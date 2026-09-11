@@ -572,3 +572,122 @@ function openSheet(html){
   document.getElementById('closeX').addEventListener('click', closeModal);
 }
 
+/* ============================================================
+   P1 FIX — Animated disclosure primitive
+   Shared by Report accordion, Dashboard Action Queue, and the
+   Invoice visit section. Uses height + opacity transitions (both
+   animatable) instead of hidden/display:none. Preserves scroll
+   position when collapsing content that is above the viewport,
+   which fixes the invoice visit section page jump.
+   ============================================================ */
+
+/**
+ * Animated disclosure primitive. Toggles a header/content pair with a
+ * smooth height + opacity transition.
+ *
+ * @param {HTMLElement} header  — clickable trigger (button)
+ * @param {HTMLElement} content — collapsible container
+ * @param {boolean} open        — target state
+ * @param {object} [opts]       — { duration, easing }
+ */
+function animateDisclosure(header, content, open, opts){
+  if(!header || !content) return;
+  opts = opts || {};
+  const duration = opts.duration || 280;
+  const easing = opts.easing || 'cubic-bezier(.22,1,.36,1)';
+  const transitionValue =
+    'height ' + duration + 'ms ' + easing +
+    ', opacity ' + duration + 'ms ' + easing;
+
+  header.classList.toggle('is-open', open);
+  header.setAttribute('aria-expanded', open ? 'true' : 'false');
+
+  if(content._disclosureEnd){
+    content.removeEventListener('transitionend', content._disclosureEnd);
+    content._disclosureEnd = null;
+  }
+
+  if(open){
+    content.hidden = false;
+    content.style.transition = 'none';
+    content.style.height = '0px';
+    content.style.opacity = '0';
+    void content.offsetHeight;
+    content.style.transition = transitionValue;
+    const target = content.scrollHeight;
+    content.style.height = target + 'px';
+    content.style.opacity = '1';
+    const onEnd = function(e){
+      if(e.propertyName !== 'height') return;
+      content.removeEventListener('transitionend', onEnd);
+      content._disclosureEnd = null;
+      content.style.transition = '';
+      content.style.height = '';
+      content.style.opacity = '';
+    };
+    content._disclosureEnd = onEnd;
+    content.addEventListener('transitionend', onEnd);
+  } else {
+    const headerTopBefore = header.getBoundingClientRect().top;
+    const height = content.scrollHeight;
+    content.style.transition = 'none';
+    content.style.height = height + 'px';
+    content.style.opacity = '1';
+    void content.offsetHeight;
+    content.style.transition = transitionValue;
+    content.style.height = '0px';
+    content.style.opacity = '0';
+    const onEnd = function(e){
+      if(e.propertyName !== 'height') return;
+      content.removeEventListener('transitionend', onEnd);
+      content._disclosureEnd = null;
+      content.hidden = true;
+      content.style.transition = '';
+      content.style.height = '';
+      content.style.opacity = '';
+      // Scroll preservation: if the header was already above the visible
+      // area when the collapse started, content below the disclosure
+      // shifted up by `height` px. Shift scroll by the same amount so the
+      // same content remains in the viewport.
+      if(headerTopBefore < 0){
+        window.scrollBy(0, -height);
+      }
+    };
+    content._disclosureEnd = onEnd;
+    content.addEventListener('transitionend', onEnd);
+  }
+}
+
+/**
+ * Wire up any [data-disclosure] elements under root.
+ * Each must contain a .disclosure-header and a .disclosure-content.
+ * Idempotent: uses a per-element flag to avoid double-binding.
+ */
+function bindDisclosure(root){
+  root = root || document;
+  const els = root.querySelectorAll('[data-disclosure]');
+  els.forEach(function(el){
+    if(el._disclosureBound) return;
+    el._disclosureBound = true;
+    const header = el.querySelector('.disclosure-header');
+    const content = el.querySelector('.disclosure-content');
+    if(!header || !content) return;
+    const initiallyOpen = el.hasAttribute('data-open');
+    header.setAttribute('aria-expanded', initiallyOpen ? 'true' : 'false');
+    if(initiallyOpen){
+      header.classList.add('is-open');
+      content.hidden = false;
+    } else {
+      header.classList.remove('is-open');
+      content.hidden = true;
+    }
+    header.addEventListener('click', function(e){
+      e.preventDefault();
+      const isOpen = header.getAttribute('aria-expanded') === 'true';
+      const willOpen = !isOpen;
+      if(willOpen) el.setAttribute('data-open', '');
+      else el.removeAttribute('data-open');
+      animateDisclosure(header, content, willOpen);
+    });
+  });
+}
