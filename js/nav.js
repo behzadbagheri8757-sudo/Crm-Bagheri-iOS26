@@ -121,8 +121,10 @@ function ensureBottomNavDOM(){
     root.innerHTML = `
       <div class="more-overlay" id="more-overlay" hidden></div>
       <div class="more-sheet" id="more-sheet" hidden role="dialog" aria-modal="true" aria-label="منوی بیشتر">
-        <div class="more-sheet-handle"></div>
-        <div class="more-sheet-title">بیشتر</div>
+        <div class="more-sheet-drag-zone" id="more-sheet-drag-zone">
+          <div class="more-sheet-handle"></div>
+          <div class="more-sheet-title">بیشتر</div>
+        </div>
         <div class="more-sheet-list" id="more-sheet-list"></div>
         <button type="button" class="btn secondary more-sheet-close" id="more-sheet-close">بستن</button>
       </div>`;
@@ -133,32 +135,113 @@ function ensureBottomNavDOM(){
   }
 }
 
-// Native-feel swipe-down-to-dismiss, started from the sheet's drag handle only
-// (keeps list-item taps below untouched). Presentation-only; just calls the
-// existing closeMoreSheet().
+// Native-feel drag-to-dismiss for the More sheet.
+// Bound to the dedicated drag zone (handle + title area, ~60px tall).
+// Uses pointer events for a unified path, tracks velocity for natural
+// dismissal, handles pointercancel AND touchcancel, and never lets the
+// sheet get stuck mid-drag. touch-action:none on the drag zone (CSS)
+// prevents iOS from claiming the gesture for scroll.
 function bindMoreSheetDragToDismiss(){
   const sheet = document.getElementById('more-sheet');
-  const handle = sheet && sheet.querySelector('.more-sheet-handle');
-  if(!sheet || !handle) return;
-  let startY = 0, deltaY = 0, dragging = false;
-  handle.addEventListener('touchstart', function(e){
-    dragging = true;
-    startY = e.touches[0].clientY;
-    sheet.style.transition = 'none';
-  }, {passive:true});
-  handle.addEventListener('touchmove', function(e){
-    if(!dragging) return;
-    deltaY = e.touches[0].clientY - startY;
-    if(deltaY > 0) sheet.style.transform = 'translateY(' + deltaY + 'px)';
-  }, {passive:true});
-  handle.addEventListener('touchend', function(){
-    if(!dragging) return;
-    dragging = false;
+  const dragZone = document.getElementById('more-sheet-drag-zone');
+  if(!sheet || !dragZone) return;
+
+  const DISMISS_DISTANCE = 80;     // px past which release dismisses
+  const DISMISS_VELOCITY = 0.5;    // px/ms — a quick downward flick also dismisses
+  const TRAVEL_MS = 220;
+
+  let activePointerId = null;
+  let dragging = false;
+  let startY = 0;
+  let deltaY = 0;
+  let lastY = 0;
+  let lastT = 0;
+  let velocity = 0;
+  let dismissing = false;
+
+  function now(){
+    return (typeof performance !== 'undefined' && performance.now)
+      ? performance.now()
+      : Date.now();
+  }
+  function clearInline(){
     sheet.style.transition = '';
     sheet.style.transform = '';
-    if(deltaY > 60) closeMoreSheet();
+  }
+  function snapBack(){
+    sheet.style.transition = 'transform 240ms cubic-bezier(.22,1,.36,1)';
+    sheet.style.transform = 'translate3d(0,0,0)';
+    setTimeout(clearInline, 260);
+  }
+  function dismissOut(){
+    dismissing = true;
+    sheet.style.transition = 'transform ' + TRAVEL_MS + 'ms cubic-bezier(.32,.72,0,1)';
+    sheet.style.transform = 'translate3d(0,110%,0)';
+    setTimeout(function(){
+      try { closeMoreSheet(); } catch(_e){}
+      setTimeout(function(){
+        clearInline();
+        dismissing = false;
+      }, 30);
+    }, TRAVEL_MS);
+  }
+
+  function onPointerDown(e){
+    if(activePointerId !== null) return;
+    if(e.pointerType === 'mouse' && e.button !== 0) return;
+    if(dismissing) return;
+    activePointerId = e.pointerId;
+    dragging = true;
+    startY = e.clientY;
     deltaY = 0;
-  });
+    velocity = 0;
+    lastY = e.clientY;
+    lastT = now();
+    sheet.style.transition = 'none';
+    try { dragZone.setPointerCapture(e.pointerId); } catch(_e){}
+    if(e.preventDefault) e.preventDefault();
+  }
+  function onPointerMove(e){
+    if(!dragging || e.pointerId !== activePointerId) return;
+    const t = now();
+    const dt = t - lastT;
+    if(dt > 0) velocity = (e.clientY - lastY) / dt;
+    lastY = e.clientY;
+    lastT = t;
+    deltaY = e.clientY - startY;
+    const effective = Math.max(0, deltaY);
+    sheet.style.transform = 'translate3d(0,' + effective + 'px,0)';
+    if(e.preventDefault) e.preventDefault();
+  }
+  function onPointerUp(e){
+    if(e.pointerId !== activePointerId) return;
+    activePointerId = null;
+    if(!dragging) return;
+    dragging = false;
+    const shouldDismiss = deltaY > DISMISS_DISTANCE || velocity > DISMISS_VELOCITY;
+    if(shouldDismiss && deltaY > 0) dismissOut();
+    else snapBack();
+  }
+  function onPointerCancel(e){
+    if(e.pointerId !== activePointerId) return;
+    activePointerId = null;
+    if(!dragging) return;
+    dragging = false;
+    snapBack();
+  }
+
+  dragZone.addEventListener('pointerdown', onPointerDown, {passive:false});
+  dragZone.addEventListener('pointermove', onPointerMove, {passive:false});
+  dragZone.addEventListener('pointerup', onPointerUp, {passive:false});
+  dragZone.addEventListener('pointercancel', onPointerCancel, {passive:false});
+  // Belt-and-suspenders: iOS sometimes fires touchcancel instead of pointercancel
+  dragZone.addEventListener('touchcancel', function(){
+    if(dragging || activePointerId !== null){
+      dragging = false;
+      activePointerId = null;
+      snapBack();
+    }
+  }, {passive:true});
 }
 
 function isMoreSectionActive(activeId){
@@ -425,6 +508,9 @@ function openMoreSheet(activeId){
   // leaves that timer alive, and it later fires `hidden = true` on the sheet
   // we just reopened, making it silently disappear a moment after opening.
   if(_moreSheetHideTimer){ clearTimeout(_moreSheetHideTimer); _moreSheetHideTimer = null; }
+  // Reset any inline transform/transition left over from a prior drag
+  sheet.style.transition = '';
+  sheet.style.transform = '';
   fillMoreSheetList(activeId);
   overlay.hidden = false;
   sheet.hidden = false;
