@@ -211,6 +211,9 @@
   }
 
   /* Toggles the collapsed remainder of the Action Queue (items 3-5).
+     P1 FIX: uses the shared animateDisclosure primitive for smooth
+     height + opacity transition, plus a real arrow rotation (220ms on
+     .dash-action-toggle-ico, declared in visual-grammar-components.css).
      Presentation-only: does not alter which actions exist, their order, or count. */
   function bindActionQueueToggle(root) {
     const btn = root.querySelector('[data-action-toggle]');
@@ -218,18 +221,23 @@
     const label = root.querySelector('[data-action-toggle-label]');
     if (!btn || !more) return;
     const hiddenCount = more.querySelectorAll('.action-row').length;
+    // Initialize collapsed state (same as prior behavior)
+    more.hidden = true;
+    btn.setAttribute('aria-expanded', 'false');
     btn.addEventListener('click', function () {
       const expanded = btn.getAttribute('aria-expanded') === 'true';
-      if (expanded) {
-        more.hidden = true;
-        btn.setAttribute('aria-expanded', 'false');
-        btn.classList.remove('is-open');
-        if (label) label.textContent = 'نمایش ' + hiddenCount + ' کار دیگر';
+      const willOpen = !expanded;
+      if (typeof animateDisclosure === 'function') {
+        animateDisclosure(btn, more, willOpen, { duration: 260 });
       } else {
-        more.hidden = false;
-        btn.setAttribute('aria-expanded', 'true');
-        btn.classList.add('is-open');
-        if (label) label.textContent = 'نمایش کمتر';
+        more.hidden = !willOpen;
+        btn.classList.toggle('is-open', willOpen);
+        btn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+      }
+      if (label) {
+        label.textContent = willOpen
+          ? 'نمایش کمتر'
+          : 'نمایش ' + hiddenCount + ' کار دیگر';
       }
     });
   }
