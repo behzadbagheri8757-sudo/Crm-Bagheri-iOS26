@@ -11,14 +11,19 @@
 
   function toggleReportAccordion(key) {
     if (!(key in reportAccordionState)) return;
-    reportAccordionState[key] = !reportAccordionState[key];
+    const willOpen = !reportAccordionState[key];
+    reportAccordionState[key] = willOpen;
     const header = document.querySelector('.report-accordion-header[data-racc-toggle="' + key + '"]');
     const content = document.getElementById('racc-' + key);
-    if (header) {
-      header.classList.toggle('is-open', reportAccordionState[key]);
-      header.setAttribute('aria-expanded', reportAccordionState[key] ? 'true' : 'false');
+    if (!header || !content) return;
+    if (typeof animateDisclosure === 'function') {
+      animateDisclosure(header, content, willOpen);
+    } else {
+      // Fallback: instant toggle (should not normally be reached)
+      header.classList.toggle('is-open', willOpen);
+      header.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+      content.hidden = !willOpen;
     }
-    if (content) content.hidden = !reportAccordionState[key];
   }
 
   function reportAccordionSection(key, titleHtml, innerHtml) {
