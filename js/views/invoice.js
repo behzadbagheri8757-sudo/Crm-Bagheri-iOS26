@@ -200,34 +200,45 @@
         </div>
       </details>
 
-      <!-- SECONDARY: visit link -->
-      <details class="tx-details">
-        <summary>ارتباط با ویزیت (اختیاری)</summary>
-        <div class="card" style="margin-top:10px;margin-bottom:8px;">
-          <div class="label">ویزیت مرتبط با این فاکتور</div>
-          <div style="font-size:.88rem;margin-top:6px;line-height:1.7;">
-            ${inv.visitId
-              ? ('<b>' + esc(linkedVisitLabel) + '</b>' +
-                 ' <button type="button" class="btn small secondary" data-inv-action="unlink-visit" style="margin-right:8px;">حذف ارتباط</button>')
-              : '<span class="sub">متصل نیست — ویزیت و فاکتور رویدادهای مستقل‌اند؛ فقط در صورت نیاز وصل کنید.</span>'}
+      <!-- SECONDARY: visit link — animated disclosure (not native <details>) -->
+      <div class="tx-details" data-disclosure>
+        <button type="button" class="disclosure-header">
+          <span>ارتباط با ویزیت (اختیاری)</span>
+          <span class="disclosure-arrow" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6l6 -6"/></svg>
+          </span>
+        </button>
+        <div class="disclosure-content" hidden>
+          <div class="card" style="margin-top:10px;margin-bottom:8px;">
+            <div class="label">ویزیت مرتبط با این فاکتور</div>
+            <div style="font-size:.88rem;margin-top:6px;line-height:1.7;">
+              ${inv.visitId
+                ? ('<b>' + esc(linkedVisitLabel) + '</b>' +
+                   ' <button type="button" class="btn small secondary" data-inv-action="unlink-visit" style="margin-right:8px;">حذف ارتباط</button>')
+                : '<span class="sub">متصل نیست — ویزیت و فاکتور رویدادهای مستقل‌اند؛ فقط در صورت نیاز وصل کنید.</span>'}
+            </div>
+            ${!inv.visitId && customerVisits.length ? (
+              '<div class="field" style="margin-top:10px;"><label>اتصال به ویزیت این مشتری</label>' +
+              '<select id="inv-link-visit"><option value="">— انتخاب ویزیت —</option>' +
+              customerVisits.map(function (v) {
+                const lab = (typeof faDate === 'function' ? faDate(v.date) : v.date) +
+                  (v.time ? ' ' + v.time : '') + (v.result ? ' — ' + v.result : '');
+                return '<option value="' + esc(v.id) + '">' + esc(lab) + '</option>';
+              }).join('') +
+              '</select></div>' +
+              '<div class="btn-row"><button type="button" class="btn small secondary" data-inv-action="link-visit">ثبت ارتباط</button></div>'
+            ) : (!inv.visitId ? '<div class="empty" style="padding:8px 0;">برای این مشتری ویزیتی ثبت نشده</div>' : '')}
           </div>
-          ${!inv.visitId && customerVisits.length ? (
-            '<div class="field" style="margin-top:10px;"><label>اتصال به ویزیت این مشتری</label>' +
-            '<select id="inv-link-visit"><option value="">— انتخاب ویزیت —</option>' +
-            customerVisits.map(function (v) {
-              const lab = (typeof faDate === 'function' ? faDate(v.date) : v.date) +
-                (v.time ? ' ' + v.time : '') + (v.result ? ' — ' + v.result : '');
-              return '<option value="' + esc(v.id) + '">' + esc(lab) + '</option>';
-            }).join('') +
-            '</select></div>' +
-            '<div class="btn-row"><button type="button" class="btn small secondary" data-inv-action="link-visit">ثبت ارتباط</button></div>'
-          ) : (!inv.visitId ? '<div class="empty" style="padding:8px 0;">برای این مشتری ویزیتی ثبت نشده</div>' : '')}
         </div>
-      </details>
+      </div>
 
       ${hist}
-    
     `;
+
+    // Wire up the custom visit disclosure (invoice.js uses a div-based
+    // disclosure instead of native <details> to allow animation + fix
+    // the page jump on close)
+    if (typeof bindDisclosure === 'function') bindDisclosure(root);
 
     // Action buttons (delegated)
     if (!actionHandlersBound) {
@@ -344,14 +355,14 @@
     if (nav) nav.style.display = '';
 
     currentInvoiceId = params && params.id ? params.id : null;
-drawInvoicePage(root);
+    drawInvoicePage(root);
 
     refreshToken = ViewHost.setRefresh(()=>drawInvoicePage(rootEl));
 
     return function unmount() {
       ViewHost.clearRefresh(refreshToken);
       refreshToken = null;
-// Do not remove actionHandlersBound flag (event listener is on root, cleaned when root.innerHTML is cleared)
+      // Do not remove actionHandlersBound flag (event listener is on root, cleaned when root.innerHTML is cleared)
       currentInvoiceId = null;
       root.innerHTML = '';
       rootEl = null;
