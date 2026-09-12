@@ -7,14 +7,15 @@
  */
 'use strict';
 
-/* CHANGED: v43 -> v44 (final verification pass: search fields get a
-   magnifying-glass icon (glass background/border preserved — the earlier
-   Phase 5 interaction-layer glass rule was being silently overridden by a
-   bare .background shorthand and is now folded into this rule directly so
-   it can't regress again); full-repo verification: JS syntax, CSS brace
-   balance, precache completeness, single-source-of-truth token check all
-   pass) */
-const CACHE_NAME = 'baqeri-shell-v44';
+/* CHANGED: v45 -> v46 (Large Title collapse rewritten as a continuous,
+   scroll-linked --header-progress custom property instead of a threshold
+   class toggle with its own CSS transition — the old version kept
+   animating for ~220ms after scroll stopped/reversed, which read as a
+   snap/lag; verified via headless scroll test: progress now tracks
+   scrollY 1:1 and reverses identically. Removed the now-duplicate "داشبورد"
+   <h2> inside Dashboard's own content — the header already shows it as the
+   page title since the brand-name/page-title fix) */
+const CACHE_NAME = 'baqeri-shell-v46';
 
 /** App Shell — paths relative to this SW (same directory as index.html). */
 const PRECACHE_URLS = [
