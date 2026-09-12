@@ -7,10 +7,11 @@
  */
 'use strict';
 
-/* CHANGED: v38 -> v39 (disclosure chevrons on real navigable list rows;
-   native pull-to-refresh gesture wired to the existing ViewHost refresh
-   registry that all 21 views already use) */
-const CACHE_NAME = 'baqeri-shell-v39';
+/* CHANGED: v42 -> v43 (Settings: sections now render as proper iOS grouped-
+   list cards instead of flat borderless stacks; flattened the accidental
+   "card inside a card" double-boxing on the auto-backup and PIN status
+   sub-panels now that the section itself is the card) */
+const CACHE_NAME = 'baqeri-shell-v43';
 
 /** App Shell — paths relative to this SW (same directory as index.html). */
 const PRECACHE_URLS = [
