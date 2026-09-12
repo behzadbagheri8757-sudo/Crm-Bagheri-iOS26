@@ -315,13 +315,15 @@ function positionBnIndicator(bar, animate){
     ind.style.opacity = '0';
     return;
   }
-  /* Cover icon + label as one group; inset so indicator is smaller than full tab */
+
   var barRect = bar.getBoundingClientRect();
   var itemRect = active.getBoundingClientRect();
-  var padX = 5;
-  var padY = 4;
-  var w = Math.max(44, Math.round(itemRect.width - padX * 2));
-  var h = Math.max(44, Math.round(itemRect.height - padY * 2));
+  /* iOS 26 selection reads as a compact Liquid Glass surface around the
+     selected tab group — not a full-width pill and not a decorative blob. */
+  var padX = 6;
+  var padY = 5;
+  var w = Math.max(46, Math.round(itemRect.width - padX * 2));
+  var h = Math.max(46, Math.round(itemRect.height - padY * 2));
   var left = itemRect.left - barRect.left + (itemRect.width - w) / 2;
   var top = itemRect.top - barRect.top + (itemRect.height - h) / 2;
   var reduceMotion = false;
@@ -336,7 +338,7 @@ function positionBnIndicator(bar, animate){
   var prevLeft = _bnIndicatorState.left;
   var prevTop = _bnIndicatorState.top;
   var canAnimate = animate && _bnIndicatorState.ready && !reduceMotion &&
-    prevLeft !== null && Math.abs(prevLeft - left) > 1;
+    prevLeft !== null && (Math.abs(prevLeft-left) > 1 || Math.abs(prevTop-top) > 1);
 
   if(ind._bnSettleTimer){
     try{ clearTimeout(ind._bnSettleTimer); }catch(_e2){}
@@ -344,9 +346,9 @@ function positionBnIndicator(bar, animate){
   }
 
   if(!canAnimate){
-    ind.classList.remove('is-traveling', 'is-settling');
+    ind.classList.remove('is-traveling','is-settling');
     ind.style.transition = 'none';
-    ind.style.transform = 'translate3d(' + left + 'px,' + top + 'px,0) scale(1,1)';
+    ind.style.transform = 'translate3d(' + left + 'px,' + top + 'px,0) scale(1)';
     _bnIndicatorState.left = left;
     _bnIndicatorState.top = top;
     _bnIndicatorState.ready = true;
@@ -354,52 +356,29 @@ function positionBnIndicator(bar, animate){
     return;
   }
 
-  if(_bnIndicatorState.animating){
-    ind.style.transition = 'none';
-    ind.classList.remove('is-traveling', 'is-settling');
-  }
-
-  var dx = left - prevLeft;
-  var dist = Math.abs(dx);
-  /* Perceptible but restrained stretch along travel direction */
-  var stretch = Math.min(1.28, 1 + dist / 200);
-
+  /* One continuous, interruptible spring-like move. Avoid the old chained
+     compress → travel → overshoot timers: that sequence looked synthetic
+     when a user changed tabs quickly or interrupted the gesture. */
+  ind.classList.remove('is-traveling','is-settling');
+  ind.style.transition = 'none';
+  ind.style.transform = 'translate3d(' + prevLeft + 'px,' + prevTop + 'px,0) scale(.96)';
   _bnIndicatorState.animating = true;
-
-  /* Phase 1: slight compress at origin */
-  ind.style.transition = 'transform 120ms cubic-bezier(.22,1,.36,1)';
-  ind.classList.add('is-traveling');
-  ind.style.transform = 'translate3d(' + prevLeft + 'px,' + prevTop + 'px,0) scale(' + (0.92 * stretch) + ',' + (0.92 / Math.sqrt(stretch)) + ')';
 
   requestAnimationFrame(function(){
     requestAnimationFrame(function(){
-      /* Phase 2: travel with elongation (~380ms — slower, liquid) */
-      ind.style.transition = 'transform 380ms cubic-bezier(.22,1.02,.36,1)';
-      ind.style.transform = 'translate3d(' + left + 'px,' + top + 'px,0) scale(' + stretch + ',' + (1 / Math.sqrt(stretch)) + ')';
-
+      ind.style.transition = 'transform 520ms cubic-bezier(.18,.88,.22,1.08)';
+      ind.style.transform = 'translate3d(' + left + 'px,' + top + 'px,0) scale(1)';
       ind._bnSettleTimer = setTimeout(function(){
-        /* Phase 3: soft overshoot then settle */
-        ind.style.transition = 'transform 160ms cubic-bezier(.22,1.1,.36,1)';
-        ind.style.transform = 'translate3d(' + left + 'px,' + top + 'px,0) scale(1.04,0.97)';
-        ind._bnSettleTimer = setTimeout(function(){
-          ind.style.transition = 'transform 140ms cubic-bezier(.22,1,.36,1)';
-          ind.classList.remove('is-traveling');
-          ind.classList.add('is-settling');
-          ind.style.transform = 'translate3d(' + left + 'px,' + top + 'px,0) scale(1,1)';
-          ind._bnSettleTimer = setTimeout(function(){
-            ind.classList.remove('is-settling');
-            ind.style.transition = 'none';
-            _bnIndicatorState.left = left;
-            _bnIndicatorState.top = top;
-            _bnIndicatorState.animating = false;
-            ind._bnSettleTimer = null;
-          }, 145);
-        }, 155);
-      }, 370);
+        ind.style.transition = 'none';
+        ind.classList.remove('is-traveling','is-settling');
+        _bnIndicatorState.left = left;
+        _bnIndicatorState.top = top;
+        _bnIndicatorState.animating = false;
+        ind._bnSettleTimer = null;
+      }, 535);
     });
   });
 }
-
 function renderBottomNav(activeId){
   ensureBottomNavDOM();
   const bar = document.getElementById('bottom-nav');
@@ -669,6 +648,18 @@ function ensureAppBackButton(activeId, routePath){
   if(!header) return;
 
   ensureHeaderDate();
+
+  /* Some legacy/detail views still call this helper with only activeId.
+     Resolve the actual SPA route before deciding whether Back belongs here;
+     otherwise a later route-local call could accidentally remove the button
+     that the router just created. */
+  if(!routePath){
+    try{
+      const cur = (typeof AppRouter !== 'undefined' && AppRouter.getCurrent)
+        ? AppRouter.getCurrent() : null;
+      routePath = cur && cur.path ? cur.path : '';
+    }catch(_e){ routePath = ''; }
+  }
 
   const existing = header.querySelector('.app-back');
   // isDash was previously also true whenever location.pathname contained
