@@ -183,13 +183,14 @@ button.app-back{
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  gap:2px;
+  gap:0;
+  width:44px;
   min-width:44px;
   min-height:44px;
-  padding:6px 10px;
+  padding:0;
   border:none;
   border-radius:999px;
-  background:rgba(31,41,55,.06);
+  background:transparent;
   color:#0070D2;
   font-family:inherit;
   font-size:.78rem;
@@ -200,7 +201,7 @@ button.app-back{
   transition:background-color var(--ios-touch,120ms) ease, transform var(--ios-touch,120ms) var(--ios-ease-out,ease);
 }
 button.app-back:active{
-  background:rgba(0,112,210,.14);
+  background:rgba(0,112,210,.10);
   transform:scale(.96);
 }
 button.app-back .app-back-ico{
@@ -223,11 +224,21 @@ header.has-back{
   position:sticky;
   top:0;
   padding-block-start:calc(env(safe-area-inset-top,0px) + 10px + (42px * (1 - var(--header-progress))));
-  padding-inline-start:calc(16px + (40px * var(--header-progress)));
+  /* On collapse, the title must clear the back control horizontally. At rest
+     it returns to the normal leading alignment of a native large title. */
+  padding-inline-start:calc(16px + (60px * var(--header-progress)));
+}
+header.has-back h1{
+  min-width:0;
+}
+header.has-back .header-date{
+  /* The centered date occupies the toolbar center; it must not compete with
+     the leading back control or the collapsed title. */
+  pointer-events:none;
 }
 @media(max-width:360px){
   header.has-back{
-    padding-inline-start:calc(16px + (32px * var(--header-progress)));
+    padding-inline-start:calc(16px + (48px * var(--header-progress)));
   }
 }
 
@@ -2209,7 +2220,7 @@ button.inv-header-save.btn{
 .inv-discount-block input{
   width:100%;
   min-height:36px;
-  padding:6px 10px;
+  padding:0;
   border:1px solid rgba(15,23,42,.1);
   border-radius:999px;
   background:#F8FAFC;
@@ -3950,7 +3961,7 @@ a.ledger-row:active,
 
 /* 3 — Product detail profit % readability */
 .product-profit-pct{
-  padding:6px 10px;
+  padding:0;
   margin:0 0 10px;
   font-size:.88rem;
   font-weight:700;
