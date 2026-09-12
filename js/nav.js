@@ -678,7 +678,7 @@ async function bootPage(activeId, afterLoad){
     }
     const main = document.getElementById('main');
     if(main){
-      main.innerHTML = `<div class="empty">خطا در بارگذاری اطلاعات. صفحه را دوباره باز کنید.</div>`;
+      main.innerHTML = `<div class="empty" role="alert">خطا در بارگذاری اطلاعات. صفحه را دوباره باز کنید.</div>`;
     }
   }
 }
@@ -811,10 +811,14 @@ async function bootSpaShell() {
        generic detail title since the router has no record loaded yet to
        name it more specifically — a real per-record title (e.g. the
        customer's name) needs to be set by that view itself once it has
-       loaded its data; see setHeaderTitle() below, callable from any view. */
+       loaded its data; see setHeaderTitle() below, callable from any view.
+       Principle: this map holds each screen's own page title, never the
+       business/brand name ("حبوبات و خشکبار باقری") — that's identity, not
+       a page title, so it must not stand in for Dashboard's title or any
+       other route here, even though Dashboard is the app's root/home tab. */
     const PAGE_TITLES = {
-      '/': 'حبوبات و خشکبار باقری',
-      '/dashboard': 'حبوبات و خشکبار باقری',
+      '/': 'داشبورد',
+      '/dashboard': 'داشبورد',
       '/products': 'اجناس',
       '/inventory': 'انبار',
       '/reports': 'گزارش‌ها',
@@ -882,7 +886,7 @@ async function bootSpaShell() {
     if (typeof showToast === 'function') showToast('خطا در بارگذاری اطلاعات');
     const main = document.getElementById('main');
     if (main) {
-      main.innerHTML = '<div class="empty">خطا در بارگذاری اطلاعات. صفحه را دوباره باز کنید.</div>';
+      main.innerHTML = '<div class="empty" role="alert">خطا در بارگذاری اطلاعات. صفحه را دوباره باز کنید.</div>';
     }
   }
 }
