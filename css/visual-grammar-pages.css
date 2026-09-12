@@ -68,6 +68,75 @@ main .empty{margin:14px 0;}
   box-shadow:none;
 }
 
+/* ---------- Customers: native list-row alignment ----------
+   Keep identity, financial value and disclosure affordance on stable tracks.
+   This prevents status/date/warning content from changing the horizontal or
+   vertical alignment of neighboring rows. */
+.vg-route-customers .customer-list-row{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(88px,auto) 14px;
+  align-items:center;
+  column-gap:10px;
+  min-height:68px;
+  padding-block:10px;
+}
+.vg-route-customers .customer-row-main{
+  min-width:0;
+  align-self:center;
+  gap:3px;
+}
+.vg-route-customers .customer-row-title-line{
+  min-width:0;
+  min-height:1.35em;
+}
+.vg-route-customers .customer-row-meta-line{
+  min-width:0;
+  min-height:22px;
+  gap:7px;
+}
+.vg-route-customers .customer-row-status{
+  min-height:21px;
+  padding-inline:7px;
+  font-size:.68rem;
+  font-weight:650;
+}
+.vg-route-customers .customer-row-meta{
+  min-width:0;
+}
+.vg-route-customers .customer-row-watch{
+  width:16px;
+  height:16px;
+}
+.vg-route-customers .customer-row-balance{
+  min-width:88px;
+  align-self:center;
+  align-items:flex-start;
+  text-align:start;
+  gap:3px;
+}
+.vg-route-customers .customer-row-balance-label,
+.vg-route-customers .customer-row-balance-value{
+  width:100%;
+  text-align:start;
+}
+.vg-route-customers .customer-row-balance-value{
+  font-size:.84rem;
+  font-weight:700;
+}
+.vg-route-customers .customer-list-row::after{
+  grid-column:3;
+  grid-row:1;
+  justify-self:end;
+  margin-inline-start:0;
+}
+@media (max-width:380px){
+  .vg-route-customers .customer-list-row{
+    grid-template-columns:minmax(0,1fr) minmax(76px,auto) 14px;
+    column-gap:8px;
+  }
+  .vg-route-customers .customer-row-balance{min-width:76px;}
+}
+
 /* ---------- Search/filter group ---------- */
 .vg-route-customers .field:has(#customer-search),
 .vg-route-products .field:has(#product-search),
