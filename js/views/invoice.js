@@ -285,7 +285,7 @@
             })();
           } else if (action === 'unlink-visit') {
             (async function () {
-              if (!confirm('ارتباط این فاکتور با ویزیت حذف شود؟ (خود ویزیت و فاکتور حذف نمی‌شوند)')) return;
+              if (!(await appConfirm('ارتباط این فاکتور با ویزیت حذف شود؟ (خود ویزیت و فاکتور حذف نمی‌شوند)'))) return;
               delete inv.visitId;
               try {
                 await saveData();
@@ -302,7 +302,7 @@
                 showToast('این فاکتور دارای برگشت از فروش است و برای حفظ یکپارچگی موجودی قابل حذف نیست');
                 return;
               }
-              if (!confirm('با حذف این فاکتور، موجودی انبار و حساب مشتری اصلاح خواهد شد. ادامه می‌دهید؟')) return;
+              if (!(await appConfirm('با حذف این فاکتور، موجودی انبار و حساب مشتری اصلاح خواهد شد. ادامه می‌دهید؟'))) return;
               const previousData = JSON.parse(JSON.stringify(data));
               if (typeof revertInvoiceStockEffects === 'function') revertInvoiceStockEffects(inv);
               if (typeof revertInvoicePayments === 'function') revertInvoicePayments(inv);
@@ -310,7 +310,7 @@
               try {
                 await saveData();
               } catch (saveErr) {
-                data = previousData;
+                restoreDataInPlace(previousData);
                 throw saveErr;
               }
               if (typeof gameOnInvoiceDeleted === 'function') {

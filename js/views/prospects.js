@@ -97,14 +97,28 @@
     const b = document.getElementById('set-target-btn');
     if (b) {
       targetBtnHandler = function () {
-        const v = prompt('تارگت ویزیت امروز (عدد):', String(dt.target || 20));
-        if (v == null) return;
-        const n = parseInt(v, 10);
-        if (!n || n <= 0) { showToast('عدد معتبر وارد کن'); return; }
-        setProspectDailyTargetValue(n).then(() => {
-          renderTargetCard();
-          showToast('تارگت ذخیره شد');
-        });
+        openSheet(`
+          <h3>هدف ارزیابی امروز</h3>
+          <div class="field"><label for="prospect-target-input">تعداد هدف</label><input id="prospect-target-input" type="text" inputmode="numeric" value="${esc(String(dt.target || 20))}"></div>
+          <div class="btn-row"><button type="button" class="btn" id="prospect-target-save">ذخیره</button></div>
+        `);
+        const input = document.getElementById('prospect-target-input');
+        const save = document.getElementById('prospect-target-save');
+        if(input) setTimeout(function(){ input.focus(); input.select(); }, 0);
+        if(save) save.onclick = function(){
+          const n = parseInt(faToEnDigits(input ? input.value : ''), 10);
+          if(!n || n <= 0){ showToast('عدد معتبر وارد کن'); if(input){ input.setAttribute('aria-invalid','true'); input.focus(); } return; }
+          save.disabled = true;
+          setProspectDailyTargetValue(n).then(function(){
+            closeModal();
+            renderTargetCard();
+            showToast('تارگت ذخیره شد');
+          }).catch(function(err){
+            console.error(err);
+            save.disabled = false;
+            showToast('ذخیره تارگت ناموفق بود');
+          });
+        };
       };
       b.onclick = targetBtnHandler;
     }

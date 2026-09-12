@@ -212,17 +212,19 @@
       const id = btn.getAttribute('data-toggle-check');
       const chk = data.checks.find(x => x.id === id);
       if (!chk) return;
-      btn.disabled = true;
-      const prev = chk.status;
-      chk.status = chk.status === 'cleared' ? 'pending' : 'cleared';
-      try {
-        await saveData();
-        showToast(chk.status === 'cleared' ? 'چک وصول شد' : 'چک به حالت در جریان برگشت');
-        renderCheckListOnly();
-      } catch (err) {
-        chk.status = prev;
-        try { btn.disabled = false; } catch (_e) {}
-      }
+      if(!(await appConfirm(chk.status === 'cleared' ? 'وضعیت این چک به «در جریان» برگردد؟' : 'این چک به‌عنوان «وصول‌شده» ثبت شود؟'))) return;
+      await withSubmitGuard(btn, async function(){
+        const prev = chk.status;
+        chk.status = chk.status === 'cleared' ? 'pending' : 'cleared';
+        try {
+          await saveData();
+          showToast(chk.status === 'cleared' ? 'چک وصول شد' : 'چک به حالت در جریان برگشت');
+          renderCheckListOnly();
+        } catch (err) {
+          chk.status = prev;
+          throw err;
+        }
+      });
     });
 
     renderCheckListOnly();

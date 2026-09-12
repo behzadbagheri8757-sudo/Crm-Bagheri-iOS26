@@ -529,7 +529,7 @@
     const convertBtn = document.getElementById('btn-convert');
     if (convertBtn) {
       convertBtn.onclick = async function () {
-        if (!confirm('مغازه «' + shop.name + '» به مشتری CRM تبدیل شود؟\nسوابق ارزیابی در همین بخش باقی می‌ماند.')) return;
+        if (!(await appConfirm('مغازه «' + shop.name + '» به مشتری CRM تبدیل شود؟\nسوابق ارزیابی در همین بخش باقی می‌ماند.'))) return;
         try {
           const res = await convertProspectToCustomer(shop.id);
           showToast(res.created ? 'مشتری جدید ساخته شد' : 'قبلاً تبدیل شده بود');

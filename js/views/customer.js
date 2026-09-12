@@ -984,7 +984,7 @@
           const msg = willDeactivate
             ? 'این مشتری غیرفعال شود؟ اطلاعات، فاکتورها، پرداخت‌ها، چک‌ها و سوابق او حذف نخواهد شد.'
             : 'مشتری «' + c.name + '» دوباره فعال شود؟';
-          if (!confirm(msg)) throw new Error('validation');
+          if (!(await appConfirm(msg))) throw new Error('validation');
           c.active = (c.active === false) ? true : false;
           await saveData();
           drawCustomerPage(rootEl || root);

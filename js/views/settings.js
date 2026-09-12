@@ -193,7 +193,7 @@
     importBtnHandler = async function () {
       const f = document.getElementById('import-file').files[0];
       if (!f) { showToast('فایل را انتخاب کنید'); return; }
-      const ok = confirm(
+      const ok = await appConfirm(
         'اطلاعات فعلی با محتوای این فایل جایگزین شود؟\n\n' +
         'قبل از جایگزینی، وضعیت فعلی برای «برگشت از بازیابی» ذخیره می‌شود.\n' +
         'فایل: ' + f.name
@@ -215,7 +215,7 @@
         showToast('نسخه‌ی قبل از بازیابی موجود نیست');
         return;
       }
-      if (!confirm('به حالت قبل از آخرین بازیابی برگردیم؟')) return;
+      if (!(await appConfirm('به حالت قبل از آخرین بازیابی برگردیم؟'))) return;
       if (typeof undoLastRestore === 'function') {
         await undoLastRestore();
         location.reload();
@@ -267,70 +267,56 @@
     };
     techRow.onclick = techInfoHandler;
 
-    // PIN settings
+    // PIN settings — app-owned sheet UI (no browser dialog).
     (function bindPinSettings() {
       const setBtn = document.getElementById('pin-set-btn');
       const changeBtn = document.getElementById('pin-change-btn');
       const clearBtn = document.getElementById('pin-clear-btn');
       const lockBtn = document.getElementById('pin-lock-now-btn');
 
-      pinSetHandler = async function () {
+      function openPinSheet(mode) {
         if (!window.pinLock) { showToast('ماژول PIN در دسترس نیست'); return; }
-        if (window.pinLock.isPinSet()) { showToast('PIN از قبل فعال است؛ از «تغییر» استفاده کنید'); return; }
-        const a = prompt('PIN شش‌رقمی جدید:');
-        if (a == null) return;
-        const b = prompt('تکرار PIN:');
-        if (b == null) return;
-        if (String(a).replace(/\D/g, '').slice(0, 6) !== String(b).replace(/\D/g, '').slice(0, 6)) {
-          showToast('دو PIN یکسان نیستند');
-          return;
-        }
-        try {
-          await window.pinLock.setPin(a);
-          showToast('PIN ذخیره شد');
-          refreshPinStatus();
-        } catch (e) {
-          showToast(e && e.message ? e.message : 'خطا در تنظیم PIN');
-        }
-      };
+        if (mode === 'set' && window.pinLock.isPinSet()) { showToast('PIN از قبل فعال است؛ از «تغییر» استفاده کنید'); return; }
+        if ((mode === 'change' || mode === 'clear') && !window.pinLock.isPinSet()) { showToast('PIN فعال نیست'); return; }
+        const title = mode === 'set' ? 'تنظیم PIN' : (mode === 'change' ? 'تغییر PIN' : 'حذف PIN');
+        let fields = '';
+        if(mode !== 'set') fields += '<div class="field"><label for="pin-current">PIN فعلی</label><input id="pin-current" type="tel" inputmode="numeric" maxlength="6" autocomplete="off"></div>';
+        if(mode !== 'clear') fields += '<div class="field"><label for="pin-new">PIN جدید (۶ رقم)</label><input id="pin-new" type="tel" inputmode="numeric" maxlength="6" autocomplete="new-password"></div>';
+        if(mode !== 'clear') fields += '<div class="field"><label for="pin-confirm">تکرار PIN</label><input id="pin-confirm" type="tel" inputmode="numeric" maxlength="6" autocomplete="new-password"></div>';
+        openSheet('<h3>'+title+'</h3>'+fields+'<div class="btn-row"><button type="button" class="btn" id="pin-sheet-save">'+(mode === 'clear' ? 'حذف PIN' : 'ذخیره')+'</button></div>');
+        const save = document.getElementById('pin-sheet-save');
+        const first = document.getElementById(mode === 'set' ? 'pin-new' : 'pin-current');
+        if(first) setTimeout(function(){ first.focus(); }, 0);
+        if(save) save.onclick = async function(){
+          const current = document.getElementById('pin-current');
+          const n1 = document.getElementById('pin-new');
+          const n2 = document.getElementById('pin-confirm');
+          const clean = function(el){ return String(el ? el.value : '').replace(/\D/g,'').slice(0,6); };
+          if(mode !== 'clear'){
+            if(clean(n1).length !== 6){ showToast('PIN باید ۶ رقم باشد'); if(n1){ n1.setAttribute('aria-invalid','true'); n1.focus(); } return; }
+            if(clean(n1) !== clean(n2)){ showToast('دو PIN جدید یکسان نیستند'); if(n2){ n2.setAttribute('aria-invalid','true'); n2.focus(); } return; }
+          }
+          if(mode !== 'set' && clean(current).length !== 6){ showToast('PIN فعلی باید ۶ رقم باشد'); if(current){ current.setAttribute('aria-invalid','true'); current.focus(); } return; }
+          save.disabled = true;
+          try{
+            if(mode === 'set') await window.pinLock.setPin(clean(n1));
+            else if(mode === 'change') await window.pinLock.changePin(clean(current), clean(n1));
+            else await window.pinLock.clearPin(clean(current));
+            closeModal();
+            refreshPinStatus();
+            showToast(mode === 'clear' ? 'PIN حذف شد' : (mode === 'change' ? 'PIN تغییر کرد' : 'PIN ذخیره شد'));
+          }catch(e){
+            save.disabled = false;
+            showToast(e && e.message ? e.message : 'خطا در عملیات PIN');
+          }
+        };
+      }
+
+      pinSetHandler = function(){ openPinSheet('set'); };
+      pinChangeHandler = function(){ openPinSheet('change'); };
+      pinClearHandler = function(){ openPinSheet('clear'); };
       setBtn.onclick = pinSetHandler;
-
-      pinChangeHandler = async function () {
-        if (!window.pinLock) { showToast('ماژول PIN در دسترس نیست'); return; }
-        if (!window.pinLock.isPinSet()) { showToast('ابتدا PIN را تنظیم کنید'); return; }
-        const oldP = prompt('PIN فعلی:');
-        if (oldP == null) return;
-        const n1 = prompt('PIN جدید (۶ رقم):');
-        if (n1 == null) return;
-        const n2 = prompt('تکرار PIN جدید:');
-        if (n2 == null) return;
-        if (String(n1).replace(/\D/g, '').slice(0, 6) !== String(n2).replace(/\D/g, '').slice(0, 6)) {
-          showToast('دو PIN جدید یکسان نیستند');
-          return;
-        }
-        try {
-          await window.pinLock.changePin(oldP, n1);
-          showToast('PIN تغییر کرد');
-          refreshPinStatus();
-        } catch (e) {
-          showToast(e && e.message ? e.message : 'خطا در تغییر PIN');
-        }
-      };
       changeBtn.onclick = pinChangeHandler;
-
-      pinClearHandler = async function () {
-        if (!window.pinLock) { showToast('ماژول PIN در دسترس نیست'); return; }
-        if (!window.pinLock.isPinSet()) { showToast('PIN فعال نیست'); return; }
-        const cur = prompt('برای حذف PIN، PIN فعلی را وارد کنید:');
-        if (cur == null) return;
-        try {
-          await window.pinLock.clearPin(cur);
-          showToast('PIN حذف شد');
-          refreshPinStatus();
-        } catch (e) {
-          showToast(e && e.message ? e.message : 'خطا در حذف PIN');
-        }
-      };
       clearBtn.onclick = pinClearHandler;
 
       pinLockNowHandler = function () {
