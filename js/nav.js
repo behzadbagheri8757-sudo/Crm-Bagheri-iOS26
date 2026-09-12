@@ -155,6 +155,77 @@ function pinBottomNav(){
   }
 }
 
+/* iOS 26-style tab-bar minimization: hide secondary labels while the user
+   scrolls down, restore them on upward scroll. This is intentionally a
+   navigation-only interaction; it never changes route state or page data. */
+function bindBottomNavMinimizeOnScroll(){
+  if(bindBottomNavMinimizeOnScroll._bound) return;
+  bindBottomNavMinimizeOnScroll._bound = true;
+
+  var lastY = window.scrollY || window.pageYOffset || 0;
+  var progress = 0;
+  var ticking = false;
+  var travel = 52;
+  var directionThreshold = 1;
+
+  function reduceMotion(){
+    try{
+      return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    }catch(_e){ return false; }
+  }
+
+  function setProgress(next, immediate){
+    progress = Math.max(0, Math.min(1, next));
+    var bar = document.getElementById('bottom-nav');
+    if(!bar) return;
+    bar.style.setProperty('--bn-minimize-progress', progress.toFixed(3));
+    bar.classList.toggle('is-minimized', progress >= .98);
+    if(immediate || reduceMotion()) bar.style.setProperty('--bn-minimize-duration', '0ms');
+    else bar.style.setProperty('--bn-minimize-duration', '180ms');
+    requestAnimationFrame(function(){
+      var current = document.getElementById('bottom-nav');
+      if(current && typeof positionBnIndicator === 'function') positionBnIndicator(current, false);
+    });
+  }
+
+  function apply(){
+    ticking = false;
+    var bar = document.getElementById('bottom-nav');
+    if(!bar) return;
+    var y = window.scrollY || window.pageYOffset || 0;
+    var dy = y - lastY;
+
+    if(y <= 8){
+      setProgress(0, false);
+    }else if(Math.abs(dy) >= directionThreshold){
+      /* Continuous scroll-linked collapse: unlike a binary class toggle,
+         every small scroll sample moves the bar toward/away from its
+         minimized state. This mirrors iOS 26's fluid content-first motion. */
+      setProgress(progress + (dy / travel), false);
+    }
+    lastY = y;
+  }
+
+  function schedule(){
+    if(ticking) return;
+    ticking = true;
+    requestAnimationFrame(apply);
+  }
+
+  function expandFromInteraction(){
+    setProgress(0, false);
+  }
+
+  window.addEventListener('scroll', schedule, {passive:true});
+  if(window.visualViewport) window.visualViewport.addEventListener('scroll', schedule, {passive:true});
+  document.addEventListener('click', function(e){
+    var target = e.target && e.target.closest ? e.target.closest('#bottom-nav .bottom-nav-item') : null;
+    if(target) expandFromInteraction();
+  }, {passive:true});
+
+  bindBottomNavMinimizeOnScroll.setProgress = setProgress;
+}
+
 function ensureBottomNavPinned(){
   if(ensureBottomNavPinned._bound) return;
   ensureBottomNavPinned._bound = true;
@@ -349,6 +420,7 @@ function renderBottomNav(activeId){
   fillMoreSheetList(activeId);
 
   ensureBottomNavPinned();
+  bindBottomNavMinimizeOnScroll();
   pinBottomNav();
 
   /* Position jelly indicator after layout. Animate only when tab actually changes. */
