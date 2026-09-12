@@ -15,6 +15,40 @@ function enToFaDigits(str){
   const map = {'0':'۰','1':'۱','2':'۲','3':'۳','4':'۴','5':'۵','6':'۶','7':'۷','8':'۸','9':'۹'};
   return String(str).replace(/[0-9]/g, ch=>map[ch]||ch);
 }
+
+/* Final UI consistency: render visible numeric text in Persian digits across the app.
+   Inputs and stored data are untouched; this is display-only. */
+function normalizeVisibleDigits(root){
+  const target = root || document.getElementById('main') || document.body;
+  if(!target || typeof document === 'undefined') return;
+  const walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT);
+  const skip = new Set(['SCRIPT','STYLE','INPUT','TEXTAREA']);
+  const nodes = [];
+  let node;
+  while((node = walker.nextNode())){
+    const el = node.parentElement;
+    if(el && !skip.has(el.tagName) && /[0-9]/.test(node.nodeValue) && !/[A-Za-z]/.test(node.nodeValue)) nodes.push(node);
+  }
+  nodes.forEach(function(n){ n.nodeValue = enToFaDigits(n.nodeValue); });
+}
+
+(function bindVisibleDigitNormalization(){
+  function start(){
+    const target = document.body;
+    if(!target || typeof MutationObserver === 'undefined') return;
+    const observer = new MutationObserver(function(mutations){
+      mutations.forEach(function(m){
+        m.addedNodes && Array.from(m.addedNodes).forEach(function(n){
+          if(n.nodeType === 1 || n.nodeType === 3) normalizeVisibleDigits(n.nodeType === 1 ? n : n.parentElement);
+        });
+      });
+    });
+    observer.observe(target, {childList:true,subtree:true});
+    normalizeVisibleDigits(target);
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, {once:true});
+  else start();
+})();
 function numVal(el){
   if(!el) return 0;
   // faToEnDigits جداکننده‌ها را حذف می‌کند تا parseFloat روی "4,000,000" مقدار 4000000 بدهد
@@ -512,29 +546,92 @@ function showToast(msg){
   };
 })();
 
-// ---------- modals ----------
+// ---------- modals / sheets ----------
+// Shared drag-to-dismiss gesture for any bottom sheet: started only from a
+// dedicated handle element (so scrolling the sheet's own content is never
+// hijacked), with a real-world velocity check in addition to distance, so a
+// quick short flick dismisses even if it didn't travel far — the way an iOS
+// sheet responds to a flick vs. a slow drag. Presentation-only: it flips
+// classes/inline transform and calls the dismiss callback; no data/state.
+function bindSheetDragToDismiss(sheetEl, handleEl, dismissFn){
+  if(!sheetEl || !handleEl) return;
+  let startY = 0, startT = 0, lastY = 0, lastT = 0, velocity = 0, deltaY = 0, dragging = false;
+  handleEl.addEventListener('touchstart', function(e){
+    dragging = true;
+    startY = lastY = e.touches[0].clientY;
+    startT = lastT = e.timeStamp;
+    velocity = 0;
+    sheetEl.style.transition = 'none';
+  }, {passive:true});
+  handleEl.addEventListener('touchmove', function(e){
+    if(!dragging) return;
+    const y = e.touches[0].clientY;
+    const t = e.timeStamp;
+    deltaY = y - startY;
+    if(deltaY > 0){
+      sheetEl.style.transform = 'translateY(' + deltaY + 'px)';
+    } else {
+      // Rubber-band resistance when dragging upward past the open position —
+      // it should feel like it's stretching, not slide further up.
+      sheetEl.style.transform = 'translateY(' + (deltaY * 0.15) + 'px)';
+    }
+    const dt = t - lastT;
+    if(dt > 0) velocity = (y - lastY) / dt; // px/ms, +down / -up
+    lastY = y; lastT = t;
+  }, {passive:true});
+  handleEl.addEventListener('touchend', function(){
+    if(!dragging) return;
+    dragging = false;
+    sheetEl.style.transition = '';
+    sheetEl.style.transform = '';
+    const shouldDismiss = deltaY > 60 || (deltaY > 16 && velocity > 0.5);
+    if(shouldDismiss) dismissFn();
+    deltaY = 0; velocity = 0;
+  });
+}
+
+let _modalHideTimer = null;
+
 function closeModal(){
+  const overlay = document.getElementById('overlay');
   const root = document.getElementById('modalRoot');
-  root.innerHTML = '';
+  if(!overlay){ if(root) root.innerHTML=''; return; }
+  overlay.classList.remove('show');
+  const sheetEl = overlay.querySelector('.sheet');
+  if(sheetEl) sheetEl.classList.remove('show');
   try{ document.body.classList.remove('modal-open'); }catch(_e){}
-  if(window.scrollX) window.scrollTo(0, window.scrollY);
+  if(_modalHideTimer){ clearTimeout(_modalHideTimer); }
+  _modalHideTimer = setTimeout(() => {
+    _modalHideTimer = null;
+    root.innerHTML = '';
+    if(window.scrollX) window.scrollTo(0, window.scrollY);
+  }, 240);
 }
 
 function openSheet(html){
   const root = document.getElementById('modalRoot');
+  if(_modalHideTimer){ clearTimeout(_modalHideTimer); _modalHideTimer = null; }
   // مطمئن شو هر Modal قبلی کاملاً پاک شده (نه فقط مخفی) قبل از ساختن Modal جدید،
   // و یک reflow اجباری بین پاک‌شدن و رندر جدید انجام بده تا ظاهر (گوشه‌های گرد و غیره) بعد از باز/بسته‌شدن‌های مکرر خراب نشه
-  closeModal();
+  root.innerHTML = '';
   void root.offsetHeight;
   root.innerHTML = `
     <div class="overlay" id="overlay">
       <div class="sheet" style="position:relative;">
-        <button class="close-x" id="closeX">×</button>
+        <div class="sheet-handle"></div>
+        <button class="close-x" id="closeX" aria-label="بستن">×</button>
         ${html}
       </div>
     </div>`;
   try{ document.body.classList.add('modal-open'); }catch(_e){}
-  document.getElementById('overlay').addEventListener('click', (e)=>{ if(e.target.id==='overlay') closeModal(); });
+  const overlay = document.getElementById('overlay');
+  const sheet = overlay.querySelector('.sheet');
+  requestAnimationFrame(() => {
+    overlay.classList.add('show');
+    sheet.classList.add('show');
+  });
+  overlay.addEventListener('click', (e)=>{ if(e.target.id==='overlay') closeModal(); });
   document.getElementById('closeX').addEventListener('click', closeModal);
+  bindSheetDragToDismiss(sheet, sheet.querySelector('.sheet-handle'), closeModal);
 }
 

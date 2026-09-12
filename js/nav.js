@@ -29,61 +29,50 @@ const NAV_ITEMS = [
   { id: 'settings',  href: '#/settings',  label: 'تنظیمات', spaPath: '/settings' },
 ];
 
-/** Primary mobile bottom bar (5 items). */
+/** Primary mobile bottom bar (5 items).
+ * iconKey references js/icons.js (AppIcons) — the single icon registry.
+ * Each key has an outline (inactive) + solid (active) pair, matching the
+ * SF-Symbols-style state change iOS tab bars use, instead of a single
+ * fixed-weight glyph. */
 const BOTTOM_NAV_ITEMS = [
-  {
-    id: 'dashboard',
-    href: '#/dashboard',
-    spaPath: '/dashboard',
-    label: 'داشبورد',
-    icon: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l-2 0l9 -9l9 9l-2 0"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7"/><path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6"/></svg>'
-  },
-  {
-    id: 'customers',
-    href: '#/customers',
-    spaPath: '/customers',
-    label: 'مشتریان',
-    icon: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"/><path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0 -3 -3.87"/></svg>'
-  },
-  {
-    id: 'products',
-    href: '#/products',
-    spaPath: '/products',
-    label: 'اجناس',
-    icon: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4.5l0 9l-8 4.5l-8 -4.5l0 -9l8 -4.5"/><path d="M12 12l8 -4.5"/><path d="M12 12l0 9"/><path d="M12 12l-8 -4.5"/><path d="M16 5.25l-8 4.5"/></svg>'
-  },
-  {
-    id: 'invoices',
-    href: '#/invoices',
-    spaPath: '/invoices',
-    label: 'فاکتورها',
-    icon: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z"/><path d="M9 7l1 0"/><path d="M9 13l6 0"/><path d="M13 17l2 0"/></svg>'
-  },
-  {
-    id: 'more',
-    href: '#more',
-    label: 'بیشتر',
-    icon: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/><path d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/><path d="M19 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/></svg>'
-  },
+  { id: 'dashboard', href: '#/dashboard', spaPath: '/dashboard', label: 'داشبورد',  iconKey: 'home' },
+  { id: 'customers', href: '#/customers', spaPath: '/customers', label: 'مشتریان',  iconKey: 'users' },
+  { id: 'products',  href: '#/products',  spaPath: '/products',  label: 'اجناس',    iconKey: 'cube' },
+  { id: 'invoices',  href: '#/invoices',  spaPath: '/invoices',  label: 'فاکتورها', iconKey: 'documentText' },
+  { id: 'more',      href: '#more',       label: 'بیشتر',        iconKey: 'more' },
 ];
 
-/** Secondary destinations opened from «بیشتر». */
+/** Secondary destinations opened from «بیشتر». iconKey references js/icons.js. */
 const MORE_NAV_ITEMS = [
-  { id: 'inventory', href: '#/inventory', label: 'انبار', spaPath: '/inventory' },
-  { id: 'suppliers', href: '#/suppliers', label: 'تأمین‌کنندگان', spaPath: '/suppliers' },
-  { id: 'payments',  href: '#/payments',  label: 'پرداخت‌ها', spaPath: '/payments' },
-  { id: 'checks',    href: '#/checks',    label: 'چک‌ها', spaPath: '/checks' },
-  { id: 'visits',    href: '#/visits',    label: 'ویزیت مشتریان', spaPath: '/visits' },
-  { id: 'prospects', href: '#/prospects', label: 'ارزیابی مغازه‌ها', spaPath: '/prospects' },
-  { id: 'game',      href: '#/game',      label: 'مرکز بازی فروش', spaPath: '/game' },
-  { id: 'reports',   href: '#/reports',   label: 'گزارش‌ها', spaPath: '/reports' },
-  { id: 'settings',  href: '#/settings',  label: 'تنظیمات و Backup', spaPath: '/settings' },
+  { id: 'inventory', href: '#/inventory', label: 'انبار', spaPath: '/inventory', iconKey: 'archiveBox' },
+  { id: 'suppliers', href: '#/suppliers', label: 'تأمین‌کنندگان', spaPath: '/suppliers', iconKey: 'truck' },
+  { id: 'payments',  href: '#/payments',  label: 'پرداخت‌ها', spaPath: '/payments', iconKey: 'banknotes' },
+  { id: 'checks',    href: '#/checks',    label: 'چک‌ها', spaPath: '/checks', iconKey: 'documentCheck' },
+  { id: 'visits',    href: '#/visits',    label: 'ویزیت مشتریان', spaPath: '/visits', iconKey: 'mapPin' },
+  { id: 'prospects', href: '#/prospects', label: 'ارزیابی مغازه‌ها', spaPath: '/prospects', iconKey: 'buildingStorefront' },
+  { id: 'game',      href: '#/game',      label: 'مرکز بازی فروش', spaPath: '/game', iconKey: 'trophy' },
+  { id: 'reports',   href: '#/reports',   label: 'گزارش‌ها', spaPath: '/reports', iconKey: 'chartBar' },
+  { id: 'settings',  href: '#/settings',  label: 'تنظیمات و Backup', spaPath: '/settings', iconKey: 'cog' },
 ];
+
+/** Renders an icon by key via the central AppIcons registry, falling back to
+ * an empty string if icons.js failed to load (never throws, never blocks nav). */
+function navIcon(iconKey, active){
+  try {
+    return (typeof AppIcons !== 'undefined' && AppIcons.render) ? AppIcons.render(iconKey, { active: !!active, size: 22 }) : '';
+  } catch (e) { return ''; }
+}
 
 function renderSharedNav(activeId){
   const nav = document.getElementById('nav');
   if(!nav) return;
-  const spa = isSpaShell();
+  // SPA shell uses floating bottom nav + More sheet only.
+  // Do not render the legacy top text navigation into #nav.
+  if(isSpaShell()){
+    nav.innerHTML = '';
+    nav.removeAttribute('aria-label');
+    return;
+  }
   nav.innerHTML = NAV_ITEMS.map(t => {
     const active = t.id === activeId ? ' active' : '';
     let href = t.spaPath ? '#' + t.spaPath : t.href;
@@ -128,31 +117,16 @@ function ensureBottomNavDOM(){
 }
 
 // Native-feel swipe-down-to-dismiss, started from the sheet's drag handle only
-// (keeps list-item taps below untouched). Presentation-only; just calls the
-// existing closeMoreSheet().
+// (keeps list-item taps below untouched). Delegates to the shared gesture
+// helper in js/ui.js (bindSheetDragToDismiss) so the More sheet and every
+// generic openSheet() sheet share one drag algorithm instead of two.
 function bindMoreSheetDragToDismiss(){
   const sheet = document.getElementById('more-sheet');
   const handle = sheet && sheet.querySelector('.more-sheet-handle');
   if(!sheet || !handle) return;
-  let startY = 0, deltaY = 0, dragging = false;
-  handle.addEventListener('touchstart', function(e){
-    dragging = true;
-    startY = e.touches[0].clientY;
-    sheet.style.transition = 'none';
-  }, {passive:true});
-  handle.addEventListener('touchmove', function(e){
-    if(!dragging) return;
-    deltaY = e.touches[0].clientY - startY;
-    if(deltaY > 0) sheet.style.transform = 'translateY(' + deltaY + 'px)';
-  }, {passive:true});
-  handle.addEventListener('touchend', function(){
-    if(!dragging) return;
-    dragging = false;
-    sheet.style.transition = '';
-    sheet.style.transform = '';
-    if(deltaY > 60) closeMoreSheet();
-    deltaY = 0;
-  });
+  if(typeof bindSheetDragToDismiss === 'function'){
+    bindSheetDragToDismiss(sheet, handle, closeMoreSheet);
+  }
 }
 
 function isMoreSectionActive(activeId){
@@ -165,10 +139,16 @@ function pinBottomNav(){
   try{
     if(window.visualViewport){
       const vv = window.visualViewport;
-      const gap = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-      el.style.setProperty('bottom', gap + 'px', 'important');
+      const keyboardHeight = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      // Only apply inline positioning when keyboard is actually open
+      if(keyboardHeight > 80){
+        el.style.setProperty('bottom', keyboardHeight + 'px', 'important');
+      } else {
+        // Clear inline bottom so CSS safe-area rule takes over
+        el.style.removeProperty('bottom');
+      }
     }else{
-      el.style.setProperty('bottom', '0px', 'important');
+      el.style.removeProperty('bottom');
     }
   }catch(e){
     /* ignore — bar still uses CSS bottom:0 */
@@ -185,6 +165,11 @@ function ensureBottomNavPinned(){
     requestAnimationFrame(function(){
       ticking = false;
       pinBottomNav();
+      /* Reposition indicator without animation on viewport changes */
+      var bar = document.getElementById('bottom-nav');
+      if(bar && typeof positionBnIndicator === 'function'){
+        positionBnIndicator(bar, false);
+      }
     });
   }
   window.addEventListener('resize', schedule, {passive:true});
@@ -199,30 +184,147 @@ function ensureBottomNavPinned(){
   }, {passive:true});
 }
 
+/* Single persistent liquid/glass indicator for bottom nav.
+   One element moves between tabs; not per-item backgrounds. */
+var _bnIndicatorState = { left: null, top: null, ready: false, animating: false };
+
+function ensureBnIndicator(bar){
+  var ind = bar.querySelector('.bn-indicator');
+  if(!ind){
+    ind = document.createElement('span');
+    ind.className = 'bn-indicator';
+    ind.setAttribute('aria-hidden', 'true');
+    bar.insertBefore(ind, bar.firstChild);
+  }
+  return ind;
+}
+
+function positionBnIndicator(bar, animate){
+  if(!bar) return;
+  var ind = ensureBnIndicator(bar);
+  var active = bar.querySelector('.bottom-nav-item.active');
+  if(!active){
+    ind.style.opacity = '0';
+    return;
+  }
+  /* Cover icon + label as one group; inset so indicator is smaller than full tab */
+  var barRect = bar.getBoundingClientRect();
+  var itemRect = active.getBoundingClientRect();
+  var padX = 5;
+  var padY = 4;
+  var w = Math.max(44, Math.round(itemRect.width - padX * 2));
+  var h = Math.max(44, Math.round(itemRect.height - padY * 2));
+  var left = itemRect.left - barRect.left + (itemRect.width - w) / 2;
+  var top = itemRect.top - barRect.top + (itemRect.height - h) / 2;
+  var reduceMotion = false;
+  try{
+    reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }catch(_e){}
+
+  ind.style.width = w + 'px';
+  ind.style.height = h + 'px';
+  ind.style.opacity = '1';
+
+  var prevLeft = _bnIndicatorState.left;
+  var prevTop = _bnIndicatorState.top;
+  var canAnimate = animate && _bnIndicatorState.ready && !reduceMotion &&
+    prevLeft !== null && Math.abs(prevLeft - left) > 1;
+
+  if(ind._bnSettleTimer){
+    try{ clearTimeout(ind._bnSettleTimer); }catch(_e2){}
+    ind._bnSettleTimer = null;
+  }
+
+  if(!canAnimate){
+    ind.classList.remove('is-traveling', 'is-settling');
+    ind.style.transition = 'none';
+    ind.style.transform = 'translate3d(' + left + 'px,' + top + 'px,0) scale(1,1)';
+    _bnIndicatorState.left = left;
+    _bnIndicatorState.top = top;
+    _bnIndicatorState.ready = true;
+    _bnIndicatorState.animating = false;
+    return;
+  }
+
+  if(_bnIndicatorState.animating){
+    ind.style.transition = 'none';
+    ind.classList.remove('is-traveling', 'is-settling');
+  }
+
+  var dx = left - prevLeft;
+  var dist = Math.abs(dx);
+  /* Perceptible but restrained stretch along travel direction */
+  var stretch = Math.min(1.28, 1 + dist / 200);
+
+  _bnIndicatorState.animating = true;
+
+  /* Phase 1: slight compress at origin */
+  ind.style.transition = 'transform 120ms cubic-bezier(.22,1,.36,1)';
+  ind.classList.add('is-traveling');
+  ind.style.transform = 'translate3d(' + prevLeft + 'px,' + prevTop + 'px,0) scale(' + (0.92 * stretch) + ',' + (0.92 / Math.sqrt(stretch)) + ')';
+
+  requestAnimationFrame(function(){
+    requestAnimationFrame(function(){
+      /* Phase 2: travel with elongation (~380ms — slower, liquid) */
+      ind.style.transition = 'transform 380ms cubic-bezier(.22,1.02,.36,1)';
+      ind.style.transform = 'translate3d(' + left + 'px,' + top + 'px,0) scale(' + stretch + ',' + (1 / Math.sqrt(stretch)) + ')';
+
+      ind._bnSettleTimer = setTimeout(function(){
+        /* Phase 3: soft overshoot then settle */
+        ind.style.transition = 'transform 160ms cubic-bezier(.22,1.1,.36,1)';
+        ind.style.transform = 'translate3d(' + left + 'px,' + top + 'px,0) scale(1.04,0.97)';
+        ind._bnSettleTimer = setTimeout(function(){
+          ind.style.transition = 'transform 140ms cubic-bezier(.22,1,.36,1)';
+          ind.classList.remove('is-traveling');
+          ind.classList.add('is-settling');
+          ind.style.transform = 'translate3d(' + left + 'px,' + top + 'px,0) scale(1,1)';
+          ind._bnSettleTimer = setTimeout(function(){
+            ind.classList.remove('is-settling');
+            ind.style.transition = 'none';
+            _bnIndicatorState.left = left;
+            _bnIndicatorState.top = top;
+            _bnIndicatorState.animating = false;
+            ind._bnSettleTimer = null;
+          }, 145);
+        }, 155);
+      }, 370);
+    });
+  });
+}
+
 function renderBottomNav(activeId){
   ensureBottomNavDOM();
   const bar = document.getElementById('bottom-nav');
   if(!bar) return;
   const moreActive = isMoreSectionActive(activeId);
   const spa = isSpaShell();
+
+  /* Preserve single indicator across re-renders */
+  var prevInd = bar.querySelector('.bn-indicator');
   bar.innerHTML = BOTTOM_NAV_ITEMS.map(t => {
     let active = false;
     if(t.id === 'more') active = moreActive;
     else active = t.id === activeId;
     const cls = 'bottom-nav-item' + (active ? ' active' : '');
+    const ico = navIcon(t.iconKey, active);
     if(t.id === 'more'){
       return `<button type="button" class="${cls}" data-bottom-more="1" aria-label="بیشتر">
-        <span class="bn-ico">${t.icon}</span>
+        <span class="bn-ico">${ico}</span>
         <span class="bn-label">${t.label}</span>
       </button>`;
     }
     let href = t.href;
     if (spa && t.spaPath) href = '#' + t.spaPath;
     return `<a class="${cls}" href="${href}" data-spa-path="${t.spaPath || ''}">
-      <span class="bn-ico">${t.icon}</span>
+      <span class="bn-ico">${ico}</span>
       <span class="bn-label">${t.label}</span>
     </a>`;
   }).join('');
+  if(prevInd){
+    bar.insertBefore(prevInd, bar.firstChild);
+  } else {
+    ensureBnIndicator(bar);
+  }
 
   if (spa) {
     bar.querySelectorAll('a[data-spa-path]').forEach(function (a) {
@@ -248,6 +350,12 @@ function renderBottomNav(activeId){
 
   ensureBottomNavPinned();
   pinBottomNav();
+
+  /* Position jelly indicator after layout. Animate only when tab actually changes. */
+  var shouldAnimate = _bnIndicatorState.ready;
+  requestAnimationFrame(function(){
+    positionBnIndicator(bar, shouldAnimate);
+  });
 }
 
 function fillMoreSheetList(activeId){
@@ -255,10 +363,15 @@ function fillMoreSheetList(activeId){
   if(!list) return;
   const spa = isSpaShell();
   list.innerHTML = MORE_NAV_ITEMS.map(t => {
-    const active = t.id === activeId ? ' active' : '';
+    const isActive = t.id === activeId;
     let href = t.href;
     if (spa && t.spaPath) href = '#' + t.spaPath;
-    return `<a class="more-sheet-item${active}" href="${href}" data-spa-path="${t.spaPath || ''}">${t.label}</a>`;
+    const ico = navIcon(t.iconKey, isActive);
+    return `<a class="more-sheet-item${isActive ? ' active' : ''}" href="${href}" data-spa-path="${t.spaPath || ''}">
+      <span class="more-sheet-item-ico">${ico}</span>
+      <span class="more-sheet-item-label">${t.label}</span>
+      <svg class="more-sheet-item-chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+    </a>`;
   }).join('');
   if (spa) {
     list.querySelectorAll('a[data-spa-path]').forEach(function (a) {
@@ -333,6 +446,44 @@ function goAppBack(e){
   else location.hash = '#/dashboard';
 }
 
+function setHeaderTitle(text, opts){
+  const header = document.querySelector('header');
+  if(!header) return;
+  const h1 = header.querySelector('h1');
+  if(h1 && text) h1.textContent = text;
+  header.classList.toggle('header-root', !!(opts && opts.isRoot));
+  bindHeaderScrollCollapse();
+  // Sync condensed state immediately (covers restored scroll position on
+  // back-navigation) instead of waiting for the next scroll event, so a
+  // page opened already-scrolled doesn't flash a large title first.
+  updateHeaderCondensedState();
+}
+
+function updateHeaderCondensedState(){
+  const header = document.querySelector('header');
+  if(!header) return;
+  const y = window.scrollY || window.pageYOffset || 0;
+  header.classList.toggle('header-condensed', y > 24);
+}
+
+/* iOS Large Title collapse: the header starts large (Phase 6). As the page
+   scrolls, it condenses into a small persistent title bar — the same visual
+   language as UINavigationBar's largeTitleDisplayMode, approximated with a
+   scroll-driven class toggle since Web/PWA has no native large-title API. */
+function bindHeaderScrollCollapse(){
+  if(bindHeaderScrollCollapse._bound) return;
+  bindHeaderScrollCollapse._bound = true;
+  let ticking = false;
+  window.addEventListener('scroll', function(){
+    if(ticking) return;
+    ticking = true;
+    requestAnimationFrame(function(){
+      updateHeaderCondensedState();
+      ticking = false;
+    });
+  }, {passive:true});
+}
+
 function ensureHeaderDate(){
   const el = document.getElementById('header-date');
   if(!el) return;
@@ -390,6 +541,95 @@ function ensureAppBackButton(activeId){
   btn.addEventListener('click', goAppBack);
   header.insertBefore(btn, header.firstChild);
   header.classList.add('has-back');
+}
+
+/* ---------------------------------------------------------------------
+   Pull-to-refresh (Phase 10). Re-reads IndexedDB into the in-memory
+   `data` object (loadData() — a pure read, never mutates anything) and
+   asks the currently-mounted view to redraw itself via the existing
+   ViewHost.setRefresh()/refreshCurrent() registry that all 21 views
+   already use for their own "data changed, redraw" path — this gesture
+   doesn't invent a new refresh mechanism, it just triggers the one that
+   was already there. Falls back to a full route re-resolve only if a
+   view hasn't registered a refresh handler.
+   Gated to start only when the page is scrolled to the very top and the
+   touch didn't begin inside a sheet/overlay/header, so it can never
+   fight the sheet drag-to-dismiss gesture or the header's own scroll
+   listener.
+   --------------------------------------------------------------------- */
+function ensurePullToRefreshDOM(){
+  if(document.getElementById('ptr-indicator')) return;
+  const el = document.createElement('div');
+  el.id = 'ptr-indicator';
+  el.setAttribute('aria-hidden', 'true');
+  el.innerHTML = '<span class="ptr-spinner"></span>';
+  document.body.appendChild(el);
+}
+
+function bindPullToRefresh(){
+  if(bindPullToRefresh._bound) return;
+  bindPullToRefresh._bound = true;
+  ensurePullToRefreshDOM();
+  const el = document.getElementById('ptr-indicator');
+  if(!el) return;
+  const THRESHOLD = 64;
+  let startY = 0, pulling = false, dragging = false, refreshing = false;
+
+  function isBlocked(target){
+    return !!(target && target.closest && target.closest('.overlay, .more-sheet, .more-overlay, #modalRoot, header'));
+  }
+
+  window.addEventListener('touchstart', function(e){
+    if(refreshing){ pulling = false; return; }
+    const y = window.scrollY || window.pageYOffset || 0;
+    if(y > 0 || isBlocked(e.target)){ pulling = false; return; }
+    pulling = true;
+    dragging = false;
+    startY = e.touches[0].clientY;
+  }, {passive:true});
+
+  window.addEventListener('touchmove', function(e){
+    if(!pulling || refreshing) return;
+    const dy = e.touches[0].clientY - startY;
+    if(dy <= 0){
+      if(dragging){ dragging = false; el.style.transform = ''; el.classList.remove('show','ptr-ready'); }
+      return;
+    }
+    dragging = true;
+    const pull = Math.min(90, Math.pow(dy, 0.72) * 3); // rubber-band resistance
+    el.style.transform = 'translateY(' + pull + 'px) rotate(' + Math.min(220, pull * 2.4) + 'deg)';
+    el.classList.add('show');
+    el.classList.toggle('ptr-ready', pull >= THRESHOLD * 0.85);
+  }, {passive:true});
+
+  window.addEventListener('touchend', function(){
+    if(!pulling) return;
+    pulling = false;
+    if(!dragging) return;
+    dragging = false;
+    const ready = el.classList.contains('ptr-ready');
+    el.style.transform = '';
+    if(ready) doRefresh();
+    else el.classList.remove('show','ptr-ready');
+  });
+
+  async function doRefresh(){
+    refreshing = true;
+    el.classList.add('show', 'ptr-spinning');
+    el.classList.remove('ptr-ready');
+    const minVisible = new Promise(function(res){ setTimeout(res, 420); });
+    try{
+      if(typeof loadData === 'function') await loadData();
+      const refreshed = (typeof ViewHost !== 'undefined' && ViewHost.refreshCurrent) ? ViewHost.refreshCurrent() : false;
+      if(!refreshed && typeof AppRouter !== 'undefined' && AppRouter.resolve) AppRouter.resolve();
+    }catch(err){
+      console.error('[pull-to-refresh] reload failed', err);
+      if(typeof showToast === 'function') showToast('بروزرسانی ناموفق بود');
+    }
+    await minVisible;
+    el.classList.remove('show', 'ptr-spinning');
+    refreshing = false;
+  }
 }
 
 function getQueryParam(name){
@@ -564,41 +804,79 @@ async function bootSpaShell() {
       return 'dashboard';
     }
 
-    function makeViewHandler(View, activeId) {
+    /* Per-route nav titles — iOS large-title convention: the tab bar labels
+       already used for BOTTOM_NAV_ITEMS/MORE_NAV_ITEMS are reused for list
+       pages so there is exactly one Persian label per section, and detail
+       routes (customer/invoice/supplier/prospect/watch) get an honest
+       generic detail title since the router has no record loaded yet to
+       name it more specifically — a real per-record title (e.g. the
+       customer's name) needs to be set by that view itself once it has
+       loaded its data; see setHeaderTitle() below, callable from any view. */
+    const PAGE_TITLES = {
+      '/': 'حبوبات و خشکبار باقری',
+      '/dashboard': 'حبوبات و خشکبار باقری',
+      '/products': 'اجناس',
+      '/inventory': 'انبار',
+      '/reports': 'گزارش‌ها',
+      '/customers': 'مشتریان',
+      '/customer': 'جزئیات مشتری',
+      '/payments': 'پرداخت‌ها',
+      '/invoices': 'فاکتورها',
+      '/invoice': 'فاکتور',
+      '/suppliers': 'تأمین‌کنندگان',
+      '/supplier': 'جزئیات تأمین‌کننده',
+      '/visits': 'ویزیت مشتریان',
+      '/prospects': 'ارزیابی مغازه‌ها',
+      '/prospect': 'جزئیات مغازه',
+      '/prospect-routes': 'مسیرهای ویزیت',
+      '/evaluation': 'ارزیابی مغازه',
+      '/checks': 'چک‌ها',
+      '/game': 'مرکز بازی فروش',
+      '/settings': 'تنظیمات و Backup',
+      '/locations': 'مناطق و مسیرها',
+      '/watches': 'واچ‌ها',
+      '/watch': 'جزئیات واچ'
+    };
+
+    function makeViewHandler(View, activeId, path) {
       return function (params) {
         renderSharedNav(activeId);
         renderBottomNav(activeId);
         ensureAppBackButton(activeId);
+        if (typeof setHeaderTitle === 'function') {
+          setHeaderTitle(PAGE_TITLES[path] || '', { isRoot: activeId === 'dashboard' && (path === '/' || path === '/dashboard') });
+        }
         const root = document.getElementById('main');
         if (!root || !View || typeof View.mount !== 'function') return function () {};
         return View.mount(root, params || {});
       };
     }
 
-    AppRouter.registerRoute('/', makeViewHandler(typeof DashboardView !== 'undefined' ? DashboardView : null, 'dashboard'));
-    AppRouter.registerRoute('/dashboard', makeViewHandler(typeof DashboardView !== 'undefined' ? DashboardView : null, 'dashboard'));
-    AppRouter.registerRoute('/products', makeViewHandler(typeof ProductsView !== 'undefined' ? ProductsView : null, 'products'));
-    AppRouter.registerRoute('/inventory', makeViewHandler(typeof InventoryView !== 'undefined' ? InventoryView : null, 'inventory'));
-    AppRouter.registerRoute('/reports', makeViewHandler(typeof ReportsView !== 'undefined' ? ReportsView : null, 'reports'));
-    AppRouter.registerRoute('/customers', makeViewHandler(typeof CustomersView !== 'undefined' ? CustomersView : null, 'customers'));
-    AppRouter.registerRoute('/customer', makeViewHandler(typeof CustomerView !== 'undefined' ? CustomerView : null, 'customers'));
-    AppRouter.registerRoute('/payments', makeViewHandler(typeof PaymentsView !== 'undefined' ? PaymentsView : null, 'payments'));
-    AppRouter.registerRoute('/invoices', makeViewHandler(typeof InvoicesView !== 'undefined' ? InvoicesView : null, 'invoices'));
-    AppRouter.registerRoute('/invoice', makeViewHandler(typeof InvoiceView !== 'undefined' ? InvoiceView : null, 'invoices'));
-    AppRouter.registerRoute('/suppliers', makeViewHandler(typeof SuppliersView !== 'undefined' ? SuppliersView : null, 'suppliers'));
-    AppRouter.registerRoute('/supplier', makeViewHandler(typeof SupplierView !== 'undefined' ? SupplierView : null, 'suppliers'));
-    AppRouter.registerRoute('/visits', makeViewHandler(typeof VisitsView !== 'undefined' ? VisitsView : null, 'visits'));
-    AppRouter.registerRoute('/prospects', makeViewHandler(typeof ProspectsView !== 'undefined' ? ProspectsView : null, 'prospects'));
-    AppRouter.registerRoute('/prospect', makeViewHandler(typeof ProspectView !== 'undefined' ? ProspectView : null, 'prospects'));
-    AppRouter.registerRoute('/prospect-routes', makeViewHandler(typeof LocationsView !== 'undefined' ? LocationsView : null, 'settings'));
-    AppRouter.registerRoute('/evaluation', makeViewHandler(typeof EvaluationView !== 'undefined' ? EvaluationView : null, 'prospects'));
-    AppRouter.registerRoute('/checks', makeViewHandler(typeof ChecksView !== 'undefined' ? ChecksView : null, 'checks'));
-    AppRouter.registerRoute('/game', makeViewHandler(typeof GameCenterView !== 'undefined' ? GameCenterView : null, 'game'));
-    AppRouter.registerRoute('/settings', makeViewHandler(typeof SettingsView !== 'undefined' ? SettingsView : null, 'settings'));
-    AppRouter.registerRoute('/locations', makeViewHandler(typeof LocationsView !== 'undefined' ? LocationsView : null, 'settings'));
-    AppRouter.registerRoute('/watches', makeViewHandler(typeof WatchesView !== 'undefined' ? WatchesView : null, 'watches'));
-    AppRouter.registerRoute('/watch', makeViewHandler(typeof WatchDetailView !== 'undefined' ? WatchDetailView : null, 'watches'));
+    AppRouter.registerRoute('/', makeViewHandler(typeof DashboardView !== 'undefined' ? DashboardView : null, 'dashboard', '/'));
+    AppRouter.registerRoute('/dashboard', makeViewHandler(typeof DashboardView !== 'undefined' ? DashboardView : null, 'dashboard', '/dashboard'));
+    AppRouter.registerRoute('/products', makeViewHandler(typeof ProductsView !== 'undefined' ? ProductsView : null, 'products', '/products'));
+    AppRouter.registerRoute('/inventory', makeViewHandler(typeof InventoryView !== 'undefined' ? InventoryView : null, 'inventory', '/inventory'));
+    AppRouter.registerRoute('/reports', makeViewHandler(typeof ReportsView !== 'undefined' ? ReportsView : null, 'reports', '/reports'));
+    AppRouter.registerRoute('/customers', makeViewHandler(typeof CustomersView !== 'undefined' ? CustomersView : null, 'customers', '/customers'));
+    AppRouter.registerRoute('/customer', makeViewHandler(typeof CustomerView !== 'undefined' ? CustomerView : null, 'customers', '/customer'));
+    AppRouter.registerRoute('/payments', makeViewHandler(typeof PaymentsView !== 'undefined' ? PaymentsView : null, 'payments', '/payments'));
+    AppRouter.registerRoute('/invoices', makeViewHandler(typeof InvoicesView !== 'undefined' ? InvoicesView : null, 'invoices', '/invoices'));
+    AppRouter.registerRoute('/invoice', makeViewHandler(typeof InvoiceView !== 'undefined' ? InvoiceView : null, 'invoices', '/invoice'));
+    AppRouter.registerRoute('/suppliers', makeViewHandler(typeof SuppliersView !== 'undefined' ? SuppliersView : null, 'suppliers', '/suppliers'));
+    AppRouter.registerRoute('/supplier', makeViewHandler(typeof SupplierView !== 'undefined' ? SupplierView : null, 'suppliers', '/supplier'));
+    AppRouter.registerRoute('/visits', makeViewHandler(typeof VisitsView !== 'undefined' ? VisitsView : null, 'visits', '/visits'));
+    AppRouter.registerRoute('/prospects', makeViewHandler(typeof ProspectsView !== 'undefined' ? ProspectsView : null, 'prospects', '/prospects'));
+    AppRouter.registerRoute('/prospect', makeViewHandler(typeof ProspectView !== 'undefined' ? ProspectView : null, 'prospects', '/prospect'));
+    AppRouter.registerRoute('/prospect-routes', makeViewHandler(typeof LocationsView !== 'undefined' ? LocationsView : null, 'settings', '/prospect-routes'));
+    AppRouter.registerRoute('/evaluation', makeViewHandler(typeof EvaluationView !== 'undefined' ? EvaluationView : null, 'prospects', '/evaluation'));
+    AppRouter.registerRoute('/checks', makeViewHandler(typeof ChecksView !== 'undefined' ? ChecksView : null, 'checks', '/checks'));
+    AppRouter.registerRoute('/game', makeViewHandler(typeof GameCenterView !== 'undefined' ? GameCenterView : null, 'game', '/game'));
+    AppRouter.registerRoute('/settings', makeViewHandler(typeof SettingsView !== 'undefined' ? SettingsView : null, 'settings', '/settings'));
+    AppRouter.registerRoute('/locations', makeViewHandler(typeof LocationsView !== 'undefined' ? LocationsView : null, 'settings', '/locations'));
+    AppRouter.registerRoute('/watches', makeViewHandler(typeof WatchesView !== 'undefined' ? WatchesView : null, 'watches', '/watches'));
+    AppRouter.registerRoute('/watch', makeViewHandler(typeof WatchDetailView !== 'undefined' ? WatchDetailView : null, 'watches', '/watch'));
     AppRouter.start();
+    bindPullToRefresh();
   } catch (e) {
     console.error('bootSpaShell failed', e);
     if (typeof showToast === 'function') showToast('خطا در بارگذاری اطلاعات');
