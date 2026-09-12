@@ -346,10 +346,21 @@ input[placeholder*="جستجو"]:focus{
 }
 
 /* ---------- Toolbar Selects (Capsule) ---------- */
+.field select,
+.tx-toolbar-select,
+.inv-discount-block select{
+  -webkit-appearance:none;
+  appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23667085' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:left 12px center;
+  background-size:16px 16px;
+}
+
 .tx-toolbar-select{
   min-height:var(--vg-control-height);
-  padding:11px 28px 11px 12px;
-  background:var(--vg-color-surface);
+  padding:11px 12px 11px 34px;
+  background-color:var(--vg-color-surface);
   border:1px solid var(--vg-color-border);
   color:var(--vg-color-text);
   font-family:inherit;
@@ -458,6 +469,35 @@ input[placeholder*="جستجو"]:focus{
 .empty .btn{
   margin-top:4px;
 }
+/* Form guidance is not an empty-state: suppress the decorative empty icon. */
+.field > .empty{
+  display:block;
+  padding:4px 0 0;
+  margin:0;
+  text-align:right;
+  font-size:.75rem;
+  line-height:1.55;
+}
+.field > .empty::before{display:none;}
+
+
+/* Form guidance rendered outside a .field is still not an empty state. */
+.form-hint{
+  display:block;
+  padding:4px 0;
+  margin:0;
+  text-align:right;
+  line-height:1.55;
+}
+.form-hint::before{display:none;}
+
+/* Financial check status: preserve surrounding row layout while meeting the
+   minimum iOS touch target for the state-changing control. */
+[data-toggle-check].tx-status-btn,
+button[data-toggle-check]{
+  min-height:44px;
+  min-width:44px;
+}
 
 /* ---------- Lists / Ledger rows ---------- */
 .ledger-row,
@@ -507,6 +547,8 @@ a.ledger-row:active{
 .accent-red{color:var(--vg-color-danger)!important;}
 .accent-amber{color:var(--vg-color-warning)!important;}
 
+/* Warning/status text must remain readable on white surfaces. */
+
 /* ---------- Toolbars ---------- */
 .btn-row{
   display:flex;
@@ -531,7 +573,7 @@ a.ledger-row:active{
 /* ---------- Toast (floating, not glass) ---------- */
 .toast{
   position:fixed;
-  bottom:calc(84px + env(safe-area-inset-bottom,0px));
+  bottom:calc(84px + env(safe-area-inset-bottom,0px) + var(--keyboard-height,0px));
   left:50%;
   transform:translateX(-50%) translateY(10px);
   background:var(--vg-color-primary);
@@ -607,4 +649,12 @@ a.ledger-row:active{
 
 @media (min-width:901px){
   .bottom-nav{display:none!important;}
+}
+
+/* Chip rows are explicit flex containers so gap is deterministic on iOS Safari. */
+.chip-row{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  gap:8px;
 }
