@@ -159,19 +159,23 @@ header h1{
   font-size:calc(1.05rem + (0.65rem * (1 - var(--header-progress))));
 }
 header .header-date{
-  margin:3px 0 0;
+  position:absolute;
+  top:calc(env(safe-area-inset-top,0px) + 13px);
+  left:50%;
+  transform:translateX(-50%);
+  margin:0;
   font-size:.72rem;
   color:#667085;
-  font-weight:600;
-  max-height:calc(1.4em * (1 - var(--header-progress)));
-  opacity:calc(1 - var(--header-progress));
+  font-weight:650;
+  line-height:1.25;
+  white-space:nowrap;
+  max-width:48%;
   overflow:hidden;
+  text-overflow:ellipsis;
+  pointer-events:none;
+  z-index:5;
 }
-/* Only the Dashboard (root) tab keeps the date subtitle — sub-pages get a
-   clean nav title with no extra line, matching iOS nav-bar convention. */
-header:not(.header-root) .header-date{
-  display:none;
-}
+
 button.app-back{
   position:absolute;
   top:calc(env(safe-area-inset-top,0px) + 4px);
@@ -216,7 +220,8 @@ button.app-back .app-back-txt{
    into the same row as the button continuously as --header-progress goes
    from 0 to 1 — again, no transition, just a scroll-driven calc(). */
 header.has-back{
-  position:relative;
+  position:sticky;
+  top:0;
   padding-block-start:calc(env(safe-area-inset-top,0px) + 10px + (42px * (1 - var(--header-progress))));
   padding-inline-start:calc(16px + (40px * var(--header-progress)));
 }
