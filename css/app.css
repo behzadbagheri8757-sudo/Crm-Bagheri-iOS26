@@ -127,65 +127,50 @@ header{
   position:sticky;
   top:0;
   z-index:30;
-  padding:calc(10px + env(safe-area-inset-top,0px)) 16px calc(10px + var(--header-title-pad,26px));
+  --header-progress:0; /* 0 = fully expanded (top of page), 1 = fully condensed — set directly from scrollY every frame, not animated, so it never fights the scroll gesture */
+  padding-inline:16px;
+  padding-block-start:calc(env(safe-area-inset-top,0px) + 10px);
+  padding-block-end:calc(10px + (24px * (1 - var(--header-progress))));
   text-align:start;
   background:rgba(255,255,255,.86);
   backdrop-filter:saturate(180%) blur(20px);
   -webkit-backdrop-filter:saturate(180%) blur(20px);
   border-bottom:1px solid rgba(31,41,55,.08);
   color:#1F2937;
-  transition:padding 220ms var(--ios-ease-out,ease);
 }
 /* Large Title (Phase 6): resting state is the big iOS-style title, leading-
    aligned (start = right in this app's RTL layout, matching Persian nav
-   titles rather than centered "web dashboard" branding). */
+   titles rather than centered "web dashboard" branding).
+   Collapse-on-scroll (Phase 6, revised): font-size/padding/opacity are all
+   `calc()` expressions of --header-progress, which js/nav.js sets straight
+   from window.scrollY on every scroll frame — no CSS transition anywhere
+   in this block. A transitioned value plays out on its own timeline once
+   triggered, which is exactly what caused the earlier snap/lag: the title
+   kept animating after the finger/scroll had already stopped or reversed.
+   Tying it to scroll position directly makes it track the gesture 1:1,
+   collapse and expand identically in either scroll direction, and stop
+   instantly if the scroll stops — the native UINavigationBar feel. */
 header h1{
   margin:0;
-  font-size:1.7rem;
   font-weight:800;
   color:#1F2937;
   letter-spacing:.1px;
   line-height:1.25;
-  transition:font-size 220ms var(--ios-ease-out,ease);
+  font-size:calc(1.05rem + (0.65rem * (1 - var(--header-progress))));
 }
 header .header-date{
   margin:3px 0 0;
   font-size:.72rem;
   color:#667085;
   font-weight:600;
-  transition:opacity 160ms ease, max-height 220ms ease, margin 220ms ease;
-  max-height:1.4em;
-  opacity:1;
+  max-height:calc(1.4em * (1 - var(--header-progress)));
+  opacity:calc(1 - var(--header-progress));
   overflow:hidden;
 }
 /* Only the Dashboard (root) tab keeps the date subtitle — sub-pages get a
    clean nav title with no extra line, matching iOS nav-bar convention. */
 header:not(.header-root) .header-date{
   display:none;
-}
-/* Collapsed/compact state: scrolled content shrinks the title into a
-   persistent small nav-bar title, the same way UINavigationBar's
-   largeTitleDisplayMode collapses on scroll. */
-/* Collapsed/compact state: scrolled content shrinks the title into a
-   persistent small nav-bar title, the same way UINavigationBar's
-   largeTitleDisplayMode collapses on scroll. min-height matches the 44pt
-   iOS compact nav bar so the back button's 44px touch target always fits
-   inside it without overflowing the header's bottom edge. */
-header.header-condensed{
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
-  min-height:calc(env(safe-area-inset-top,0px) + 52px);
-  padding-block:0;
-  --header-title-pad:0px;
-}
-header.header-condensed h1{
-  font-size:1.05rem;
-}
-header.header-condensed .header-date{
-  opacity:0;
-  max-height:0;
-  margin-top:0;
 }
 button.app-back{
   position:absolute;
@@ -224,27 +209,20 @@ button.app-back .app-back-txt{
   text-overflow:ellipsis;
   white-space:nowrap;
 }
-/* Two-row Large Title layout when a back button is present:
-   the back chevron owns a slim top strip (like UINavigationBar's compact
-   bar); the large title flows on its own line below it, so they never sit
-   side-by-side and overlap on the same (start) edge in RTL. Once the
-   header condenses on scroll, everything collapses back to one row and the
-   title simply gets start-padding to clear the button beside it. */
+/* Two-row Large Title layout when a back button is present: the back
+   chevron stays fixed near the top-start corner (see button.app-back
+   above — its position never depends on --header-progress), and the large
+   title starts far enough below it to clear it, then rises and shrinks
+   into the same row as the button continuously as --header-progress goes
+   from 0 to 1 — again, no transition, just a scroll-driven calc(). */
 header.has-back{
   position:relative;
-}
-header.has-back:not(.header-condensed){
-  padding-block-start:calc(env(safe-area-inset-top,0px) + 52px);
-}
-header.has-back.header-condensed{
-  padding-inline-start:56px;
+  padding-block-start:calc(env(safe-area-inset-top,0px) + 10px + (42px * (1 - var(--header-progress))));
+  padding-inline-start:calc(16px + (40px * var(--header-progress)));
 }
 @media(max-width:360px){
-  button.app-back .app-back-txt{
-    display:none;
-  }
-  header.has-back.header-condensed{
-    padding-inline-start:48px;
+  header.has-back{
+    padding-inline-start:calc(16px + (32px * var(--header-progress)));
   }
 }
 
