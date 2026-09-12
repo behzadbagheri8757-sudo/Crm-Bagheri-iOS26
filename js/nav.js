@@ -169,6 +169,7 @@ function bindBottomNavMinimizeOnScroll(){
   var directionThreshold = 1;
   var idleTimer = null;
   var idleDelay = 520;
+  var restoreRaf = null;
 
   function reduceMotion(){
     try{
@@ -190,8 +191,34 @@ function bindBottomNavMinimizeOnScroll(){
     });
   }
 
+  function cancelRestore(){
+    if(restoreRaf != null){
+      cancelAnimationFrame(restoreRaf);
+      restoreRaf = null;
+    }
+  }
+
+  function restoreNaturally(){
+    cancelRestore();
+    var start = progress;
+    if(start <= .01){ setProgress(0, false); return; }
+    var started = performance.now();
+    var duration = reduceMotion() ? 1 : 360;
+    function frame(now){
+      var t = Math.min(1, (now - started) / duration);
+      /* Ease-out with a tiny spring-like tail; the bar should feel like it is
+         settling into place, not snapping back when scrolling stops. */
+      var eased = 1 - Math.pow(1 - t, 3);
+      setProgress(start * (1 - eased), true);
+      if(t < 1) restoreRaf = requestAnimationFrame(frame);
+      else { restoreRaf = null; setProgress(0, true); }
+    }
+    restoreRaf = requestAnimationFrame(frame);
+  }
+
   function apply(){
     ticking = false;
+    cancelRestore();
     var bar = document.getElementById('bottom-nav');
     if(!bar) return;
     var y = window.scrollY || window.pageYOffset || 0;
@@ -209,13 +236,13 @@ function bindBottomNavMinimizeOnScroll(){
   }
 
   function schedule(){
+    cancelRestore();
     if(idleTimer) clearTimeout(idleTimer);
     idleTimer = setTimeout(function(){
       idleTimer = null;
-      // Once scrolling has genuinely stopped, restore the full tab bar.
-      // Upward scrolling still restores it immediately; this idle restore
-      // prevents the minimized state from getting stuck after a downward drag.
-      setProgress(0, false);
+      // Once scrolling has genuinely stopped, restore the full tab bar with
+      // a continuous settle rather than a discrete jump.
+      restoreNaturally();
     }, idleDelay);
     if(ticking) return;
     ticking = true;
@@ -507,25 +534,59 @@ function closeMoreSheet(){
   }, 200);
 }
 
-function canAppHistoryBack(){
-  try{
-    const ref = document.referrer || '';
-    if(!ref) return false;
-    const u = new URL(ref);
-    return u.origin === location.origin;
-  }catch(e){
-    return false;
+function isBackRoute(path){
+  return ['/customer','/invoice','/supplier','/prospect','/evaluation','/prospect-routes','/locations','/watch'].indexOf(path) !== -1;
+}
+
+function routeBackTarget(path, params){
+  params = params || {};
+  switch(path){
+    case '/customer':
+      return {path:'/customers'};
+    case '/invoice': {
+      /* If the invoice belongs to a customer, return to that customer rather
+         than blindly returning to the invoice list. Otherwise use the list. */
+      try{
+        const id = params.id;
+        const invs = (typeof data !== 'undefined' && Array.isArray(data.invoices)) ? data.invoices : [];
+        const inv = invs.find(function(x){ return String(x.id) === String(id); });
+        if(inv && inv.customerId != null) return {path:'/customer', params:{id:String(inv.customerId)}};
+      }catch(_e){}
+      return {path:'/invoices'};
+    }
+    case '/supplier':
+      return {path:'/suppliers'};
+    case '/prospect':
+      return {path:'/prospects'};
+    case '/evaluation':
+      return params.id != null ? {path:'/prospect', params:{id:String(params.id)}} : {path:'/prospects'};
+    case '/prospect-routes':
+    case '/locations':
+      return {path:'/prospects'};
+    case '/watch':
+      return {path:'/watches'};
+    default:
+      return {path:'/dashboard'};
   }
 }
 
 function goAppBack(e){
   if(e && typeof e.preventDefault === 'function') e.preventDefault();
-  if(canAppHistoryBack() && window.history.length > 1){
-    window.history.back();
-    return;
+  try{
+    const cur = (typeof AppRouter !== 'undefined' && AppRouter.getCurrent) ? AppRouter.getCurrent() : null;
+    const path = cur && cur.path ? cur.path : '/dashboard';
+    if(!isBackRoute(path)) return;
+    const target = routeBackTarget(path, cur.params || {});
+    if(typeof AppRouter !== 'undefined' && AppRouter.navigate){
+      AppRouter.navigate(target.path, target.params || null);
+      return;
+    }
+    location.hash = '#' + target.path;
+  }catch(_e){
+    try{
+      if(typeof AppRouter !== 'undefined' && AppRouter.navigate) AppRouter.navigate('/dashboard');
+    }catch(__e){}
   }
-  if (typeof AppRouter !== 'undefined' && AppRouter.navigate) AppRouter.navigate('/dashboard');
-  else location.hash = '#/dashboard';
 }
 
 function setHeaderTitle(text, opts){
@@ -603,7 +664,7 @@ function ensureHeaderDate(){
   }
 }
 
-function ensureAppBackButton(activeId){
+function ensureAppBackButton(activeId, routePath){
   const header = document.querySelector('header');
   if(!header) return;
 
@@ -619,8 +680,9 @@ function ensureAppBackButton(activeId){
   // rendered on any route. activeId is the one signal the router actually
   // updates per navigation, so it's the only correct check here.
   const isDash = !activeId || activeId === 'dashboard';
+  const showBack = !isDash && isBackRoute(routePath || '');
 
-  if(isDash){
+  if(!showBack){
     if(existing) existing.remove();
     header.classList.remove('has-back');
     return;
@@ -943,7 +1005,7 @@ async function bootSpaShell() {
       return function (params) {
         renderSharedNav(activeId);
         renderBottomNav(activeId);
-        ensureAppBackButton(activeId);
+        ensureAppBackButton(activeId, path);
         if (typeof setHeaderTitle === 'function') {
           setHeaderTitle(PAGE_TITLES[path] || '', { isRoot: activeId === 'dashboard' && (path === '/' || path === '/dashboard') });
         }
