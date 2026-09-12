@@ -56,12 +56,12 @@
               if (remLineQty <= 0) {
                 return `<div class="field" style="opacity:.55;">
                   <label>${esc(it.name)} (خریداری‌شده: ${it.qty} — <span class="accent-rust">۰ قابل‌برگشت</span>؛ موجودی این خرید مصرف شده)</label>
-                  <input class="ret-item-qty" data-item-id="${esc(it.id)}" data-product-id="${esc(it.productId)}" data-unit-cost="${it.unitCost}" data-max="0" type="text" inputmode="decimal" disabled value="">
+                  <input class="ret-item-qty" data-item-id="${it.id}" data-product-id="${it.productId}" data-unit-cost="${it.unitCost}" data-max="0" type="text" inputmode="decimal" disabled value="">
                 </div>`;
               }
               return `<div class="field">
                 <label>${esc(it.name)} (خریداری‌شده: ${it.qty}، حداکثر قابل‌برگشت: ${remLineQty})</label>
-                <input class="ret-item-qty" data-item-id="${esc(it.id)}" data-product-id="${esc(it.productId)}" data-unit-cost="${it.unitCost}" data-max="${remLineQty}" type="text" inputmode="decimal" placeholder="تعداد برگشتی (اختیاری)">
+                <input class="ret-item-qty" data-item-id="${it.id}" data-product-id="${it.productId}" data-unit-cost="${it.unitCost}" data-max="${remLineQty}" type="text" inputmode="decimal" placeholder="تعداد برگشتی (اختیاری)">
               </div>`;
             }).join('')}
             </div>
@@ -387,7 +387,7 @@
 
     function renderMultiRows() {
       document.getElementById('multi-item-rows').innerHTML = multiItems.map((it, idx) => `
-        <div class="ledger-row supplier-purchase-item-row"><span class="name"><span class="tx-row-title">${esc((data.products.find(x => x.id === it.productId) || {}).name || '?')}</span><span class="sub">${it.qty} ${esc(String((data.products.find(x => x.id === it.productId) || {}).packageWeight ? 'بسته' : 'واحد'))}${(data.products.find(x => x.id === it.productId) || {}).packageWeight ? ' · وزن بسته ' + enToFaDigits(String((data.products.find(x => x.id === it.productId) || {}).packageWeight)) : ''} · قیمت واحد ${toman(it.unitCost)} ت</span></span><span class="filler"></span><span class="amount"><span class="tx-row-total">${toman(it.qty * it.unitCost)} ت</span><br><button class="btn danger small" data-del-item="${idx}" type="button">حذف</button></span></div>
+        <div class="ledger-row"><span class="name">${esc((data.products.find(x => x.id === it.productId) || {}).name || '?')} × ${it.qty} @ ${toman(it.unitCost)} ت</span><span class="filler"></span><span class="amount">${toman(it.qty * it.unitCost)} ت<br><button class="btn danger small" data-del-item="${idx}" type="button">حذف</button></span></div>
       `).join('');
       document.getElementById('multi-item-total').textContent = toman(multiItems.reduce((s2, it) => s2 + it.qty * it.unitCost, 0));
       document.querySelectorAll('[data-del-item]').forEach(btn => {

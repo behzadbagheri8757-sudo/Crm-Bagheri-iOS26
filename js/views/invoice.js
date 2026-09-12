@@ -107,12 +107,9 @@
     }) : [];
 
 
-    const invItemsProfit = (inv.items || []).reduce(function (a, it) {
+    const invProfit = (inv.items || []).reduce(function (a, it) {
       return a + ((it.price || 0) - (it.buyPrice || 0)) * (it.qty || 0) - (it.discount || 0);
-    }, 0);
-    // Use the canonical invoice-level discount calculation so percentage and
-    // fixed discounts are treated identically to reports/customerProfit.
-    const invProfit = invItemsProfit - invoiceDiscountAmount(inv);
+    }, 0) - ((inv.discountType === 'percent') ? 0 : (inv.discount || 0));
 
     const itemRows = (inv.items || []).map(function (it, idx) {
       const line = (it.qty || 0) * (it.price || 0) - (it.discount || 0);
