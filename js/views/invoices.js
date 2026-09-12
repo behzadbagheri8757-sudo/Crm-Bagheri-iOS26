@@ -82,15 +82,16 @@
           : `<span class="tx-row-meta accent-olive">تسویه</span>`;
         return `
         <a class="ledger-row tx-row" href="#/invoice?id=${encodeURIComponent(inv.id)}" style="text-decoration:none;color:inherit;">
-          <span class="name">
+          <span class="name invoice-row-main">
             <span class="tx-row-title">#${esc(String(inv.number||''))} · ${esc(custName)}</span>
             <span class="sub">${faDate(inv.date)} — <span class="${st.cls}">${st.label}</span></span>
             ${remain > 0.5 || paid > 0 ? `<span class="sub">پرداخت‌شده ${toman(paid)} ت</span>` : ''}
           </span>
           <span class="filler"></span>
-          <span class="amount tx-row-amount">
-            <span class="tx-row-total">${toman(inv.total)} ت</span>
-            ${remainBit}
+          <span class="amount tx-row-amount invoice-row-summary">
+            <span class="invoice-row-total"><span class="invoice-row-label">جمع فاکتور</span><span class="tx-row-total">${toman(inv.total)} ت</span></span>
+            ${remain > 0.5 ? `<span class="invoice-row-remain"><span class="invoice-row-label">مانده</span>${remainBit}</span>` : ''}
+            ${paid > 0 ? `<span class="invoice-row-paid"><span class="invoice-row-label">پرداخت‌شده</span><span class="tx-row-meta accent-olive">${toman(paid)} ت</span></span>` : ''}
           </span>
         </a>`;
       }).join('');
@@ -122,7 +123,6 @@
       return `<button type="button" class="chip ${invFilter===id?'active':''}" data-if="${id}">${label}</button>`;
     };
     root.innerHTML = `
-      <h2 class="section-title">فاکتورها</h2>
       <div class="field"><input id="invoice-search" placeholder="جستجوی شماره فاکتور یا نام مشتری..." value="${esc(invQuery)}" autocomplete="off"></div>
       <div class="chip-row" id="invoice-chips">
         ${chip('all','همه')}

@@ -83,7 +83,6 @@
       return `<button type="button" class="chip ${supFilter === id ? 'active' : ''}" data-sf="${id}">${label}</button>`;
     };
     root.innerHTML = `
-      <h2 class="section-title">تامین‌کنندگان</h2>
       <div class="field"><input id="supplier-search" placeholder="جستجوی نام یا تلفن..." value="${esc(supQuery)}" autocomplete="off"></div>
       <div class="chip-row" id="supplier-chips">
         ${chip('all', 'همه')}

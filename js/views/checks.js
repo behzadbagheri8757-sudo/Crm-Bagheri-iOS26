@@ -153,7 +153,6 @@
       return `<button type="button" class="chip ${chkFilter === id ? 'active' : ''}" data-cf="${id}">${label}</button>`;
     };
     root.innerHTML = `
-      <h2 class="section-title">چک‌ها</h2>
       <div class="field"><input id="check-search" placeholder="جستجوی مشتری، شماره چک، مبلغ..." value="${esc(chkQuery)}" autocomplete="off"></div>
       <div class="chip-row" id="check-chips">
         ${chip('all','همه')}

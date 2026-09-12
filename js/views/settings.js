@@ -67,13 +67,12 @@
     }
 
     root.innerHTML = `
-      <h2 class="section-title">تنظیمات</h2>
-      <p class="tx-hint">مدیریت سیستم، داده و امنیت — بدون تغییر منطق ذخیره‌سازی.</p>
+      <p class="tx-hint">مدیریت داده‌ها، پشتیبان‌گیری و امنیت برنامه.</p>
 
       <div class="settings-section mgmt-section">
         <h3 class="mgmt-section-title">داده و بکاپ</h3>
         <div class="settings-warn">
-          فایل JSON را در جایی امن نگه دارید (Files / ابر / کامپیوتر). روی iPhone معمولاً برگه Share و «Save to Files» باز می‌شود.
+          فایل JSON را در جایی امن نگه دارید (Files / ابر). روی iPhone معمولاً Share → Save to Files.
         </div>
         <div class="btn-row tx-actions-primary">
           <button type="button" class="btn" id="export-json">دریافت Backup (JSON)</button>
@@ -84,7 +83,7 @@
       <div class="settings-section mgmt-section">
         <h3 class="mgmt-section-title">بازیابی از فایل</h3>
         <div class="settings-warn">
-          بازیابی، اطلاعات فعلی را <b>جایگزین</b> می‌کند. قبل از جایگزینی، نسخهٔ فعلی به‌صورت خودکار برای «برگشت از بازیابی» ذخیره می‌شود.
+          بازیابی اطلاعات فعلی را <b>جایگزین</b> می‌کند؛ قبلش نسخهٔ برگشت ذخیره می‌شود.
         </div>
         <div class="field"><label>انتخاب فایل بکاپ JSON</label>
           <input type="file" id="import-file" accept="application/json,.json">
@@ -123,13 +122,13 @@
       <details class="tx-details mgmt-section">
         <summary>آمار دادهٔ فعلی</summary>
         <div class="cards" style="margin-top:10px;">
-          <div class="card"><div class="label">مشتریان</div><div class="value">${(data.customers || []).length}</div></div>
-          <div class="card"><div class="label">کالاها</div><div class="value">${(data.products || []).length}</div></div>
-          <div class="card"><div class="label">فاکتورها</div><div class="value">${(data.invoices || []).length}</div></div>
-          <div class="card"><div class="label">تأمین‌کنندگان</div><div class="value">${(data.suppliers || []).length}</div></div>
-          <div class="card"><div class="label">پرداخت‌ها</div><div class="value">${(data.payments || []).length}</div></div>
-          <div class="card"><div class="label">چک‌ها</div><div class="value">${(data.checks || []).length}</div></div>
-          <div class="card wide"><div class="label">ویزیت مشتریان</div><div class="value">${visitCount}</div></div>
+          <div class="card"><div class="label">مشتریان</div><div class="value">${enToFaDigits(String((data.customers || []).length))}</div></div>
+          <div class="card"><div class="label">کالاها</div><div class="value">${enToFaDigits(String((data.products || []).length))}</div></div>
+          <div class="card"><div class="label">فاکتورها</div><div class="value">${enToFaDigits(String((data.invoices || []).length))}</div></div>
+          <div class="card"><div class="label">تأمین‌کنندگان</div><div class="value">${enToFaDigits(String((data.suppliers || []).length))}</div></div>
+          <div class="card"><div class="label">پرداخت‌ها</div><div class="value">${enToFaDigits(String((data.payments || []).length))}</div></div>
+          <div class="card"><div class="label">چک‌ها</div><div class="value">${enToFaDigits(String((data.checks || []).length))}</div></div>
+          <div class="card wide"><div class="label">ویزیت مشتریان</div><div class="value">${enToFaDigits(String(visitCount))}</div></div>
         </div>
       </details>
 
@@ -254,12 +253,12 @@
           <div class="card"><div class="label">نسخه معماری</div>
             <div class="value" style="font-size:.95rem;">چندصفحه‌ای · فاز ۹</div></div>
           <div class="card"><div class="label">schemaVersion</div>
-            <div class="value">${esc(String(schema))}</div></div>
+            <div class="value">${esc(enToFaDigits(String(schema)))}</div></div>
           <div class="card wide"><div class="label">ذخیره‌سازی محلی</div>
             <div class="value" style="font-size:.9rem;">${esc(storageStatusLabel())}</div>
             <div class="sub" style="margin-top:4px;">DB: baqeriDB · store: appdata · کلید: main</div>
           </div>
-          <div class="card"><div class="label">سری فاکتور</div><div class="value">${esc(String(seq))}</div></div>
+          <div class="card"><div class="label">سری فاکتور</div><div class="value">${esc(enToFaDigits(String(seq)))}</div></div>
         </div>
         <div class="report-note" style="font-size:.78rem;color:var(--ink-soft);margin-top:12px;line-height:1.55;">
           برنامه آفلاین است. داده‌ها روی همین دستگاه ذخیره می‌شوند. برای امنیت، به‌طور منظم Backup بگیرید.
