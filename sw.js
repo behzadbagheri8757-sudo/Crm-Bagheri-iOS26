@@ -7,7 +7,7 @@
  */
 'use strict';
 
-/* CHANGED: v46 -> v48 (Large Title collapse rewritten as a continuous,
+/* CHANGED: v48 -> v49 (Large Title collapse rewritten as a continuous,
    scroll-linked --header-progress custom property instead of a threshold
    class toggle with its own CSS transition — the old version kept
    animating for ~220ms after scroll stopped/reversed, which read as a
@@ -15,7 +15,7 @@
    scrollY 1:1 and reverses identically. Removed the now-duplicate "داشبورد"
    <h2> inside Dashboard's own content — the header already shows it as the
    page title since the brand-name/page-title fix) */
-const CACHE_NAME = 'baqeri-shell-v48';
+const CACHE_NAME = 'baqeri-shell-v49';
 
 /** App Shell — paths relative to this SW (same directory as index.html). */
 const PRECACHE_URLS = [
