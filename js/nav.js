@@ -36,34 +36,34 @@ const BOTTOM_NAV_ITEMS = [
     href: '#/dashboard',
     spaPath: '/dashboard',
     label: 'داشبورد',
-    icon: '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l-2 0l9 -9l9 9l-2 0"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7"/><path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6"/></svg>'
+    icon: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l-2 0l9 -9l9 9l-2 0"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7"/><path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6"/></svg>'
   },
   {
     id: 'customers',
     href: '#/customers',
     spaPath: '/customers',
     label: 'مشتریان',
-    icon: '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"/><path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0 -3 -3.87"/></svg>'
+    icon: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"/><path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0 -3 -3.87"/></svg>'
   },
   {
     id: 'products',
     href: '#/products',
     spaPath: '/products',
     label: 'اجناس',
-    icon: '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4.5l0 9l-8 4.5l-8 -4.5l0 -9l8 -4.5"/><path d="M12 12l8 -4.5"/><path d="M12 12l0 9"/><path d="M12 12l-8 -4.5"/><path d="M16 5.25l-8 4.5"/></svg>'
+    icon: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4.5l0 9l-8 4.5l-8 -4.5l0 -9l8 -4.5"/><path d="M12 12l8 -4.5"/><path d="M12 12l0 9"/><path d="M12 12l-8 -4.5"/><path d="M16 5.25l-8 4.5"/></svg>'
   },
   {
     id: 'invoices',
     href: '#/invoices',
     spaPath: '/invoices',
     label: 'فاکتورها',
-    icon: '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z"/><path d="M9 7l1 0"/><path d="M9 13l6 0"/><path d="M13 17l2 0"/></svg>'
+    icon: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z"/><path d="M9 7l1 0"/><path d="M9 13l6 0"/><path d="M13 17l2 0"/></svg>'
   },
   {
     id: 'more',
     href: '#more',
     label: 'بیشتر',
-    icon: '<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/><path d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/><path d="M19 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/></svg>'
+    icon: '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/><path d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/><path d="M19 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/></svg>'
   },
 ];
 
@@ -83,13 +83,7 @@ const MORE_NAV_ITEMS = [
 function renderSharedNav(activeId){
   const nav = document.getElementById('nav');
   if(!nav) return;
-  // SPA shell uses floating bottom nav + More sheet only.
-  // Do not render the legacy top text navigation into #nav.
-  if(isSpaShell()){
-    nav.innerHTML = '';
-    nav.removeAttribute('aria-label');
-    return;
-  }
+  const spa = isSpaShell();
   nav.innerHTML = NAV_ITEMS.map(t => {
     const active = t.id === activeId ? ' active' : '';
     let href = t.spaPath ? '#' + t.spaPath : t.href;
@@ -121,10 +115,8 @@ function ensureBottomNavDOM(){
     root.innerHTML = `
       <div class="more-overlay" id="more-overlay" hidden></div>
       <div class="more-sheet" id="more-sheet" hidden role="dialog" aria-modal="true" aria-label="منوی بیشتر">
-        <div class="more-sheet-drag-zone" id="more-sheet-drag-zone">
-          <div class="more-sheet-handle"></div>
-          <div class="more-sheet-title">بیشتر</div>
-        </div>
+        <div class="more-sheet-handle"></div>
+        <div class="more-sheet-title">بیشتر</div>
         <div class="more-sheet-list" id="more-sheet-list"></div>
         <button type="button" class="btn secondary more-sheet-close" id="more-sheet-close">بستن</button>
       </div>`;
@@ -135,113 +127,32 @@ function ensureBottomNavDOM(){
   }
 }
 
-// Native-feel drag-to-dismiss for the More sheet.
-// Bound to the dedicated drag zone (handle + title area, ~60px tall).
-// Uses pointer events for a unified path, tracks velocity for natural
-// dismissal, handles pointercancel AND touchcancel, and never lets the
-// sheet get stuck mid-drag. touch-action:none on the drag zone (CSS)
-// prevents iOS from claiming the gesture for scroll.
+// Native-feel swipe-down-to-dismiss, started from the sheet's drag handle only
+// (keeps list-item taps below untouched). Presentation-only; just calls the
+// existing closeMoreSheet().
 function bindMoreSheetDragToDismiss(){
   const sheet = document.getElementById('more-sheet');
-  const dragZone = document.getElementById('more-sheet-drag-zone');
-  if(!sheet || !dragZone) return;
-
-  const DISMISS_DISTANCE = 80;     // px past which release dismisses
-  const DISMISS_VELOCITY = 0.5;    // px/ms — a quick downward flick also dismisses
-  const TRAVEL_MS = 220;
-
-  let activePointerId = null;
-  let dragging = false;
-  let startY = 0;
-  let deltaY = 0;
-  let lastY = 0;
-  let lastT = 0;
-  let velocity = 0;
-  let dismissing = false;
-
-  function now(){
-    return (typeof performance !== 'undefined' && performance.now)
-      ? performance.now()
-      : Date.now();
-  }
-  function clearInline(){
+  const handle = sheet && sheet.querySelector('.more-sheet-handle');
+  if(!sheet || !handle) return;
+  let startY = 0, deltaY = 0, dragging = false;
+  handle.addEventListener('touchstart', function(e){
+    dragging = true;
+    startY = e.touches[0].clientY;
+    sheet.style.transition = 'none';
+  }, {passive:true});
+  handle.addEventListener('touchmove', function(e){
+    if(!dragging) return;
+    deltaY = e.touches[0].clientY - startY;
+    if(deltaY > 0) sheet.style.transform = 'translateY(' + deltaY + 'px)';
+  }, {passive:true});
+  handle.addEventListener('touchend', function(){
+    if(!dragging) return;
+    dragging = false;
     sheet.style.transition = '';
     sheet.style.transform = '';
-  }
-  function snapBack(){
-    sheet.style.transition = 'transform 240ms cubic-bezier(.22,1,.36,1)';
-    sheet.style.transform = 'translate3d(0,0,0)';
-    setTimeout(clearInline, 260);
-  }
-  function dismissOut(){
-    dismissing = true;
-    sheet.style.transition = 'transform ' + TRAVEL_MS + 'ms cubic-bezier(.32,.72,0,1)';
-    sheet.style.transform = 'translate3d(0,110%,0)';
-    setTimeout(function(){
-      try { closeMoreSheet(); } catch(_e){}
-      setTimeout(function(){
-        clearInline();
-        dismissing = false;
-      }, 30);
-    }, TRAVEL_MS);
-  }
-
-  function onPointerDown(e){
-    if(activePointerId !== null) return;
-    if(e.pointerType === 'mouse' && e.button !== 0) return;
-    if(dismissing) return;
-    activePointerId = e.pointerId;
-    dragging = true;
-    startY = e.clientY;
+    if(deltaY > 60) closeMoreSheet();
     deltaY = 0;
-    velocity = 0;
-    lastY = e.clientY;
-    lastT = now();
-    sheet.style.transition = 'none';
-    try { dragZone.setPointerCapture(e.pointerId); } catch(_e){}
-    if(e.preventDefault) e.preventDefault();
-  }
-  function onPointerMove(e){
-    if(!dragging || e.pointerId !== activePointerId) return;
-    const t = now();
-    const dt = t - lastT;
-    if(dt > 0) velocity = (e.clientY - lastY) / dt;
-    lastY = e.clientY;
-    lastT = t;
-    deltaY = e.clientY - startY;
-    const effective = Math.max(0, deltaY);
-    sheet.style.transform = 'translate3d(0,' + effective + 'px,0)';
-    if(e.preventDefault) e.preventDefault();
-  }
-  function onPointerUp(e){
-    if(e.pointerId !== activePointerId) return;
-    activePointerId = null;
-    if(!dragging) return;
-    dragging = false;
-    const shouldDismiss = deltaY > DISMISS_DISTANCE || velocity > DISMISS_VELOCITY;
-    if(shouldDismiss && deltaY > 0) dismissOut();
-    else snapBack();
-  }
-  function onPointerCancel(e){
-    if(e.pointerId !== activePointerId) return;
-    activePointerId = null;
-    if(!dragging) return;
-    dragging = false;
-    snapBack();
-  }
-
-  dragZone.addEventListener('pointerdown', onPointerDown, {passive:false});
-  dragZone.addEventListener('pointermove', onPointerMove, {passive:false});
-  dragZone.addEventListener('pointerup', onPointerUp, {passive:false});
-  dragZone.addEventListener('pointercancel', onPointerCancel, {passive:false});
-  // Belt-and-suspenders: iOS sometimes fires touchcancel instead of pointercancel
-  dragZone.addEventListener('touchcancel', function(){
-    if(dragging || activePointerId !== null){
-      dragging = false;
-      activePointerId = null;
-      snapBack();
-    }
-  }, {passive:true});
+  });
 }
 
 function isMoreSectionActive(activeId){
@@ -254,16 +165,10 @@ function pinBottomNav(){
   try{
     if(window.visualViewport){
       const vv = window.visualViewport;
-      const keyboardHeight = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-      // Only apply inline positioning when keyboard is actually open
-      if(keyboardHeight > 80){
-        el.style.setProperty('bottom', keyboardHeight + 'px', 'important');
-      } else {
-        // Clear inline bottom so CSS safe-area rule takes over
-        el.style.removeProperty('bottom');
-      }
+      const gap = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      el.style.setProperty('bottom', gap + 'px', 'important');
     }else{
-      el.style.removeProperty('bottom');
+      el.style.setProperty('bottom', '0px', 'important');
     }
   }catch(e){
     /* ignore — bar still uses CSS bottom:0 */
@@ -280,11 +185,6 @@ function ensureBottomNavPinned(){
     requestAnimationFrame(function(){
       ticking = false;
       pinBottomNav();
-      /* Reposition indicator without animation on viewport changes */
-      var bar = document.getElementById('bottom-nav');
-      if(bar && typeof positionBnIndicator === 'function'){
-        positionBnIndicator(bar, false);
-      }
     });
   }
   window.addEventListener('resize', schedule, {passive:true});
@@ -299,123 +199,12 @@ function ensureBottomNavPinned(){
   }, {passive:true});
 }
 
-/* Single persistent liquid/glass indicator for bottom nav.
-   One element moves between tabs; not per-item backgrounds. */
-var _bnIndicatorState = { left: null, top: null, ready: false, animating: false };
-
-function ensureBnIndicator(bar){
-  var ind = bar.querySelector('.bn-indicator');
-  if(!ind){
-    ind = document.createElement('span');
-    ind.className = 'bn-indicator';
-    ind.setAttribute('aria-hidden', 'true');
-    bar.insertBefore(ind, bar.firstChild);
-  }
-  return ind;
-}
-
-function positionBnIndicator(bar, animate){
-  if(!bar) return;
-  var ind = ensureBnIndicator(bar);
-  var active = bar.querySelector('.bottom-nav-item.active');
-  if(!active){
-    ind.style.opacity = '0';
-    return;
-  }
-  /* Cover icon + label as one group; inset so indicator is smaller than full tab */
-  var barRect = bar.getBoundingClientRect();
-  var itemRect = active.getBoundingClientRect();
-  var padX = 5;
-  var padY = 4;
-  var w = Math.max(44, Math.round(itemRect.width - padX * 2));
-  var h = Math.max(48, Math.round(itemRect.height - padY * 2));
-  var left = itemRect.left - barRect.left + (itemRect.width - w) / 2;
-  var top = itemRect.top - barRect.top + (itemRect.height - h) / 2;
-  var reduceMotion = false;
-  try{
-    reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-  }catch(_e){}
-
-  ind.style.width = w + 'px';
-  ind.style.height = h + 'px';
-  ind.style.opacity = '1';
-
-  var prevLeft = _bnIndicatorState.left;
-  var prevTop = _bnIndicatorState.top;
-  var canAnimate = animate && _bnIndicatorState.ready && !reduceMotion &&
-    prevLeft !== null && Math.abs(prevLeft - left) > 1;
-
-  if(ind._bnSettleTimer){
-    try{ clearTimeout(ind._bnSettleTimer); }catch(_e2){}
-    ind._bnSettleTimer = null;
-  }
-
-  if(!canAnimate){
-    ind.classList.remove('is-traveling', 'is-settling');
-    ind.style.transition = 'none';
-    ind.style.transform = 'translate3d(' + left + 'px,' + top + 'px,0) scale(1,1)';
-    _bnIndicatorState.left = left;
-    _bnIndicatorState.top = top;
-    _bnIndicatorState.ready = true;
-    _bnIndicatorState.animating = false;
-    return;
-  }
-
-  if(_bnIndicatorState.animating){
-    ind.style.transition = 'none';
-    ind.classList.remove('is-traveling', 'is-settling');
-  }
-
-  var dx = left - prevLeft;
-  var dist = Math.abs(dx);
-  /* Perceptible but restrained stretch along travel direction */
-  var stretch = Math.min(1.28, 1 + dist / 200);
-
-  _bnIndicatorState.animating = true;
-
-  /* Phase 1: slight compress at origin */
-  ind.style.transition = 'transform 120ms cubic-bezier(.22,1,.36,1)';
-  ind.classList.add('is-traveling');
-  ind.style.transform = 'translate3d(' + prevLeft + 'px,' + prevTop + 'px,0) scale(' + (0.92 * stretch) + ',' + (0.92 / Math.sqrt(stretch)) + ')';
-
-  requestAnimationFrame(function(){
-    requestAnimationFrame(function(){
-      /* Phase 2: travel with elongation (~380ms — slower, liquid) */
-      ind.style.transition = 'transform 380ms cubic-bezier(.22,1.02,.36,1)';
-      ind.style.transform = 'translate3d(' + left + 'px,' + top + 'px,0) scale(' + stretch + ',' + (1 / Math.sqrt(stretch)) + ')';
-
-      ind._bnSettleTimer = setTimeout(function(){
-        /* Phase 3: soft overshoot then settle */
-        ind.style.transition = 'transform 160ms cubic-bezier(.22,1.1,.36,1)';
-        ind.style.transform = 'translate3d(' + left + 'px,' + top + 'px,0) scale(1.04,0.97)';
-        ind._bnSettleTimer = setTimeout(function(){
-          ind.style.transition = 'transform 140ms cubic-bezier(.22,1,.36,1)';
-          ind.classList.remove('is-traveling');
-          ind.classList.add('is-settling');
-          ind.style.transform = 'translate3d(' + left + 'px,' + top + 'px,0) scale(1,1)';
-          ind._bnSettleTimer = setTimeout(function(){
-            ind.classList.remove('is-settling');
-            ind.style.transition = 'none';
-            _bnIndicatorState.left = left;
-            _bnIndicatorState.top = top;
-            _bnIndicatorState.animating = false;
-            ind._bnSettleTimer = null;
-          }, 145);
-        }, 155);
-      }, 370);
-    });
-  });
-}
-
 function renderBottomNav(activeId){
   ensureBottomNavDOM();
   const bar = document.getElementById('bottom-nav');
   if(!bar) return;
   const moreActive = isMoreSectionActive(activeId);
   const spa = isSpaShell();
-
-  /* Preserve single indicator across re-renders */
-  var prevInd = bar.querySelector('.bn-indicator');
   bar.innerHTML = BOTTOM_NAV_ITEMS.map(t => {
     let active = false;
     if(t.id === 'more') active = moreActive;
@@ -434,11 +223,6 @@ function renderBottomNav(activeId){
       <span class="bn-label">${t.label}</span>
     </a>`;
   }).join('');
-  if(prevInd){
-    bar.insertBefore(prevInd, bar.firstChild);
-  } else {
-    ensureBnIndicator(bar);
-  }
 
   if (spa) {
     bar.querySelectorAll('a[data-spa-path]').forEach(function (a) {
@@ -464,12 +248,6 @@ function renderBottomNav(activeId){
 
   ensureBottomNavPinned();
   pinBottomNav();
-
-  /* Position jelly indicator after layout. Animate only when tab actually changes. */
-  var shouldAnimate = _bnIndicatorState.ready;
-  requestAnimationFrame(function(){
-    positionBnIndicator(bar, shouldAnimate);
-  });
 }
 
 function fillMoreSheetList(activeId){
@@ -508,9 +286,6 @@ function openMoreSheet(activeId){
   // leaves that timer alive, and it later fires `hidden = true` on the sheet
   // we just reopened, making it silently disappear a moment after opening.
   if(_moreSheetHideTimer){ clearTimeout(_moreSheetHideTimer); _moreSheetHideTimer = null; }
-  // Reset any inline transform/transition left over from a prior drag
-  sheet.style.transition = '';
-  sheet.style.transform = '';
   fillMoreSheetList(activeId);
   overlay.hidden = false;
   sheet.hidden = false;
