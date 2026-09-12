@@ -4307,7 +4307,7 @@ button#save-tx{
   text-align:right;
 }
 .ff-date-field.is-empty .shamsi-date-field{
-  color:var(--text-muted,#8b8b8b);
+  color:var(--vg-color-text-muted);
 }
 
 /* 22 — Invoice product selector: compact plain (empty state already pill; selected is plain) */
