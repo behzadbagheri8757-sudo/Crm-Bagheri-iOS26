@@ -320,10 +320,12 @@ function positionBnIndicator(bar, animate){
   var itemRect = active.getBoundingClientRect();
   /* iOS 26 selection reads as a compact Liquid Glass surface around the
      selected tab group — not a full-width pill and not a decorative blob. */
-  var padX = 6;
-  var padY = 5;
-  var w = Math.max(46, Math.round(itemRect.width - padX * 2));
-  var h = Math.max(46, Math.round(itemRect.height - padY * 2));
+  var padX = 1;
+  var padY = 1;
+  /* The iOS 26 selected control nearly fills its tab item; the glass is
+     the selected item surface, not a small decorative badge inside it. */
+  var w = Math.max(50, Math.round(itemRect.width - 2));
+  var h = Math.max(50, Math.round(itemRect.height - 2));
   var left = itemRect.left - barRect.left + (itemRect.width - w) / 2;
   var top = itemRect.top - barRect.top + (itemRect.height - h) / 2;
   var reduceMotion = false;
@@ -361,12 +363,15 @@ function positionBnIndicator(bar, animate){
      when a user changed tabs quickly or interrupted the gesture. */
   ind.classList.remove('is-traveling','is-settling');
   ind.style.transition = 'none';
-  ind.style.transform = 'translate3d(' + prevLeft + 'px,' + prevTop + 'px,0) scale(.96)';
+  /* iOS 26 tab selection uses a visible control interaction. Start slightly
+     compressed, then settle into the selected surface; one transition keeps
+     the motion interruptible when the user changes tabs again. */
+  ind.style.transform = 'translate3d(' + prevLeft + 'px,' + prevTop + 'px,0) scale(.90,.94)';
   _bnIndicatorState.animating = true;
 
   requestAnimationFrame(function(){
     requestAnimationFrame(function(){
-      ind.style.transition = 'transform 520ms cubic-bezier(.18,.88,.22,1.08)';
+      ind.style.transition = 'transform 460ms cubic-bezier(.16,1.18,.32,1)';
       ind.style.transform = 'translate3d(' + left + 'px,' + top + 'px,0) scale(1)';
       ind._bnSettleTimer = setTimeout(function(){
         ind.style.transition = 'none';
@@ -687,7 +692,7 @@ function ensureAppBackButton(activeId, routePath){
   btn.type = 'button';
   btn.className = 'app-back';
   btn.setAttribute('aria-label', 'بازگشت');
-  btn.innerHTML = '<span class="app-back-ico" aria-hidden="true">›</span><span class="app-back-txt">بازگشت</span>';
+  btn.innerHTML = '<span class="app-back-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.15" stroke-linecap="round" stroke-linejoin="round"><path d="m14.5 5-7 7 7 7"/></svg></span><span class="app-back-txt">بازگشت</span>';
   btn.addEventListener('click', goAppBack);
   header.insertBefore(btn, header.firstChild);
   header.classList.add('has-back');
