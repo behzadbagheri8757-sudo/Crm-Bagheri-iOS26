@@ -152,11 +152,14 @@ header{
    instantly if the scroll stops — the native UINavigationBar feel. */
 header h1{
   margin:0;
+  max-width:calc(100% - 16px);
   font-weight:800;
   color:#1F2937;
   letter-spacing:.1px;
-  line-height:1.25;
+  line-height:1.22;
   font-size:calc(1.05rem + (0.65rem * (1 - var(--header-progress))));
+  overflow-wrap:anywhere;
+  text-wrap:balance;
 }
 header .header-date{
   position:absolute;
@@ -169,7 +172,7 @@ header .header-date{
   font-weight:650;
   line-height:1.25;
   white-space:nowrap;
-  max-width:48%;
+  max-width:40%;
   overflow:hidden;
   text-overflow:ellipsis;
   pointer-events:none;
@@ -179,68 +182,118 @@ header .header-date{
 button.app-back{
   position:absolute;
   top:calc(env(safe-area-inset-top,0px) + 4px);
-  inset-inline-start:8px;
+  inset-inline-start:6px;
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  gap:0;
   width:44px;
   min-width:44px;
+  height:44px;
   min-height:44px;
   padding:0;
   border:none;
-  border-radius:999px;
-  background:transparent;
+  border-radius:14px;
+  background:rgba(255,255,255,.38);
   color:#0070D2;
   font-family:inherit;
   font-size:.78rem;
   font-weight:700;
   cursor:pointer;
-  z-index:6;
+  z-index:12;
   -webkit-tap-highlight-color:transparent;
-  transition:background-color var(--ios-touch,120ms) ease, transform var(--ios-touch,120ms) var(--ios-ease-out,ease);
+  transition:background-color 140ms ease,transform 140ms cubic-bezier(.22,1,.36,1),opacity 140ms ease;
 }
 button.app-back:active{
   background:rgba(0,112,210,.10);
-  transform:scale(.96);
+  transform:scale(.94);
 }
 button.app-back .app-back-ico{
-  font-size:1.35rem;
-  line-height:1;
+  display:block;
+  font-family:ui-sans-serif,system-ui,sans-serif;
+  font-size:1.65rem;
+  font-weight:400;
+  line-height:.8;
+  transform:translateX(1px);
 }
-button.app-back .app-back-txt{
-  max-width:4.5rem;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
+button.app-back .app-back-txt{display:none;}
+
+/* The date owns the top toolbar row. Large titles start below that row so a
+   long title can never collide with the centered date. During collapse the
+   title returns to the compact row and gains side clearance for Back. */
+header:not(.header-root){
+  padding-block-start:calc(env(safe-area-inset-top,0px) + 34px - (24px * var(--header-progress)));
+  padding-block-end:calc(10px + (24px * (1 - var(--header-progress))));
 }
-/* Two-row Large Title layout when a back button is present: the back
-   chevron stays fixed near the top-start corner (see button.app-back
-   above — its position never depends on --header-progress), and the large
-   title starts far enough below it to clear it, then rises and shrinks
-   into the same row as the button continuously as --header-progress goes
-   from 0 to 1 — again, no transition, just a scroll-driven calc(). */
+header:not(.header-root) h1{
+  max-width:calc(100% - (16px + (44px * (1 - var(--header-progress)))));
+}
 header.has-back{
   position:sticky;
   top:0;
-  padding-block-start:calc(env(safe-area-inset-top,0px) + 10px + (42px * (1 - var(--header-progress))));
-  /* On collapse, the title must clear the back control horizontally. At rest
-     it returns to the normal leading alignment of a native large title. */
-  padding-inline-start:calc(16px + (60px * var(--header-progress)));
+  padding-inline-start:calc(16px + (48px * var(--header-progress)));
 }
 header.has-back h1{
-  min-width:0;
+  max-width:calc(100% - 48px);
 }
 header.has-back .header-date{
-  /* The centered date occupies the toolbar center; it must not compete with
-     the leading back control or the collapsed title. */
-  pointer-events:none;
+  max-width:36%;
 }
 @media(max-width:360px){
+  header:not(.header-root) h1{
+    max-width:calc(100% - 12px);
+  }
   header.has-back{
-    padding-inline-start:calc(16px + (48px * var(--header-progress)));
+    padding-inline-start:calc(12px + (44px * var(--header-progress)));
+  }
+  header.has-back h1{
+    max-width:calc(100% - 44px);
   }
 }
+
+/* Active tab: selected label/icon stay accent-colored; the selection surface
+   is a quiet Liquid Glass layer that follows the item as one object. */
+.bn-indicator{
+  position:absolute;
+  left:0;
+  top:0;
+  width:52px;
+  height:48px;
+  border-radius:15px;
+  pointer-events:none;
+  z-index:0;
+  opacity:1;
+  box-sizing:border-box;
+  isolation:isolate;
+  background:rgba(255,255,255,.48);
+  border:1px solid rgba(255,255,255,.72);
+  box-shadow:0 2px 10px rgba(26,38,52,.08), inset 0 1px 0 rgba(255,255,255,.65);
+  -webkit-backdrop-filter:saturate(155%) blur(10px);
+  backdrop-filter:saturate(155%) blur(10px);
+  transform:translate3d(0,0,0) scale(1);
+  transform-origin:center;
+  will-change:transform;
+}
+.bn-indicator::before{
+  content:"";
+  position:absolute;
+  inset:1px;
+  border-radius:14px;
+  background:linear-gradient(145deg,rgba(255,255,255,.42),rgba(255,255,255,.08) 58%,rgba(255,255,255,.20));
+  pointer-events:none;
+}
+.bn-indicator::after{
+  content:"";
+  position:absolute;
+  left:18%;
+  right:18%;
+  top:1px;
+  height:1px;
+  border-radius:999px;
+  background:rgba(255,255,255,.75);
+  pointer-events:none;
+}
+.bn-indicator.is-traveling,
+.bn-indicator.is-settling{background:rgba(255,255,255,.48);}
 
 /* Main page frame (base mobile composition) */
 main{
