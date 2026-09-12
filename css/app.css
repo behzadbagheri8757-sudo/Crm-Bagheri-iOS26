@@ -1,7 +1,9 @@
 /* ==========================================================================
    TEST/css/app.css — FINAL RECONSTRUCTED + COMPOSITION RECOVERED
    View-specific composition + protected systems + floating glass nav.
-   Visual Grammar (VG) owns shared component geometry (loaded before).
+   Visual Grammar (VG) owns shared component geometry: the three vg-*.css
+   files are linked after this one in index.html, so on shared selectors
+   their rules win the cascade tie-break over this file's, by design.
    This file owns page composition, containers, spacing, grouping, and view-specific layout.
    ========================================================================== */
 
@@ -125,31 +127,70 @@ header{
   position:sticky;
   top:0;
   z-index:30;
-  padding:calc(14px + env(safe-area-inset-top,0px)) 16px 12px;
-  text-align:center;
-  background:#FFFFFF;
+  padding:calc(10px + env(safe-area-inset-top,0px)) 16px calc(10px + var(--header-title-pad,26px));
+  text-align:start;
+  background:rgba(255,255,255,.86);
+  backdrop-filter:saturate(180%) blur(20px);
+  -webkit-backdrop-filter:saturate(180%) blur(20px);
   border-bottom:1px solid rgba(31,41,55,.08);
   color:#1F2937;
+  transition:padding 220ms var(--ios-ease-out,ease);
 }
+/* Large Title (Phase 6): resting state is the big iOS-style title, leading-
+   aligned (start = right in this app's RTL layout, matching Persian nav
+   titles rather than centered "web dashboard" branding). */
 header h1{
   margin:0;
-  font-size:1.08rem;
+  font-size:1.7rem;
   font-weight:800;
   color:#1F2937;
-  letter-spacing:.15px;
-  line-height:1.3;
+  letter-spacing:.1px;
+  line-height:1.25;
+  transition:font-size 220ms var(--ios-ease-out,ease);
 }
 header .header-date{
-  margin:5px 0 0;
+  margin:3px 0 0;
   font-size:.72rem;
   color:#667085;
   font-weight:600;
+  transition:opacity 160ms ease, max-height 220ms ease, margin 220ms ease;
+  max-height:1.4em;
+  opacity:1;
+  overflow:hidden;
+}
+/* Only the Dashboard (root) tab keeps the date subtitle — sub-pages get a
+   clean nav title with no extra line, matching iOS nav-bar convention. */
+header:not(.header-root) .header-date{
+  display:none;
+}
+/* Collapsed/compact state: scrolled content shrinks the title into a
+   persistent small nav-bar title, the same way UINavigationBar's
+   largeTitleDisplayMode collapses on scroll. */
+/* Collapsed/compact state: scrolled content shrinks the title into a
+   persistent small nav-bar title, the same way UINavigationBar's
+   largeTitleDisplayMode collapses on scroll. min-height matches the 44pt
+   iOS compact nav bar so the back button's 44px touch target always fits
+   inside it without overflowing the header's bottom edge. */
+header.header-condensed{
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  min-height:calc(env(safe-area-inset-top,0px) + 52px);
+  padding-block:0;
+  --header-title-pad:0px;
+}
+header.header-condensed h1{
+  font-size:1.05rem;
+}
+header.header-condensed .header-date{
+  opacity:0;
+  max-height:0;
+  margin-top:0;
 }
 button.app-back{
   position:absolute;
-  top:calc(50% + env(safe-area-inset-top,0px) * .15);
+  top:calc(env(safe-area-inset-top,0px) + 4px);
   inset-inline-start:8px;
-  transform:translateY(-50%);
   display:inline-flex;
   align-items:center;
   justify-content:center;
@@ -159,17 +200,19 @@ button.app-back{
   padding:6px 10px;
   border:none;
   border-radius:999px;
-  background:rgba(255,255,255,.12);
-  color:#fff;
+  background:rgba(31,41,55,.06);
+  color:#0070D2;
   font-family:inherit;
   font-size:.78rem;
   font-weight:700;
   cursor:pointer;
   z-index:6;
   -webkit-tap-highlight-color:transparent;
+  transition:background-color var(--ios-touch,120ms) ease, transform var(--ios-touch,120ms) var(--ios-ease-out,ease);
 }
 button.app-back:active{
-  background:rgba(255,255,255,.22);
+  background:rgba(0,112,210,.14);
+  transform:scale(.96);
 }
 button.app-back .app-back-ico{
   font-size:1.35rem;
@@ -181,16 +224,27 @@ button.app-back .app-back-txt{
   text-overflow:ellipsis;
   white-space:nowrap;
 }
+/* Two-row Large Title layout when a back button is present:
+   the back chevron owns a slim top strip (like UINavigationBar's compact
+   bar); the large title flows on its own line below it, so they never sit
+   side-by-side and overlap on the same (start) edge in RTL. Once the
+   header condenses on scroll, everything collapses back to one row and the
+   title simply gets start-padding to clear the button beside it. */
 header.has-back{
   position:relative;
-  padding-inline:56px 16px;
+}
+header.has-back:not(.header-condensed){
+  padding-block-start:calc(env(safe-area-inset-top,0px) + 52px);
+}
+header.has-back.header-condensed{
+  padding-inline-start:56px;
 }
 @media(max-width:360px){
   button.app-back .app-back-txt{
     display:none;
   }
-  header.has-back{
-    padding-inline:48px 12px;
+  header.has-back.header-condensed{
+    padding-inline-start:48px;
   }
 }
 
@@ -416,8 +470,10 @@ main .empty{
   margin-bottom:12px;
 }
 .more-sheet-item{
-  display:block;
-  padding:14px;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:12px 14px;
   border-radius:12px;
   text-decoration:none;
   color:#1F2937;
@@ -429,6 +485,38 @@ main .empty{
 .more-sheet-item.active{
   background:#E8F2FC;
   border-color:#0070D2;
+  color:#0070D2;
+}
+/* Leading icon tile — iOS Settings-style list row: a small tinted squircle
+   holding the icon, label filling the remaining width, trailing chevron
+   for disclosure affordance. Icons come from AppIcons (js/icons.js). */
+.more-sheet-item-ico{
+  flex:none;
+  width:30px;
+  height:30px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:9px;
+  background:rgba(0,112,210,.10);
+  color:#0070D2;
+}
+.more-sheet-item.active .more-sheet-item-ico{
+  background:rgba(0,112,210,.16);
+}
+.more-sheet-item-ico svg{
+  width:18px;
+  height:18px;
+}
+.more-sheet-item-label{
+  flex:1 1 auto;
+  min-width:0;
+}
+.more-sheet-item-chevron{
+  flex:none;
+  color:#B4BCC7;
+}
+.more-sheet-item.active .more-sheet-item-chevron{
   color:#0070D2;
 }
 .more-sheet-close{
@@ -453,6 +541,52 @@ body.modal-open .fab{
 body.modal-open{
   overflow:hidden;
   overscroll-behavior:none;
+}
+
+/* Pull-to-refresh indicator (Phase 10). JS drives `transform` directly while
+   dragging/spinning, so the resting position is expressed via `left`, not
+   `transform: translateX(-50%)`, which would otherwise be clobbered the
+   moment the drag handler sets an inline transform. */
+#ptr-indicator{
+  position:fixed;
+  top:calc(env(safe-area-inset-top,0px) + 6px);
+  left:calc(50% - 17px);
+  width:34px;
+  height:34px;
+  border-radius:50%;
+  background:rgba(255,255,255,.88);
+  backdrop-filter:saturate(180%) blur(14px);
+  -webkit-backdrop-filter:saturate(180%) blur(14px);
+  box-shadow:0 4px 14px rgba(31,41,55,.16);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  opacity:0;
+  transform:translateY(-40px);
+  z-index:35;
+  pointer-events:none;
+  transition:opacity 160ms ease;
+}
+#ptr-indicator.show{
+  opacity:1;
+}
+.ptr-spinner{
+  width:16px;
+  height:16px;
+  border-radius:50%;
+  border:2px solid rgba(0,112,210,.22);
+  border-top-color:#0070D2;
+}
+#ptr-indicator.ptr-spinning .ptr-spinner{
+  animation:ptr-spin .7s linear infinite;
+}
+@keyframes ptr-spin{
+  to{ transform:rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce){
+  #ptr-indicator.ptr-spinning .ptr-spinner{
+    animation:none;
+  }
 }
 
 /* Shared sheet composition (not Invoice V6 full-screen host) */
@@ -504,6 +638,32 @@ body.modal-open{
   flex:1;
   min-width:6px;
   height:0;
+}
+/* Disclosure chevron (Phase 8 / iOS list rows): every ledger-row that is a
+   real <a> — i.e. genuinely navigates to a detail screen (customer,
+   supplier, invoice, prospect...) — gets a trailing chevron, the same
+   affordance iOS Settings/Mail/Messages use to say "this row goes
+   somewhere". Rows built as <div> (ledger/history entries that do not
+   navigate) are correctly left without one — this only targets real links,
+   not row shape, so it can't mislabel a non-navigating row as navigable.
+   Reuses the same chevron glyph as .more-sheet-item-chevron for one
+   consistent disclosure indicator across the whole app. */
+a.ledger-row:not(.action-row)::after{
+  content:'';
+  flex:none;
+  width:14px;
+  height:14px;
+  margin-inline-start:2px;
+  opacity:.38;
+  background-color:currentColor;
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m15 18-6-6 6-6'/%3E%3C/svg%3E");
+  mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m15 18-6-6 6-6'/%3E%3C/svg%3E");
+  -webkit-mask-size:contain;
+  mask-size:contain;
+  -webkit-mask-repeat:no-repeat;
+  mask-repeat:no-repeat;
+  -webkit-mask-position:center;
+  mask-position:center;
 }
 .ledger-row:last-child,
 .tx-row:last-child{
@@ -1516,6 +1676,13 @@ details[open] > .customer-behavior-summary::after{
   overflow:hidden;
   background:#F5F7FA;
   z-index:1;
+}
+/* This is a full-screen page-like host, not a card sheet — no grabber,
+   no swipe-to-dismiss affordance (display:none also stops touch events
+   from reaching bindSheetDragToDismiss's listener, so this alone is
+   enough to disable the gesture here, no JS branch needed). */
+.sheet.inv-sheet-host .sheet-handle{
+  display:none;
 }
 .inv-sheet-v2{
   display:flex;
@@ -3509,7 +3676,7 @@ button.inv-header-save.btn{
     padding:8px;
     background:#fff;
   }
-  .overlay,.sheet,header,nav,.fab,.toast,.bottom-nav,button.app-back,main{
+  .overlay,.sheet,header,nav,.fab,.toast,.bottom-nav,button.app-back,main,#ptr-indicator{
     display:none!important;
   }
   body{
@@ -3522,17 +3689,10 @@ button.inv-header-save.btn{
    Interaction layer only. Visual Grammar geometry remains the source of truth.
    Timing targets: ~120ms touch response, ~220-260ms navigation/presentation,
    ~360ms spring-like active-state settling.
+   Tokens (--ios-ease-out, --ios-touch, --ios-glass, etc.) now live in
+   css/visual-grammar.css :root, loaded before this file, so this file has
+   exactly one place it reads them from instead of redefining them here.
    ============================================================================ */
-
-:root{
-  --ios-ease-out:cubic-bezier(.22,1,.36,1);
-  --ios-ease-spring:cubic-bezier(.22,1.18,.36,1);
-  --ios-touch:120ms;
-  --ios-control:180ms;
-  --ios-route:240ms;
-  --ios-glass:rgba(255,255,255,.72);
-  --ios-glass-border:rgba(255,255,255,.58);
-}
 
 /* Route changes: short, directional-feeling materialization rather than a fade-only flash. */
 main.route-transition{
@@ -3693,6 +3853,46 @@ a.ledger-row:active,
   transform:scale(.985);
   background:rgba(247,248,250,.9);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.7);
+}
+
+/* Generic bottom sheet (openSheet()/closeModal() in js/ui.js) — brought up to
+   the same native presentation as the More sheet: starts translated off-
+   screen + transparent, animates in via .show, real glass material, and a
+   drag handle wired to the shared bindSheetDragToDismiss() gesture.
+   Excluded for .inv-sheet-host, which is a full-screen page host, not a
+   card sheet (see the .sheet-handle display:none rule near its block). */
+.overlay:not(.more-overlay){
+  opacity:0;
+  transition:opacity 220ms var(--ios-ease-out);
+}
+.overlay.show{
+  opacity:1;
+}
+.sheet:not(.inv-sheet-host){
+  transform:translateY(110%);
+  transition:transform 270ms var(--ios-ease-spring),
+             box-shadow 220ms var(--ios-ease-out);
+  background:rgba(255,255,255,.9);
+  backdrop-filter:saturate(170%) blur(22px);
+  -webkit-backdrop-filter:saturate(170%) blur(22px);
+  box-shadow:0 -12px 34px rgba(31,41,55,.12),
+             inset 0 1px 0 rgba(255,255,255,.7);
+}
+.sheet.show{
+  transform:translateY(0);
+}
+.sheet-handle{
+  width:40px;
+  height:4px;
+  border-radius:999px;
+  background:rgba(31,41,55,.12);
+  margin:4px auto 8px;
+  flex:none;
+}
+.sheet .close-x{
+  position:absolute;
+  top:10px;
+  inset-inline-end:10px;
 }
 
 /* Dashboard quick actions: glass surface only — do not enlarge cards/icons. */

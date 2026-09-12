@@ -75,7 +75,7 @@ input[placeholder*="جستجو"]{
   align-items:center;
   justify-content:center;
   gap:2px;
-  min-height:48px;
+  min-height:44px;
   padding:4px 2px;
   border:none;
   background:transparent;
@@ -97,8 +97,8 @@ input[placeholder*="جستجو"]{
 }
 
 .bottom-nav-item .bn-ico svg{
-  width:24px;
-  height:24px;
+  width:22px;
+  height:22px;
   stroke-width:1.55;
 }
 
@@ -464,178 +464,4 @@ a.ledger-row:active{
   align-items:flex-end;
   justify-content:center;
   z-index:60;
-}
-
-/* ============================================================
-   P1 FIXES
-   Loaded after app.css → wins the cascade on equal specificity.
-   No business logic touched. No !important used.
-   ============================================================ */
-
-/* ---------- Press feedback (perceptible, iOS-like) ---------- */
-
-/* Base transitions must exist for :active to animate smoothly. */
-.btn{
-  transition:transform 120ms cubic-bezier(.22,1,.36,1),
-             box-shadow 180ms cubic-bezier(.22,1,.36,1),
-             background-color 150ms ease,
-             border-color 150ms ease,
-             color 150ms ease;
-}
-.chip,
-.chip-opt,
-.gc-seg-btn{
-  transition:transform 120ms cubic-bezier(.22,1,.36,1),
-             background-color 150ms ease,
-             border-color 150ms ease,
-             color 150ms ease;
-}
-.close-x,
-.icon-btn,
-.icon-button{
-  transition:transform 120ms cubic-bezier(.22,1,.36,1),
-             background-color 150ms ease;
-}
-.fab{
-  transition:transform 120ms cubic-bezier(.22,1,.36,1),
-             background-color 180ms ease,
-             box-shadow 180ms ease,
-             opacity 150ms ease;
-}
-button.app-back{
-  transition:transform 120ms cubic-bezier(.22,1,.36,1),
-             background-color 150ms ease;
-}
-a.tx-row,
-a.ledger-row,
-.customer-list-row{
-  transition:transform 120ms cubic-bezier(.22,1,.36,1),
-             background-color 150ms ease;
-}
-.dash-qa-btn{
-  transition:transform 120ms cubic-bezier(.22,1,.36,1),
-             box-shadow 180ms cubic-bezier(.22,1,.36,1),
-             background-color 150ms ease;
-}
-.more-sheet-item{
-  transition:transform 120ms cubic-bezier(.22,1,.36,1),
-             background-color 150ms ease,
-             border-color 150ms ease,
-             box-shadow 180ms cubic-bezier(.22,1,.36,1);
-}
-.prod-drop-item{
-  transition:transform 120ms cubic-bezier(.22,1,.36,1),
-             background-color 150ms ease;
-}
-
-/* Active states — scales chosen for perceptibility.
-   Large rows: subtle scale + background tint.
-   Buttons/chips: 4–5%.
-   Small icon targets: 8%. */
-.btn:active{
-  transform:scale(.96);
-}
-.btn.secondary:active{
-  transform:scale(.96);
-  background-color:rgba(31,41,55,.05);
-}
-.btn.danger:active{
-  transform:scale(.96);
-}
-.chip:active,
-.chip-opt:active,
-.gc-seg-btn:active{
-  transform:scale(.95);
-}
-.close-x:active,
-.icon-btn:active,
-.icon-button:active{
-  transform:scale(.92);
-}
-.fab:active{
-  transform:scale(.92);
-}
-button.app-back:active{
-  transform:scale(.92);
-}
-a.tx-row:active,
-a.ledger-row:active,
-.customer-list-row:active{
-  transform:scale(.985);
-  background-color:rgba(31,41,55,.04);
-}
-.dash-qa-btn:active{
-  transform:scale(.96);
-}
-.more-sheet-item:active{
-  transform:scale(.97);
-}
-.prod-drop-item:active{
-  transform:scale(.97);
-  background-color:#F2F2F7;
-}
-
-/* ---------- Disclosure primitive ----------
-   Shared by: Report accordion, Dashboard Action Queue, Invoice visit section. */
-.disclosure-header{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  width:100%;
-  padding:8px 0;
-  background:transparent;
-  border:0;
-  font:inherit;
-  font-weight:600;
-  color:#1F2937;
-  cursor:pointer;
-  text-align:right;
-  -webkit-appearance:none;
-  appearance:none;
-  -webkit-tap-highlight-color:transparent;
-}
-.disclosure-content{
-  overflow:hidden;
-}
-.disclosure-arrow{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  width:20px;
-  height:20px;
-  flex:0 0 auto;
-  color:#667085;
-  transition:transform 220ms cubic-bezier(.22,1,.36,1);
-  transform-origin:center center;
-}
-.disclosure-header.is-open .disclosure-arrow{
-  transform:rotate(180deg);
-}
-.dash-action-toggle-ico{
-  transition:transform 220ms cubic-bezier(.22,1,.36,1);
-}
-
-/* ---------- More Sheet drag zone ----------
-   ~60px tall area (handle + title) so a thumb can reliably start the drag.
-   touch-action:none prevents iOS from claiming the gesture for scroll. */
-.more-sheet-drag-zone{
-  padding:12px 0 4px;
-  margin-top:-4px;
-  touch-action:none;
-  -webkit-user-select:none;
-  user-select:none;
-  cursor:grab;
-}
-.more-sheet-drag-zone:active{
-  cursor:grabbing;
-}
-
-/* ---------- More overlay material ----------
-   Was blur(2px) — effectively invisible.
-   Now a proper backdrop chrome: dim + blur + slight saturation. */
-.more-overlay{
-  background:rgba(11,31,58,.32);
-  -webkit-backdrop-filter:saturate(140%) blur(20px);
-  backdrop-filter:saturate(140%) blur(20px);
-  transition:opacity 220ms cubic-bezier(.22,1,.36,1);
 }
