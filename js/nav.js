@@ -168,9 +168,8 @@ function bindBottomNavMinimizeOnScroll(){
   var ticking = false;
   var travel = 52;
   var directionThreshold = 1;
-  var idleTimer = null;
-  var idleDelay = 520;
-  var restoreRaf = null;
+  /* No automatic restore on scroll idle: the bar stays at its current
+     scroll-linked progress until the user scrolls upward (or taps a tab). */
 
   function reduceMotion(){
     try{
@@ -192,34 +191,8 @@ function bindBottomNavMinimizeOnScroll(){
     });
   }
 
-  function cancelRestore(){
-    if(restoreRaf != null){
-      cancelAnimationFrame(restoreRaf);
-      restoreRaf = null;
-    }
-  }
-
-  function restoreNaturally(){
-    cancelRestore();
-    var start = progress;
-    if(start <= .01){ setProgress(0, false); return; }
-    var started = performance.now();
-    var duration = reduceMotion() ? 1 : 360;
-    function frame(now){
-      var t = Math.min(1, (now - started) / duration);
-      /* Ease-out with a tiny spring-like tail; the bar should feel like it is
-         settling into place, not snapping back when scrolling stops. */
-      var eased = 1 - Math.pow(1 - t, 3);
-      setProgress(start * (1 - eased), true);
-      if(t < 1) restoreRaf = requestAnimationFrame(frame);
-      else { restoreRaf = null; setProgress(0, true); }
-    }
-    restoreRaf = requestAnimationFrame(frame);
-  }
-
   function apply(){
     ticking = false;
-    cancelRestore();
     var bar = document.getElementById('bottom-nav');
     if(!bar) return;
     var y = window.scrollY || window.pageYOffset || 0;
@@ -237,14 +210,6 @@ function bindBottomNavMinimizeOnScroll(){
   }
 
   function schedule(){
-    cancelRestore();
-    if(idleTimer) clearTimeout(idleTimer);
-    idleTimer = setTimeout(function(){
-      idleTimer = null;
-      // Once scrolling has genuinely stopped, restore the full tab bar with
-      // a continuous settle rather than a discrete jump.
-      restoreNaturally();
-    }, idleDelay);
     if(ticking) return;
     ticking = true;
     requestAnimationFrame(apply);
@@ -359,20 +324,19 @@ function positionBnIndicator(bar, animate){
     return;
   }
 
-  /* One continuous, interruptible spring-like move. Avoid the old chained
-     compress → travel → overshoot timers: that sequence looked synthetic
-     when a user changed tabs quickly or interrupted the gesture. */
+  /* One restrained, interruptible ease-out move. No scale compression or
+     spring overshoot is used; the indicator simply travels to the new tab. */
   ind.classList.remove('is-traveling','is-settling');
   ind.style.transition = 'none';
   /* iOS 26 tab selection uses a visible control interaction. Start slightly
      compressed, then settle into the selected surface; one transition keeps
      the motion interruptible when the user changes tabs again. */
-  ind.style.transform = 'translate3d(' + prevLeft + 'px,' + prevTop + 'px,0) scale(.90,.94)';
+  ind.style.transform = 'translate3d(' + prevLeft + 'px,' + prevTop + 'px,0) scale(1)';
   _bnIndicatorState.animating = true;
 
   requestAnimationFrame(function(){
     requestAnimationFrame(function(){
-      ind.style.transition = 'transform 460ms cubic-bezier(.16,1.18,.32,1)';
+      ind.style.transition = 'transform 320ms cubic-bezier(.25,1,.5,1)';
       ind.style.transform = 'translate3d(' + left + 'px,' + top + 'px,0) scale(1)';
       ind._bnSettleTimer = setTimeout(function(){
         ind.style.transition = 'none';
@@ -381,7 +345,7 @@ function positionBnIndicator(bar, animate){
         _bnIndicatorState.top = top;
         _bnIndicatorState.animating = false;
         ind._bnSettleTimer = null;
-      }, 535);
+      }, 360);
     });
   });
 }
