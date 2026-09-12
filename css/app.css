@@ -208,12 +208,16 @@ button.app-back:active{
   transform:scale(.94);
 }
 button.app-back .app-back-ico{
-  display:block;
-  font-family:ui-sans-serif,system-ui,sans-serif;
-  font-size:1.65rem;
-  font-weight:400;
-  line-height:.8;
+  display:grid;
+  place-items:center;
+  width:22px;
+  height:22px;
   transform:translateX(1px);
+}
+button.app-back .app-back-ico svg{
+  display:block;
+  width:22px;
+  height:22px;
 }
 button.app-back .app-back-txt{display:none;}
 
@@ -221,22 +225,43 @@ button.app-back .app-back-txt{display:none;}
    long title can never collide with the centered date. During collapse the
    title returns to the compact row and gains side clearance for Back. */
 header:not(.header-root){
-  padding-block-start:calc(env(safe-area-inset-top,0px) + 34px - (24px * var(--header-progress)));
+  /* The centered date occupies a permanent toolbar lane. Large titles live
+     below that lane while expanded, then move into a compact three-column
+     row (back / title / date) only after collapse. This is one geometry rule
+     for every non-root page, including long detail/evaluation titles. */
+  padding-block-start:calc(env(safe-area-inset-top,0px) + 40px - (30px * var(--header-progress)));
   padding-block-end:calc(10px + (24px * (1 - var(--header-progress))));
+  min-height:calc(48px + (24px * (1 - var(--header-progress))));
+  box-sizing:border-box;
 }
 header:not(.header-root) h1{
-  max-width:calc(100% - (16px + (44px * (1 - var(--header-progress)))));
+  max-width:calc(100% - 12px);
+  padding-inline:2px;
+  overflow-wrap:break-word;
+  word-break:normal;
+  text-wrap:balance;
 }
 header.has-back{
   position:sticky;
   top:0;
-  padding-inline-start:calc(16px + (48px * var(--header-progress)));
+  padding-inline-start:calc(16px + (50px * var(--header-progress)));
 }
 header.has-back h1{
-  max-width:calc(100% - 48px);
+  max-width:calc(100% - 12px);
 }
 header.has-back .header-date{
-  max-width:36%;
+  max-width:34%;
+}
+@media(max-width:380px){
+  header:not(.header-root) h1{
+    max-width:calc(100% - 8px);
+  }
+  header.has-back{
+    padding-inline-start:calc(12px + (46px * var(--header-progress)));
+  }
+  header.has-back .header-date{
+    max-width:31%;
+  }
 }
 @media(max-width:360px){
   header:not(.header-root) h1{
@@ -4339,22 +4364,50 @@ button#save-tx{
   .inv-line-del{ width:30px; height:30px; min-width:30px; flex-basis:30px; }
 }
 
-/* Jelly: alive, refined, restrained — neutral watery presence (no blue/cyan shift) */
+/* iOS 26 selected-tab surface: the item itself rests on the Liquid Glass
+   layer. Size and position are supplied by js/nav.js from the real tab item
+   rect; this rule only defines the material and its interaction character. */
 .bn-indicator{
-  background: rgba(120,120,128,0.12);
-  border: 1px solid rgba(255, 255, 255, 0.88);
+  border-radius:18px;
+  background:
+    linear-gradient(145deg,rgba(255,255,255,.48),rgba(255,255,255,.22) 52%,rgba(255,255,255,.34)),
+    rgba(255,255,255,.30);
+  border:1px solid rgba(255,255,255,.62);
   box-shadow:
-    0 2px 10px rgba(26,38,52,.09),
-    0 1px 2px rgba(26,38,52,.04),
-    inset 0 1px 0 rgba(255,255,255,.72);
-  -webkit-backdrop-filter: saturate(130%) blur(6px);
-  backdrop-filter: saturate(130%) blur(6px);
+    0 3px 14px rgba(26,38,52,.10),
+    0 1px 3px rgba(26,38,52,.06),
+    inset 0 1px 0 rgba(255,255,255,.76),
+    inset 0 -1px 0 rgba(26,38,52,.035);
+  -webkit-backdrop-filter:saturate(180%) blur(18px);
+  backdrop-filter:saturate(180%) blur(18px);
+  overflow:hidden;
+  transform-origin:center;
+}
+.bn-indicator::before{
+  content:"";
+  position:absolute;
+  inset:-18% -8% 42%;
+  border-radius:50%;
+  background:radial-gradient(ellipse at 50% 0%,rgba(255,255,255,.68),rgba(255,255,255,0) 68%);
+  pointer-events:none;
+}
+.bn-indicator::after{
+  content:"";
+  position:absolute;
+  inset:1px;
+  border-radius:17px;
+  box-shadow:inset 0 0 0 .5px rgba(255,255,255,.46);
+  pointer-events:none;
 }
 .bn-indicator.is-traveling{
-  background: rgba(120,120,128,0.12);
+  background:
+    linear-gradient(145deg,rgba(255,255,255,.56),rgba(255,255,255,.24) 52%,rgba(255,255,255,.38)),
+    rgba(255,255,255,.34);
 }
 .bn-indicator.is-settling{
-  background: rgba(120,120,128,0.12);
+  background:
+    linear-gradient(145deg,rgba(255,255,255,.48),rgba(255,255,255,.22) 52%,rgba(255,255,255,.34)),
+    rgba(255,255,255,.30);
 }
 
 /* ==========================================================================

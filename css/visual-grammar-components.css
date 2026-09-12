@@ -132,11 +132,11 @@ input[placeholder*="جستجو"]{
              opacity 120ms ease;
 }
 .bottom-nav.is-minimized{
-  min-height:46px;
-  padding-block:4px;
+  min-height:50px;
+  padding-block:5px;
 }
 .bottom-nav.is-minimized .bottom-nav-item{
-  min-height:38px;
+  min-height:40px;
   padding-block:2px;
 }
 .bottom-nav.is-minimized .bottom-nav-item .bn-label{
@@ -570,14 +570,14 @@ a.ledger-row:active{
    ============================================================ */
 .bottom-nav{
   --bn-minimize-progress:0;
-  min-height:calc(54px - (8px * var(--bn-minimize-progress)));
-  padding-block:calc(6px - (2px * var(--bn-minimize-progress)));
-  border-radius:calc(22px - (2px * var(--bn-minimize-progress)));
+  min-height:calc(68px - (18px * var(--bn-minimize-progress)));
+  padding-block:calc(7px - (2px * var(--bn-minimize-progress)));
+  border-radius:calc(24px - (3px * var(--bn-minimize-progress)));
   transition:background-color 220ms ease, box-shadow 220ms ease;
 }
 .bottom-nav-item{
-  min-height:calc(44px - (6px * var(--bn-minimize-progress)));
-  padding-block:calc(4px - (2px * var(--bn-minimize-progress)));
+  min-height:calc(56px - (12px * var(--bn-minimize-progress)));
+  padding-block:calc(4px - (1px * var(--bn-minimize-progress)));
 }
 .bottom-nav-item .bn-label{
   max-height:calc(2em * (1 - var(--bn-minimize-progress)));
@@ -591,11 +591,11 @@ a.ledger-row:active{
   height:calc(24px - (1px * var(--bn-minimize-progress)));
 }
 .bottom-nav.is-minimized{
-  min-height:46px;
-  padding-block:4px;
+  min-height:50px;
+  padding-block:5px;
 }
 .bottom-nav.is-minimized .bottom-nav-item{
-  min-height:38px;
+  min-height:40px;
   padding-block:2px;
 }
 .bottom-nav.is-minimized .bottom-nav-item .bn-label{
