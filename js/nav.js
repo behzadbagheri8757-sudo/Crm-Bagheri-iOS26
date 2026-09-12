@@ -459,11 +459,20 @@ function setHeaderTitle(text, opts){
   updateHeaderCondensedState();
 }
 
+/* Continuous scroll-linked collapse (fixes the earlier snap/lag): progress
+   is a plain 0..1 number derived straight from window.scrollY and written
+   to a CSS custom property every frame — no class toggle, no CSS
+   transition anywhere in this chain, so there is nothing that keeps
+   animating after the finger/scroll stops or that fights a direction
+   change mid-scroll. COLLAPSE_RANGE is the scroll distance (px) over
+   which the large title fully collapses into the compact title. */
+var HEADER_COLLAPSE_RANGE = 48;
 function updateHeaderCondensedState(){
   const header = document.querySelector('header');
   if(!header) return;
   const y = window.scrollY || window.pageYOffset || 0;
-  header.classList.toggle('header-condensed', y > 24);
+  const progress = Math.max(0, Math.min(1, y / HEADER_COLLAPSE_RANGE));
+  header.style.setProperty('--header-progress', String(progress));
 }
 
 /* iOS Large Title collapse: the header starts large (Phase 6). As the page
@@ -519,9 +528,15 @@ function ensureAppBackButton(activeId){
   ensureHeaderDate();
 
   const existing = header.querySelector('.app-back');
-  const isDash = !activeId || activeId === 'dashboard' ||
-    /(?:^|\/)index\.html(?:$|\?)/i.test(location.pathname) ||
-    document.body.classList.contains('page-dashboard');
+  // isDash was previously also true whenever location.pathname contained
+  // "index.html" or <body> carried the legacy "page-dashboard" class — both
+  // are relics of the old multi-page-HTML architecture and are constant in
+  // this single-shell SPA (this file is always served as /index.html and
+  // <body class="page-dashboard"> in index.html is never changed at
+  // runtime), so isDash was always true and the header back button never
+  // rendered on any route. activeId is the one signal the router actually
+  // updates per navigation, so it's the only correct check here.
+  const isDash = !activeId || activeId === 'dashboard';
 
   if(isDash){
     if(existing) existing.remove();
