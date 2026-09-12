@@ -610,6 +610,28 @@ function closeModal(){
 
 function openSheet(html){
   const root = document.getElementById('modalRoot');
+
+  // Invoice V6 re-renders its form when a row is added/removed or a payment
+  // control changes. Re-presenting the whole sheet causes the visible
+  // close/reopen jump on iPhone. When an invoice sheet is already open,
+  // replace only its content shell and keep the existing overlay/sheet
+  // presentation alive. Other sheets keep the original behavior.
+  const existingInvoiceSheet = document.querySelector('#modalRoot .sheet.inv-sheet-host .inv-sheet-v2');
+  if(existingInvoiceSheet && typeof html === 'string' && html.indexOf('class="inv-sheet-v2"') !== -1){
+    const oldBody = existingInvoiceSheet.querySelector('.inv-body');
+    const oldScrollTop = oldBody ? oldBody.scrollTop : 0;
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    const next = tmp.firstElementChild;
+    if(next && next.classList.contains('inv-sheet-v2')){
+      existingInvoiceSheet.replaceWith(next);
+      requestAnimationFrame(function(){
+        const body = document.querySelector('#modalRoot .sheet.inv-sheet-host .inv-body');
+        if(body) body.scrollTop = oldScrollTop;
+      });
+      return;
+    }
+  }
   if(_modalHideTimer){ clearTimeout(_modalHideTimer); _modalHideTimer = null; }
   // مطمئن شو هر Modal قبلی کاملاً پاک شده (نه فقط مخفی) قبل از ساختن Modal جدید،
   // و یک reflow اجباری بین پاک‌شدن و رندر جدید انجام بده تا ظاهر (گوشه‌های گرد و غیره) بعد از باز/بسته‌شدن‌های مکرر خراب نشه

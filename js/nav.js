@@ -167,6 +167,8 @@ function bindBottomNavMinimizeOnScroll(){
   var ticking = false;
   var travel = 52;
   var directionThreshold = 1;
+  var idleTimer = null;
+  var idleDelay = 520;
 
   function reduceMotion(){
     try{
@@ -207,6 +209,14 @@ function bindBottomNavMinimizeOnScroll(){
   }
 
   function schedule(){
+    if(idleTimer) clearTimeout(idleTimer);
+    idleTimer = setTimeout(function(){
+      idleTimer = null;
+      // Once scrolling has genuinely stopped, restore the full tab bar.
+      // Upward scrolling still restores it immediately; this idle restore
+      // prevents the minimized state from getting stuck after a downward drag.
+      setProgress(0, false);
+    }, idleDelay);
     if(ticking) return;
     ticking = true;
     requestAnimationFrame(apply);
