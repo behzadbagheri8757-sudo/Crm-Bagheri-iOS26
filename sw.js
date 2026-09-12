@@ -7,7 +7,10 @@
  */
 'use strict';
 
-/* CHANGED: v51 -> v52 (Header geometry, semantic Back, and native-style tab selection refined as a continuous,
+/* CHANGED: v53 -> v54 (surgical retry-orphan graph preservation, validation focus, header geometry, in-app confirmations, and scoped hint/touch fixes). Previous v53 behavior is otherwise preserved.
+   The build also retains the v53 scroll-linked header geometry and native-style tab selection.
+   */
+/* Legacy v53 note: Header geometry, semantic Back, and native-style tab selection refined as a continuous,
    scroll-linked --header-progress custom property instead of a threshold
    class toggle with its own CSS transition — the old version kept
    animating for ~220ms after scroll stopped/reversed, which read as a
@@ -15,7 +18,7 @@
    scrollY 1:1 and reverses identically. Removed the now-duplicate "داشبورد"
    <h2> inside Dashboard's own content — the header already shows it as the
    page title since the brand-name/page-title fix) */
-const CACHE_NAME = 'baqeri-shell-v52';
+const CACHE_NAME = 'baqeri-shell-v54';
 
 /** App Shell — paths relative to this SW (same directory as index.html). */
 const PRECACHE_URLS = [
