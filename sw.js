@@ -7,11 +7,14 @@
  */
 'use strict';
 
-/* CHANGED: v42 -> v43 (Settings: sections now render as proper iOS grouped-
-   list cards instead of flat borderless stacks; flattened the accidental
-   "card inside a card" double-boxing on the auto-backup and PIN status
-   sub-panels now that the section itself is the card) */
-const CACHE_NAME = 'baqeri-shell-v43';
+/* CHANGED: v43 -> v44 (final verification pass: search fields get a
+   magnifying-glass icon (glass background/border preserved — the earlier
+   Phase 5 interaction-layer glass rule was being silently overridden by a
+   bare .background shorthand and is now folded into this rule directly so
+   it can't regress again); full-repo verification: JS syntax, CSS brace
+   balance, precache completeness, single-source-of-truth token check all
+   pass) */
+const CACHE_NAME = 'baqeri-shell-v44';
 
 /** App Shell — paths relative to this SW (same directory as index.html). */
 const PRECACHE_URLS = [
