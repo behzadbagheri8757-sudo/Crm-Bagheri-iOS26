@@ -80,9 +80,9 @@
     const totalAll = collectVisits().length;
     const orderedN = rows.filter(r => r.visit.result === VISIT_RESULTS[0] || r.visit.ordered).length;
     sumEl.innerHTML = `
-      <div class="card"><div class="label">تعداد (فیلتر)</div><div class="value">${enToFaDigits(String(rows.length))}</div></div>
-      <div class="card"><div class="label">کل ویزیت‌ها</div><div class="value">${enToFaDigits(String(totalAll))}</div></div>
-      <div class="card wide"><div class="label">سفارش‌گرفته در فیلتر فعلی</div><div class="value accent-olive">${enToFaDigits(String(orderedN))}</div></div>
+      <div class="card"><div class="label">تعداد (فیلتر)</div><div class="value">${rows.length}</div></div>
+      <div class="card"><div class="label">کل ویزیت‌ها</div><div class="value">${totalAll}</div></div>
+      <div class="card wide"><div class="label">سفارش‌گرفته در فیلتر فعلی</div><div class="value accent-olive">${orderedN}</div></div>
     `;
 
     if (!rows.length) {
@@ -138,7 +138,7 @@
       return `<button type="button" class="chip ${visitFilter === id ? 'active' : ''}" data-vf="${id}">${label}</button>`;
     };
     root.innerHTML = `
-      <h2 class="section-title">ویزیت مشتریان</h2>
+      <h2 class="section-title">ویزیت و ارزیابی</h2>
       <div class="field"><input id="visit-search" placeholder="جستجوی نام مشتری، منطقه، نتیجه..." value="${esc(visitQuery)}" autocomplete="off"></div>
       <div class="chip-row" id="visit-chips">
         ${chip('all','همه')}

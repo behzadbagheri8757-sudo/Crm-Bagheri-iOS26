@@ -90,7 +90,7 @@
 
   function quickActionsHtml() {
     const gameShortcut = '<a class="section-action" href="#/game">Sales Game ←</a>';
-    return '<div class="dashboard-block dash-quick-actions-block">' +
+    return '<div class="dashboard-block">' +
       '<div class="dashboard-block-head"><div class="dash-section-label"><span class="dash-section-ico" aria-hidden="true">' + ICO.quick + '</span><span>اقدام سریع</span></div>' + gameShortcut + '</div>' +
       '<div class="dash-quick-actions dash-qa-bar">' +
         '<button type="button" class="dash-qa-btn" data-qa="invoice"><span class="dash-qa-ico" aria-hidden="true">' + ICO.invoice + '</span><span class="dash-qa-label">فاکتور جدید</span></button>' +
@@ -195,7 +195,7 @@
       hiddenBlock =
         '<div class="dash-action-more" data-action-more hidden>' + hiddenRows + '</div>' +
         '<button type="button" class="dash-action-toggle" data-action-toggle aria-expanded="false">' +
-          '<span data-action-toggle-label>نمایش ' + enToFaDigits(String(hiddenItems.length)) + ' کار دیگر</span>' +
+          '<span data-action-toggle-label>نمایش ' + hiddenItems.length + ' کار دیگر</span>' +
           '<span class="dash-action-toggle-ico" aria-hidden="true">›</span>' +
         '</button>';
     }
@@ -211,9 +211,6 @@
   }
 
   /* Toggles the collapsed remainder of the Action Queue (items 3-5).
-     P1 FIX: uses the shared animateDisclosure primitive for smooth
-     height + opacity transition, plus a real arrow rotation (220ms on
-     .dash-action-toggle-ico, declared in visual-grammar-components.css).
      Presentation-only: does not alter which actions exist, their order, or count. */
   function bindActionQueueToggle(root) {
     const btn = root.querySelector('[data-action-toggle]');
@@ -221,23 +218,18 @@
     const label = root.querySelector('[data-action-toggle-label]');
     if (!btn || !more) return;
     const hiddenCount = more.querySelectorAll('.action-row').length;
-    // Initialize collapsed state (same as prior behavior)
-    more.hidden = true;
-    btn.setAttribute('aria-expanded', 'false');
     btn.addEventListener('click', function () {
       const expanded = btn.getAttribute('aria-expanded') === 'true';
-      const willOpen = !expanded;
-      if (typeof animateDisclosure === 'function') {
-        animateDisclosure(btn, more, willOpen, { duration: 260 });
+      if (expanded) {
+        more.hidden = true;
+        btn.setAttribute('aria-expanded', 'false');
+        btn.classList.remove('is-open');
+        if (label) label.textContent = 'نمایش ' + hiddenCount + ' کار دیگر';
       } else {
-        more.hidden = !willOpen;
-        btn.classList.toggle('is-open', willOpen);
-        btn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
-      }
-      if (label) {
-        label.textContent = willOpen
-          ? 'نمایش کمتر'
-          : 'نمایش ' + hiddenCount + ' کار دیگر';
+        more.hidden = false;
+        btn.setAttribute('aria-expanded', 'true');
+        btn.classList.add('is-open');
+        if (label) label.textContent = 'نمایش کمتر';
       }
     });
   }
@@ -299,8 +291,7 @@
       const cust = (data.customers || []).find(function (c) { return c.id === inv.customerId; });
       return '<a class="ledger-row" href="#/invoice?id=' + encodeURIComponent(inv.id) + '"><span class="name">فاکتور #' + esc(String(inv.number || '')) + '<span class="sub">' + esc(cust ? cust.name : '—') + ' — ' + faDate(inv.date) + '</span></span><span class="filler"></span><span class="amount">' + money(inv.total) + '</span></a>';
     }).join('');
-    /* Inner section only — parent .dash-activity-group provides the surface */
-    return '<div class="dash-activity-section">' + dashSectionHead(ICO.invoiceSection, 'آخرین فاکتورها', '#/invoices', 'همه ←') + '<div class="dash-activity">' + rows + '</div></div>';
+    return '<div class="dashboard-block">' + dashSectionHead(ICO.invoiceSection, 'آخرین فاکتورها', '#/invoices', 'همه ←') + '<div class="dash-activity">' + rows + '</div></div>';
   }
 
   function recentVisitsHtml() {
@@ -314,8 +305,7 @@
     const rows = top.map(function (v) {
       return '<a class="ledger-row" href="#/customer?id=' + encodeURIComponent(v.customerId) + '"><span class="name">' + esc(v.name) + '<span class="sub">' + faDate(v.date) + (v.time ? ' ' + esc(v.time) : '') + (v.result ? ' — ' + esc(v.result) : '') + '</span></span><span class="filler"></span><span class="amount">ویزیت</span></a>';
     }).join('');
-    /* Inner section only — parent .dash-activity-group provides the surface */
-    return '<div class="dash-activity-section">' + dashSectionHead(ICO.visitSection, 'آخرین ویزیت‌ها', '#/visits', 'همه ←') + '<div class="dash-activity">' + rows + '</div></div>';
+    return '<div class="dashboard-block">' + dashSectionHead(ICO.visitSection, 'آخرین ویزیت‌ها', '#/visits', 'همه ←') + '<div class="dash-activity">' + rows + '</div></div>';
   }
 
   function targetHtml(metrics) {
@@ -351,7 +341,7 @@
           if (daysLeft > 0) {
             const requiredDaily = Math.round(remaining / daysLeft);
             paceHtml = '<span class="dmt-pace">نیاز روزانه ' + toman(requiredDaily) + ' ت' +
-              ' <span class="dmt-pace-days">(' + enToFaDigits(String(daysLeft)) + ' روز مانده)</span></span>';
+              ' <span class="dmt-pace-days">(' + daysLeft + ' روز مانده)</span></span>';
           }
         }
         if (statusMeta) {
@@ -436,49 +426,21 @@
     const invVal = inventoryValue();
     if (typeof isStale === 'function' && isStale()) return;
 
-    /* Semantic composition (presentation only):
-         A. Today's Focus  — target + action queue (primary attention)
-         B. Financial Health — profit / inventory / debt (one surface, stacked rows)
-         C. Quick Actions — tools (de-emphasized)
-         D. Recent Activity — invoices + visits (one activity surface)
-         Data sources, helpers, IDs, and event bindings are unchanged. */
-    const focusActions = todaysActionsHtml();
-    const activityInvoices = recentInvoicesHtml();
-    const activityVisits = recentVisitsHtml();
-    const activityBody = activityInvoices + activityVisits;
-    const activityBlock = activityBody
-      ? ('<div class="dashboard-block dash-activity-group">' +
-          '<div class="dashboard-block-head"><div class="dash-section-label"><span class="dash-section-ico" aria-hidden="true">' + ICO.summary + '</span><span>فعالیت اخیر</span></div></div>' +
-          activityBody +
-        '</div>')
-      : '';
-
     root.innerHTML =
       '<div class="dashboard-shell">' +
       '<h2 class="section-title">داشبورد</h2>' +
       '<div class="dashboard-eyebrow">مرکز فرماندهی روزانه</div>' +
-
-      /* A — Today's Focus */
-      '<div class="dash-focus">' +
-        '<div class="dash-focus-target">' + targetHtml(metrics) + '</div>' +
-        '<div class="dash-focus-actions">' + focusActions + '</div>' +
+      '<div class="biz-status">' +
+        targetHtml(metrics) +
       '</div>' +
-
-      /* B — Financial Health (same metrics; stacked rows for mobile) */
-      '<div class="dashboard-block dash-health">' +
-        '<div class="dashboard-block-head"><div class="dash-section-label"><span class="dash-section-ico" aria-hidden="true">' + ICO.card + '</span><span>وضعیت مالی</span></div></div>' +
-        '<div class="dash-health-surface">' +
-          '<div class="dash-health-row"><span class="dash-health-label">سود این ماه</span><span class="dash-health-value">' + money(metrics.mtdProfit) + '</span></div>' +
-          '<div class="dash-health-row"><span class="dash-health-label">ارزش موجودی</span><span class="dash-health-value">' + money(invVal) + '</span></div>' +
-          '<a class="dash-health-row dash-health-link" href="#/customers?filter=debt"><span class="dash-health-label">بدهی مشتریان</span><span class="dash-health-value debt">' + money(g.customerDebt) + '</span></a>' +
-        '</div>' +
+      todaysActionsHtml() +
+      '<div class="biz-status-secondary">' +
+        '<div class="biz-stat"><span class="biz-stat-label">سود این ماه</span><span class="biz-stat-value">' + money(metrics.mtdProfit) + '</span></div>' +
+        '<div class="biz-stat"><span class="biz-stat-label">ارزش موجودی</span><span class="biz-stat-value">' + money(invVal) + '</span></div>' +
+        '<a class="biz-stat biz-stat-link" href="#/customers?filter=debt"><span class="biz-stat-label">بدهی مشتریان</span><span class="biz-stat-value debt">' + money(g.customerDebt) + '</span></a>' +
       '</div>' +
-
-      /* C — Quick Actions (tools) */
       quickActionsHtml() +
-
-      /* D — Recent Activity */
-      activityBlock +
+      recentInvoicesHtml() + recentVisitsHtml() +
       '</div>';
 
     bindMonthlyTarget(root, function () { renderInto(root, isStale); });

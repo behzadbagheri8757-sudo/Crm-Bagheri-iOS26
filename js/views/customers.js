@@ -113,7 +113,8 @@
         const c = x.c;
         const t = x.t;
         const word = balanceStatusWord(t.balance);
-        const color = t.balance > 0 ? 'accent-rust' : t.balance < 0 ? 'accent-olive' : 'accent-olive';
+        const color = t.balance > 0 ? 'accent-rust' : t.balance < 0 ? 'accent-olive' : '';
+        const amt = t.balance === 0 ? word : word + ': ' + toman(Math.abs(t.balance)) + ' ت';
 
         // One compact status badge + one activity metric. These are read-only
         // presentations of existing frozen outputs; no new scoring/thresholds.
@@ -130,7 +131,7 @@
 
         let badgeLabel = 'فعال';
         let badgeTone = 'neutral';
-        if (riskLevel === 'critical') { badgeLabel = 'فوری'; badgeTone = 'danger'; }
+        if (riskLevel === 'critical') { badgeLabel = 'عاجل'; badgeTone = 'danger'; }
         else if (riskLevel === 'high') { badgeLabel = 'پیگیری'; badgeTone = 'warning'; }
         else if (behavior.behindPattern === true) { badgeLabel = 'عقب‌افتاده'; badgeTone = 'warning'; }
         else if (status === 'lost') { badgeLabel = 'از دست رفته'; badgeTone = 'muted'; }
@@ -153,23 +154,17 @@
           customerHref(c.id) +
           '" style="text-decoration:none;color:inherit;"' +
           (watchTitle ? ' title="' + esc(watchTitle) + '"' : '') + '>' +
-          '<span class="customer-row-main">' +
-          '<span class="customer-row-title-line">' +
-          '<span class="customer-row-name tx-row-title">' + esc(c.name) + '</span>' +
+          '<span class="name">' +
+          esc(c.name) +
+          '<span class="sub customer-row-meta">' + esc(daysText) + '</span>' +
           '</span>' +
-          '<span class="customer-row-meta-line">' +
           '<span class="customer-row-status badge tone-' + badgeTone + '">' + esc(badgeLabel) + '</span>' +
-          '<span class="customer-row-meta">' + esc(daysText) + '</span>' +
-          (watchCount > 0
-            ? '<span class="customer-row-watch" aria-label="هشدار فعال" title="' + esc(watchTitle) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg></span>'
-            : '') +
-          '</span>' +
-          '</span>' +
-          '<span class="customer-row-balance ' + color + '">' +
-          '<span class="customer-row-balance-label">' + esc(word) + '</span>' +
-          '<span class="customer-row-balance-value">' +
-          (t.balance !== 0 ? toman(Math.abs(t.balance)) + ' ت' : '') +
-          '</span>' +
+          (watchCount > 0 ? '<span class="customer-row-watch" aria-label="هشدار فعال" title="' + esc(watchTitle) + '">⚠</span>' : '<span class="customer-row-watch-placeholder" aria-hidden="true"></span>') +
+          '<span class="filler"></span>' +
+          '<span class="amount ' +
+          color +
+          '">' +
+          amt +
           '</span></a>'
         );
       })
