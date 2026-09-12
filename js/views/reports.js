@@ -221,17 +221,17 @@
       '<div class="report-section">' +
       '<h3>سود</h3>' +
       '<div class="cards">' +
-      '<div class="card wide"><div class="label">سود کل (منطق customerProfit روی همه مشتریان)</div>' +
+      '<div class="card wide report-profit-primary"><div class="label">سود کل</div>' +
       '<div class="value accent-olive">' +
       toman(g.totalProfit) +
       ' ت</div></div>' +
-      '<div class="card wide"><div class="label">سود ناخالص فاکتورهای دوره «' +
+      '<div class="card wide report-profit-secondary"><div class="label">سود ناخالص فاکتورهای دوره «' +
       esc(periodLabel) +
       '»</div>' +
       '<div class="value">' +
       toman(periodGrossProfit) +
       ' ت</div>' +
-      '<div class="report-note">همان فرمول ردیف فاکتور (قیمت − buyPrice تاریخی − تخفیف). برگشت/تخفیف تراکنشی فقط در «سود کل» لحاظ شده است.</div>' +
+      '<div class="report-note">سود ردیف فاکتور (قیمت − خرید تاریخی − تخفیف). برگشت/تخفیف تراکنشی فقط در سود کل.</div>' +
       '</div>' +
       '<div class="card"><div class="label">دریافت نقد/کارت/انتقال — ' +
       esc(periodLabel) +
@@ -254,7 +254,7 @@
                 '</span><span class="name"><span class="tx-row-title">' +
                 esc(p.name) +
                 '</span><span class="sub">تعداد: ' +
-                p.qty +
+                enToFaDigits(String(p.qty)) +
                 (p.qtyUnit === 'kg' ? ' کیلوگرم' : '') +
                 '</span></span><span class="filler"></span><span class="amount tx-row-amount"><span class="tx-row-total">' +
                 toman(p.revenue) +
@@ -277,7 +277,7 @@
                 '</span><span class="name"><span class="tx-row-title">' +
                 esc(p.name) +
                 '</span><span class="sub">تعداد: ' +
-                p.qty +
+                enToFaDigits(String(p.qty)) +
                 (p.qtyUnit === 'kg' ? ' کیلوگرم' : '') +
                 '</span></span><span class="filler"></span><span class="amount tx-row-amount"><span class="tx-row-total">' +
                 toman(p.revenue) +
@@ -477,7 +477,7 @@
     };
     root.innerHTML =
       '<h2 class="section-title">گزارش‌ها</h2>' +
-      '<p class="tx-hint">تحلیل مدیریتی — فقط مقادیر موجود سیستم. مانده‌ها همیشه وضعیت فعلی‌اند.</p>' +
+      '<p class="tx-hint">خلاصه‌ای از فروش، سود، دریافت‌ها و وضعیت فعلی حساب‌ها و انبار.</p>' +
       '<div id="reports-summary"></div>' +
       '<div class="field"><label>بازه زمانی (فروش و فاکتور)</label>' +
       '<div class="chip-row" id="report-period-chips">' +

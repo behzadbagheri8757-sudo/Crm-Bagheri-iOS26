@@ -20,8 +20,9 @@
   let fabHandler = null;
   let targetBtnHandler = null;
   function rankPill(rank) {
-    const safeRank = (rank || 'D').toString().replace(/[^A-Z+\-]/g, '');
-    return `<span class="rank-pill rank-pill-${safeRank}">${esc(safeRank)}</span>`;
+    // Shared helper (prospect-scoring.js): an incomplete V2 prospect has
+    // rank === null and must render as "ناقص", never fall back to "D".
+    return prospectRankBadgeHTML(rank);
   }
 
   function navigateToProspect(id) {
@@ -56,13 +57,16 @@
     const el = document.getElementById('prospect-target');
     if (!el) return;
     const dt = prospectState.dailyTarget || { target: 0, count: 0 };
-    /* UI only: compact progress strip. Logic (target/count) unchanged.
-       Progress bar stays idle until at least 1 visit is recorded. */
+    /* Presentation-only: iOS-like Hero Activity Card.
+       Logic (target/count/percentage/remaining) and edit flow unchanged.
+       Progress bar stays empty while count is 0 (is-idle). */
     if (!dt.target) {
       el.innerHTML = `<div class="prospect-daily-target is-unset">
-        <span class="pdt-label">تارگت ویزیت امروز</span>
-        <span class="pdt-meta" style="opacity:.75;">تنظیم نشده</span>
-        <button type="button" class="pdt-edit" id="set-target-btn">تنظیم</button>
+        <div class="pdt-head">
+          <span class="pdt-label">هدف ارزیابی امروز</span>
+          <button type="button" class="pdt-edit" id="set-target-btn">تنظیم</button>
+        </div>
+        <div class="pdt-unset-msg">هنوز هدفی تنظیم نشده</div>
       </div>`;
     } else {
       const count = Number(dt.count) || 0;
@@ -72,11 +76,22 @@
       const pctLabel = Math.min(100, Math.round(pctRaw));
       const idle = count <= 0;
       const barW = idle ? 0 : Math.min(100, Math.max(0, pct));
+      const remaining = Math.max(0, target - count);
       el.innerHTML = `<div class="prospect-daily-target${idle ? ' is-idle' : ' is-active'}">
-        <span class="pdt-label">تارگت امروز</span>
+        <div class="pdt-head">
+          <span class="pdt-label">هدف ارزیابی امروز</span>
+          <span class="pdt-pct">${pctLabel}٪</span>
+        </div>
+        <div class="pdt-hero">
+          <span class="pdt-count">${count}</span>
+          <span class="pdt-caption">ارزیابی انجام شد</span>
+          <span class="pdt-of">از ${target}</span>
+        </div>
         <div class="pdt-bar-wrap"><div class="pdt-bar" role="progressbar" aria-valuenow="${count}" aria-valuemin="0" aria-valuemax="${target}"><span style="width:${barW}%"></span></div></div>
-        <span class="pdt-meta">${count} / ${target}${idle ? '' : ' · ' + pctLabel + '٪'}</span>
-        <button type="button" class="pdt-edit" id="set-target-btn">ویرایش</button>
+        <div class="pdt-foot">
+          <span class="pdt-remain">${remaining} ارزیابی باقی مانده</span>
+          <button type="button" class="pdt-edit" id="set-target-btn">ویرایش</button>
+        </div>
       </div>`;
     }
     const b = document.getElementById('set-target-btn');
@@ -171,7 +186,7 @@
       return `<button type="button" class="chip ${pFilter === id ? 'active' : ''}" data-pf="${id}">${label}</button>`;
     };
     root.innerHTML = `
-      <h2 class="section-title">مغازه‌های بالقوه</h2>
+      <h2 class="section-title">مشتریان بالقوه</h2>
       <div class="prospect-subnav">
         <a class="btn small secondary" data-nav-evaluation href="#/evaluation">ثبت مغازه + ارزیابی</a>
         <a class="btn small secondary" data-nav-routes href="#/locations">موقعیت‌ها</a>

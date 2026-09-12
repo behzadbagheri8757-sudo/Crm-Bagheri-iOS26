@@ -6,6 +6,22 @@
 'use strict';
 
 (function (global) {
+  /* Same defensive helper as payments view — customer payment rows call this. */
+  if (typeof global.paymentMethodLabel !== 'function') {
+    global.paymentMethodLabel = function paymentMethodLabel(method) {
+      var map = {
+        cash: 'نقد',
+        card: 'کارت',
+        transfer: 'انتقال',
+        return: 'برگشت',
+        check: 'چک',
+        supplier: 'پرداخت به تامین‌کننده'
+      };
+      if (method == null || method === '') return '—';
+      return map[method] || String(method);
+    };
+  }
+
   let currentCustomerId = null;
   let rootEl = null;
   function customersHref() {
@@ -427,6 +443,8 @@
 
   function drawCustomerPage(root) {
     if (!root) return;
+    root.classList.add('customer-detail-view'); // UPDATED: Added for CSS scoping
+
     const id = currentCustomerId;
 
     if (!id) {
@@ -502,7 +520,7 @@
           .map(function (inv) {
             const st = invoicePayStatus(inv);
             return (
-              '<a class="ledger-row" href="#/invoice?id=' +
+              '<a class="ledger-row customer-invoice-row" href="#/invoice?id=' +
               encodeURIComponent(inv.id) +
               '" style="text-decoration:none;color:inherit;">' +
               '<span class="name">#' +
@@ -741,11 +759,11 @@
         '<h3 class="sub-title">رفتار خرید و هوش تجاری</h3>' +
         (watchHtmlBlock
           ? '<details open style="margin-bottom:12px;">' +
-            '<summary style="cursor:pointer;color:var(--olive-dark);font-weight:700;padding:6px 0;list-style:none;">نشانه‌ها و هشدارها ▾</summary>' +
+            '<summary class="customer-behavior-summary" style="cursor:pointer;color:var(--olive-dark);font-weight:700;padding:6px 0;list-style:none;">نشانه‌ها و هشدارها</summary>' +
             '<div style="margin-top:8px;">' + watchHtmlBlock + '</div></details>'
           : '') +
         '<details style="margin-bottom:12px;">' +
-        '<summary style="cursor:pointer;color:var(--olive-dark);font-weight:700;padding:6px 0;list-style:none;">تحلیل رفتار خرید ▾</summary>' +
+        '<summary class="customer-behavior-summary" style="cursor:pointer;color:var(--olive-dark);font-weight:700;padding:6px 0;list-style:none;">تحلیل رفتار خرید</summary>' +
         summaryHtml +
         '<div class="cards" style="margin-top:10px;margin-bottom:10px;">' +
         '<div class="card"><div class="label">اولین خرید</div><div class="value" style="font-size:.95rem;">' +
@@ -818,7 +836,7 @@
       esc(c.name) +
       '</div>' +
       '<div style="font-size:.88rem;line-height:1.85;color:var(--ink);">' +
-      (c.ownerName ? '<div>صاحب: ' + esc(c.ownerName) + '</div>' : '') +
+      (c.ownerName ? '<div>مسئول فروشگاه: ' + esc(c.ownerName) + '</div>' : '') +
       (c.phone ? '<div>تلفن: ' + esc(c.phone) + '</div>' : '') +
       (c.locationId
         ? '<div>موقعیت: ' + esc(getLocationDisplayString(c.locationId)) + '</div>'
@@ -988,10 +1006,10 @@
     currentCustomerId = params && params.id ? params.id : null;
     function refreshCustomer() {
       function paint() { drawCustomerPage(rootEl || root); }
+      // Paint immediately so the page is never blank if lifecycle reconcile hangs.
+      paint();
       if (typeof reconcileWatchLifecycle === 'function' && currentCustomerId) {
         reconcileWatchLifecycle(currentCustomerId).then(paint).catch(function () { paint(); });
-      } else {
-        paint();
       }
     }
     refreshCustomer();
@@ -1001,6 +1019,7 @@
       ViewHost.clearRefresh(refreshToken);
       refreshToken = null;
       currentCustomerId = null;
+      root.classList.remove('customer-detail-view'); // UPDATED: Added for CSS scoping cleanup
       root.innerHTML = '';
       rootEl = null;
     };
