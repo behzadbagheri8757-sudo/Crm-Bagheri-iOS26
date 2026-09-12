@@ -61,6 +61,12 @@
       const hash = location.hash || '#/';
       const { path, params } = parseHash();
       const handler = routes.get(path);
+      // A route change must not leave a sheet mounted over the new route.
+      // If a save is in flight, let its continuation finish first; its own
+      // success/error path owns the sheet lifecycle.
+      if(!(global.__sheetSaveInFlight > 0)){
+        try { if(typeof global.closeModal === 'function') global.closeModal(); } catch(_e) {}
+      }
       unmountCurrent();
 
       const main = document.getElementById('main');

@@ -425,6 +425,7 @@ function openShamsiPicker(fieldEl){
   dCol.addEventListener('scroll', onWheelScroll, { passive: true });
 
   function close(){
+    Object.keys(scrollTimers).forEach(function(k){ clearTimeout(scrollTimers[k]); });
     overlay.remove();
   }
 
@@ -592,6 +593,39 @@ function bindSheetDragToDismiss(sheetEl, handleEl, dismissFn){
 
 let _modalHideTimer = null;
 
+/* In-app confirmation layer. It sits above an existing sheet when needed, so
+   destructive actions can be confirmed without replacing/dismissing an
+   in-flight form or changing its state. */
+function appConfirm(message, confirmLabel){
+  confirmLabel = confirmLabel || 'تأیید';
+  return new Promise(function(resolve){
+    const root = document.getElementById('modalRoot');
+    if(!root){ resolve(false); return; }
+    const layer = document.createElement('div');
+    layer.className = 'confirm-overlay';
+    layer.setAttribute('role','alertdialog');
+    layer.setAttribute('aria-modal','true');
+    layer.innerHTML = '<div class="confirm-card"><div class="confirm-message"></div><div class="btn-row"><button type="button" class="btn secondary" data-confirm-cancel>انصراف</button><button type="button" class="btn danger" data-confirm-ok>'+esc(confirmLabel)+'</button></div></div>';
+    layer.querySelector('.confirm-message').textContent = String(message || 'ادامه می‌دهید؟');
+    root.appendChild(layer);
+    let settled = false;
+    function finish(value){
+      if(settled) return;
+      settled = true;
+      layer.remove();
+      resolve(value);
+    }
+    layer.querySelector('[data-confirm-cancel]').addEventListener('click', function(){ finish(false); });
+    layer.querySelector('[data-confirm-ok]').addEventListener('click', function(){ finish(true); });
+    layer.addEventListener('click', function(e){ if(e.target === layer) finish(false); });
+    requestAnimationFrame(function(){
+      const ok = layer.querySelector('[data-confirm-ok]');
+      if(ok) ok.focus();
+    });
+  });
+}
+
+
 function closeModal(){
   const overlay = document.getElementById('overlay');
   const root = document.getElementById('modalRoot');
@@ -610,6 +644,25 @@ function closeModal(){
 
 function openSheet(html){
   const root = document.getElementById('modalRoot');
+
+  // Generic sheets can also re-render in response to a control change.
+  // Replace only the sheet content so the visible sheet/overlay never
+  // closes and reopens during an in-sheet interaction.
+  const existingGenericSheet = document.querySelector('#modalRoot .overlay.show .sheet:not(.inv-sheet-host)');
+  if(existingGenericSheet && typeof html === 'string'){
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    const keep = Array.from(existingGenericSheet.children).filter(function(el){
+      return el.id === 'closeX' || el.classList.contains('sheet-handle');
+    });
+    Array.from(existingGenericSheet.children).forEach(function(el){
+      if(keep.indexOf(el) === -1) el.remove();
+    });
+    const frag = document.createDocumentFragment();
+    Array.from(tmp.childNodes).forEach(function(n){ frag.appendChild(n); });
+    existingGenericSheet.appendChild(frag);
+    return;
+  }
 
   // Invoice V6 re-renders its form when a row is added/removed or a payment
   // control changes. Re-presenting the whole sheet causes the visible
@@ -653,6 +706,9 @@ function openSheet(html){
     sheet.classList.add('show');
   });
   overlay.addEventListener('click', (e)=>{ if(e.target.id==='overlay') closeModal(); });
+  overlay.addEventListener('touchmove', function(e){
+    if(!e.target.closest('.sheet')) e.preventDefault();
+  }, {passive:false});
   document.getElementById('closeX').addEventListener('click', closeModal);
   bindSheetDragToDismiss(sheet, sheet.querySelector('.sheet-handle'), closeModal);
 }

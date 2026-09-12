@@ -559,6 +559,54 @@ async function loadData(){
   }
 }
 
+function reconcileRestoreGraph(target, source){
+  if(source === null || source === undefined || typeof source !== 'object') return source;
+  if(Array.isArray(source)){
+    if(!Array.isArray(target)) return JSON.parse(JSON.stringify(source));
+    const hasIds = source.every(function(item){ return item && typeof item === 'object' && !Array.isArray(item) && item.id != null; });
+    if(hasIds){
+      const existingById = new Map();
+      target.forEach(function(item){ if(item && typeof item === 'object' && item.id != null) existingById.set(String(item.id), item); });
+      const next = source.map(function(src){
+        const live = existingById.get(String(src.id));
+        return live ? reconcileRestoreGraph(live, src) : JSON.parse(JSON.stringify(src));
+      });
+      target.splice(0, target.length);
+      next.forEach(function(item){ target.push(item); });
+      return target;
+    }
+    target.splice(0, target.length);
+    source.forEach(function(src, index){
+      target.push(reconcileRestoreGraph(target[index], src));
+    });
+    return target;
+  }
+  if(!target || typeof target !== 'object' || Array.isArray(target)) return JSON.parse(JSON.stringify(source));
+  Object.keys(target).forEach(function(k){ if(!Object.prototype.hasOwnProperty.call(source, k)) delete target[k]; });
+  Object.keys(source).forEach(function(k){
+    const src = source[k];
+    const cur = target[k];
+    if(src && typeof src === 'object'){
+      if(Array.isArray(src)){
+        if(!Array.isArray(cur)) target[k] = JSON.parse(JSON.stringify(src));
+        else reconcileRestoreGraph(cur, src);
+      }else{
+        if(!cur || typeof cur !== 'object' || Array.isArray(cur)) target[k] = JSON.parse(JSON.stringify(src));
+        else reconcileRestoreGraph(cur, src);
+      }
+    }else target[k] = src;
+  });
+  return target;
+}
+
+function restoreDataInPlace(snapshot){
+  if(!snapshot || typeof snapshot !== 'object') return;
+  // Preserve the live graph, including ID-bearing nested objects/arrays.
+  // Form/event-handler closures therefore continue to reference live records
+  // after a failed save instead of mutating an orphaned pre-rollback object.
+  reconcileRestoreGraph(data, snapshot);
+}
+
 async function saveData(){
   try{
     data.schemaVersion = CURRENT_SCHEMA_VERSION;
@@ -568,7 +616,7 @@ async function saveData(){
     console.error('save failed', e);
     // Global last-known-good rollback closes the remaining integrity gap for
     // mutation paths that do not maintain their own previousData snapshot.
-    try{ data = JSON.parse(JSON.stringify(_lastPersistedData)); }catch(rollbackErr){ console.error('global save rollback failed', rollbackErr); }
+    try{ restoreDataInPlace(_lastPersistedData); }catch(rollbackErr){ console.error('global save rollback failed', rollbackErr); }
     showToast('⚠️ ذخیره نشد؛ تغییر انجام‌شده برگردانده شد');
     throw e;
   }

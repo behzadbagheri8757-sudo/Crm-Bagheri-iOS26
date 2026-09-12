@@ -130,7 +130,8 @@ function bindMoreSheetDragToDismiss(){
 }
 
 function isMoreSectionActive(activeId){
-  return MORE_NAV_ITEMS.some(t => t.id === activeId);
+  if(MORE_NAV_ITEMS.some(t => t.id === activeId)) return true;
+  return activeId === 'watches';
 }
 
 function pinBottomNav(){
@@ -545,8 +546,9 @@ function routeBackTarget(path, params){
     case '/evaluation':
       return params.id != null ? {path:'/prospect', params:{id:String(params.id)}} : {path:'/prospects'};
     case '/prospect-routes':
-    case '/locations':
       return {path:'/prospects'};
+    case '/locations':
+      return {path:'/settings'};
     case '/watch':
       return {path:'/watches'};
     default:
@@ -763,9 +765,13 @@ function bindPullToRefresh(){
     if(!dragging) return;
     dragging = false;
     const ready = el.classList.contains('ptr-ready');
-    el.style.transform = '';
-    if(ready) doRefresh();
-    else el.classList.remove('show','ptr-ready');
+    if(ready){
+      el.style.transform = 'translateY(0)';
+      doRefresh();
+    } else {
+      el.style.transform = 'translateY(-40px)';
+      el.classList.remove('show','ptr-ready');
+    }
   });
 
   async function doRefresh(){
@@ -783,6 +789,7 @@ function bindPullToRefresh(){
     }
     await minVisible;
     el.classList.remove('show', 'ptr-spinning');
+    el.style.transform = 'translateY(-40px)';
     refreshing = false;
   }
 }
@@ -953,6 +960,7 @@ async function bootSpaShell() {
       if (path === '/suppliers' || path === '/supplier') return 'suppliers';
       if (path === '/visits') return 'visits';
       if (path === '/prospects' || path === '/prospect' || path === '/prospect-routes' || path === '/evaluation') return 'prospects';
+      if (path === '/watches' || path === '/watch') return 'watches';
       if (path === '/checks') return 'checks';
       if (path === '/game') return 'game';
       if (path === '/settings') return 'settings';

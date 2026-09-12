@@ -987,7 +987,7 @@ async function autoBackupTick(){
 }
 
 async function restoreFromAutoBackup(key){
-  if(!confirm('مطمئنی؟ اطلاعات فعلی با این نسخه‌ی بکاپ خودکار جایگزین می‌شه.')) return;
+  if(!(await appConfirm('مطمئنی؟ اطلاعات فعلی با این نسخه‌ی بکاپ خودکار جایگزین می‌شه.'))) return;
   try{
     const snap = await dbGet(key);
     if(!snap || !snap.value){ showToast('این نسخه‌ی بکاپ پیدا نشد'); return; }
