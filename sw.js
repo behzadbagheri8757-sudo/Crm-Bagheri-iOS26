@@ -7,8 +7,10 @@
  */
 'use strict';
 
-/* CHANGED: v34 -> v35 (precache Visual Grammar CSS assets) */
-const CACHE_NAME = 'baqeri-shell-v35';
+/* CHANGED: v38 -> v39 (disclosure chevrons on real navigable list rows;
+   native pull-to-refresh gesture wired to the existing ViewHost refresh
+   registry that all 21 views already use) */
+const CACHE_NAME = 'baqeri-shell-v39';
 
 /** App Shell — paths relative to this SW (same directory as index.html). */
 const PRECACHE_URLS = [
@@ -25,6 +27,7 @@ const PRECACHE_URLS = [
   './js/stock.js',
   './js/backup.js',
   './js/pin-lock.js',
+  './js/icons.js',
   './js/nav.js',
   './js/app.js',
   './js/prospect-scoring.js',
