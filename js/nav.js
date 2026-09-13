@@ -697,7 +697,7 @@ function bindPullToRefresh(){
   let startY = 0, pulling = false, dragging = false, refreshing = false;
 
   function isBlocked(target){
-    return !!(target && target.closest && target.closest('.overlay, .more-sheet, .more-overlay, #modalRoot, header'));
+    return !!(target && target.closest && target.closest('.overlay, .more-sheet, .more-overlay, .shamsi-sheet-overlay, #modalRoot, header'));
   }
 
   window.addEventListener('touchstart', function(e){
