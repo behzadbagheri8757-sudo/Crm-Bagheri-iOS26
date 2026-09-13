@@ -376,6 +376,17 @@ function _bnBuildMove(left0, right0, top0, left1, right1, top1, barWidth){
 function positionBnIndicator(bar, animate){
   if(!bar) return;
   var ind = ensureBnIndicator(bar);
+  /* A route change's own post-navigation scrollTo() (see router.js) fires
+     the scroll/minimize listeners with animate=false a frame or two after
+     a tab tap starts its animate=true move. Without this guard that
+     non-animated reposition was killing the tap animation almost as soon
+     as it started, well before its spring motion could be seen — the
+     motion model itself was never the problem. If a tap animation is
+     already in flight, an animate=false call has nothing useful to do:
+     skip it and let the in-flight animation keep going undisturbed. */
+  if(!animate && ind._bnAnim){
+    return;
+  }
   var active = bar.querySelector('.bottom-nav-item.active');
   if(!active){
     ind.style.opacity = '0';
