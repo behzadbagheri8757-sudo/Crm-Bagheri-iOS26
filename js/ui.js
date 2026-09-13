@@ -1,5 +1,8 @@
 /* ui.js — shared UI helpers (toast, modal/sheet, formatting)
    Phase 0 extract: no logic changes.
+   Shamsi rebuild: unified close lifecycle, handle drag dismissal, Escape,
+   focus restoration, data-shamsi-mode="calendar" dispatch, and a bridge to
+   js/shamsi-calendar.js. All other helpers are preserved byte-for-byte.
 */
 // ---------- small utilities ----------
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
@@ -266,21 +269,37 @@ function isSameJalaliMonth(iso, ref){
 
 /**
  * HTML for a Shamsi date field — single field like native input.
- * Tap opens iOS-style bottom sheet with scroll wheels (Jalali Y/M/D).
- * Hidden input keeps Gregorian YYYY-MM-DD (same id) for existing .value readers.
- * NOTE: Native iOS <input type="date"> cannot use Jalali; this is the closest safe UX.
+ * Tap opens the wheel picker by default, or the calendar grid when
+ * opts.mode === 'calendar'. Hidden input keeps Gregorian YYYY-MM-DD
+ * (same id) for existing .value readers.
+ * Backward compatible: existing 2-arg callers are unchanged.
  */
-function shamsiDateInputHTML(id, valueISO){
+function shamsiDateInputHTML(id, valueISO, opts){
   const iso = (valueISO && parseISODateParts(valueISO)) ? String(valueISO).slice(0,10) : todayISO();
   const j = isoToJalali(iso) || gregorianToJalali(
     new Date().getFullYear(), new Date().getMonth()+1, new Date().getDate()
   );
   const label = enToFaDigits(j[0] + '/' + j[1] + '/' + j[2]);
-  return `<div class="shamsi-date" data-shamsi-root="1">
+  const modeAttr = (opts && opts.mode) ? (' data-shamsi-mode="' + esc(opts.mode) + '"') : '';
+  return `<div class="shamsi-date" data-shamsi-root="1"${modeAttr}>
     <input type="hidden" id="${esc(id)}" value="${esc(iso)}" data-shamsi-hidden="1">
     <input type="text" class="shamsi-date-field" data-shamsi-field="1" readonly inputmode="none" value="${esc(label)}" aria-label="تاریخ شمسی">
   </div>`;
 }
+
+/* ==========================================================================
+   Shamsi Wheel Picker
+   - Visual order (left → right in RTL pages): Year | Month | Day
+   - Container uses direction:ltr so DOM order (y, m, d) maps to that visual
+     order; each column re-establishes direction:rtl for its own content.
+   - Single-instance guard: only one shamsi sheet may exist at a time
+     (shared id with the calendar picker for mutual exclusion).
+   - Unified close lifecycle: cancel / done / backdrop / drag / Escape all
+     funnel through one close(apply) function; the closed flag prevents
+     double-close and no timer or listener survives past DOM removal.
+   - Focus restoration: the trigger's focus is captured on open and restored
+     on close.
+   ========================================================================== */
 
 function _shamsiPadWheel(col, countBefore){
   // spacer items so first/last can center in the highlight band
@@ -338,29 +357,46 @@ function _shamsiSnapWheel(col){
   return v;
 }
 
+function _shamsiUpdateSelected(col){
+  const v = _shamsiReadWheel(col);
+  if(v == null) return;
+  col.querySelectorAll('.shamsi-wheel-item[data-v]').forEach(function(it){
+    const iv = parseInt(it.getAttribute('data-v'), 10);
+    if(iv === v) it.setAttribute('data-selected', '1');
+    else it.removeAttribute('data-selected');
+  });
+}
+
 function _shamsiFillDayCol(dayCol, jy, jm, jd){
   const dim = jalaliMonthLength(jy, jm);
   if(jd > dim) jd = dim;
+  if(jd < 1) jd = 1;
   const vals = [];
   for(let d = 1; d <= dim; d++) vals.push(d);
   dayCol.innerHTML = _shamsiBuildWheelHTML('d', vals, jd, null);
   _shamsiScrollToValue(dayCol, jd);
+  _shamsiUpdateSelected(dayCol);
   return jd;
 }
 
 function openShamsiPicker(fieldEl){
+  if(!fieldEl || !fieldEl.closest) return;
   const root = fieldEl.closest('[data-shamsi-root]');
   if(!root) return;
   const hid = root.querySelector('[data-shamsi-hidden]');
   if(!hid) return;
-  const iso = hid.value || todayISO();
+
+  // Capture the trigger so focus can be returned on close.
+  const previousActive = document.activeElement;
+
+  const iso = (hid.value && parseISODateParts(hid.value)) ? String(hid.value).slice(0, 10) : todayISO();
   const j = isoToJalali(iso) || gregorianToJalali(
-    new Date().getFullYear(), new Date().getMonth()+1, new Date().getDate()
+    new Date().getFullYear(), new Date().getMonth() + 1, new Date().getDate()
   );
   let jy = j[0], jm = j[1], jd = j[2];
 
-  // remove any existing sheet
-  const prev = document.getElementById('shamsi-picker-sheet');
+  // Single-instance guard: remove any other shamsi sheet (wheel OR calendar).
+  const prev = document.getElementById('shamsi-sheet-root');
   if(prev) prev.remove();
 
   const yVals = [];
@@ -369,13 +405,14 @@ function openShamsiPicker(fieldEl){
   const mLabs = SHAMSI_MONTH_NAMES.slice();
 
   const overlay = document.createElement('div');
-  overlay.id = 'shamsi-picker-sheet';
+  overlay.id = 'shamsi-sheet-root';
   overlay.className = 'shamsi-sheet-overlay';
   overlay.innerHTML =
-    '<div class="shamsi-sheet" role="dialog" aria-label="انتخاب تاریخ شمسی">' +
+    '<div class="shamsi-sheet" role="dialog" aria-modal="true" aria-labelledby="shamsi-sheet-title">' +
+      '<div class="shamsi-sheet-handle" aria-hidden="true"></div>' +
       '<div class="shamsi-sheet-toolbar">' +
         '<button type="button" class="shamsi-sheet-btn" data-shamsi-cancel="1">لغو</button>' +
-        '<span class="shamsi-sheet-title">تاریخ</span>' +
+        '<span class="shamsi-sheet-title" id="shamsi-sheet-title">تاریخ</span>' +
         '<button type="button" class="shamsi-sheet-btn shamsi-sheet-done" data-shamsi-done="1">تأیید</button>' +
       '</div>' +
       '<div class="shamsi-wheels-wrap">' +
@@ -390,6 +427,8 @@ function openShamsiPicker(fieldEl){
 
   document.body.appendChild(overlay);
 
+  const sheetEl = overlay.querySelector('.shamsi-sheet');
+  const handleEl = overlay.querySelector('.shamsi-sheet-handle');
   const yCol = overlay.querySelector('[data-shamsi-wheel="y"]');
   const mCol = overlay.querySelector('[data-shamsi-wheel="m"]');
   const dCol = overlay.querySelector('[data-shamsi-wheel="d"]');
@@ -398,20 +437,28 @@ function openShamsiPicker(fieldEl){
   mCol.innerHTML = _shamsiBuildWheelHTML('m', mVals, jm, mLabs);
   _shamsiFillDayCol(dCol, jy, jm, jd);
 
-  // initial scroll after layout
+  // initial scroll + entry animation after layout
   requestAnimationFrame(function(){
-    _shamsiScrollToValue(yCol, jy);
-    _shamsiScrollToValue(mCol, jm);
-    _shamsiScrollToValue(dCol, jd);
+    overlay.classList.add('show');
+    requestAnimationFrame(function(){
+      _shamsiScrollToValue(yCol, jy);
+      _shamsiScrollToValue(mCol, jm);
+      _shamsiScrollToValue(dCol, jd);
+      _shamsiUpdateSelected(yCol);
+      _shamsiUpdateSelected(mCol);
+      _shamsiUpdateSelected(dCol);
+    });
   });
 
-  let scrollTimers = {};
+  const scrollTimers = {};
   function onWheelScroll(ev){
     const col = ev.currentTarget;
     const part = col.getAttribute('data-shamsi-wheel');
     clearTimeout(scrollTimers[part]);
     scrollTimers[part] = setTimeout(function(){
+      delete scrollTimers[part];
       const v = _shamsiSnapWheel(col);
+      _shamsiUpdateSelected(col);
       if(part === 'y' && v != null) jy = v;
       if(part === 'm' && v != null) jm = v;
       if(part === 'd' && v != null) jd = v;
@@ -424,51 +471,110 @@ function openShamsiPicker(fieldEl){
   mCol.addEventListener('scroll', onWheelScroll, { passive: true });
   dCol.addEventListener('scroll', onWheelScroll, { passive: true });
 
-  function close(){
-    Object.keys(scrollTimers).forEach(function(k){ clearTimeout(scrollTimers[k]); });
-    overlay.remove();
+  let closed = false;
+
+  function onKey(e){
+    if(e.key === 'Escape' || e.keyCode === 27){
+      e.preventDefault();
+      close(false);
+    }
   }
 
-  function apply(){
-    jy = _shamsiSnapWheel(yCol) || jy;
-    jm = _shamsiSnapWheel(mCol) || jm;
-    jd = _shamsiSnapWheel(dCol) || jd;
-    const dim = jalaliMonthLength(jy, jm);
-    if(jd > dim) jd = dim;
-    const newIso = jalaliToISO(jy, jm, jd);
-    const prev = hid.value;
-    hid.value = newIso;
-    const field = root.querySelector('[data-shamsi-field]');
-    if(field) field.value = enToFaDigits(jy + '/' + jm + '/' + jd);
-    if(prev !== newIso){
-      try{
-        hid.dispatchEvent(new Event('input', { bubbles: true }));
-        hid.dispatchEvent(new Event('change', { bubbles: true }));
-      }catch(e){}
+  function cleanup(){
+    Object.keys(scrollTimers).forEach(function(k){
+      clearTimeout(scrollTimers[k]);
+      delete scrollTimers[k];
+    });
+    document.removeEventListener('keydown', onKey, true);
+  }
+
+  function close(applyValues){
+    if(closed) return;
+    closed = true;
+    cleanup();
+
+    if(applyValues){
+      jy = _shamsiSnapWheel(yCol) || jy;
+      jm = _shamsiSnapWheel(mCol) || jm;
+      jd = _shamsiSnapWheel(dCol) || jd;
+      const dim = jalaliMonthLength(jy, jm);
+      if(jd > dim) jd = dim;
+      if(jd < 1) jd = 1;
+      const newIso = jalaliToISO(jy, jm, jd);
+      const old = hid.value;
+      hid.value = newIso;
+      const field = root.querySelector('[data-shamsi-field]');
+      if(field) field.value = enToFaDigits(jy + '/' + jm + '/' + jd);
+      if(old !== newIso){
+        try{
+          hid.dispatchEvent(new Event('input', { bubbles: true }));
+          hid.dispatchEvent(new Event('change', { bubbles: true }));
+        }catch(e){}
+      }
     }
-    close();
+
+    overlay.classList.remove('show');
+
+    // Remove after exit animation finishes; guard against double removal.
+    setTimeout(function(){
+      if(overlay.parentNode) overlay.remove();
+      if(previousActive && typeof previousActive.focus === 'function'){
+        try{ previousActive.focus(); }catch(e){}
+      }
+    }, 340);
   }
 
   overlay.addEventListener('click', function(e){
-    if(e.target === overlay) close();
+    if(e.target === overlay) close(false);
   });
   overlay.querySelector('[data-shamsi-cancel]').addEventListener('click', function(e){
-    e.preventDefault(); close();
+    e.preventDefault();
+    close(false);
   });
   overlay.querySelector('[data-shamsi-done]').addEventListener('click', function(e){
-    e.preventDefault(); apply();
+    e.preventDefault();
+    close(true);
+  });
+  document.addEventListener('keydown', onKey, true);
+
+  if(typeof bindSheetDragToDismiss === 'function'){
+    bindSheetDragToDismiss(sheetEl, handleEl, function(){ close(false); });
+  }
+
+  requestAnimationFrame(function(){
+    const done = overlay.querySelector('[data-shamsi-done]');
+    if(done){ try{ done.focus(); }catch(e){} }
   });
 }
 
-/** Tap on Shamsi date field opens wheel sheet (document delegation). */
+/* Bridge to the calendar-grid picker in js/shamsi-calendar.js.
+   If the module is not on the page, we log a visible warning (not a silent
+   fallback) and open the wheel picker so the field still functions. */
+function openShamsiCalendarPicker(fieldEl){
+  if(window.ShamsiCalendar && typeof window.ShamsiCalendar.open === 'function'){
+    window.ShamsiCalendar.open(fieldEl);
+    return;
+  }
+  try{ console.warn('[shamsi] js/shamsi-calendar.js is not loaded; falling back to wheel picker. Add the <script> tag after js/ui.js.'); }catch(e){}
+  openShamsiPicker(fieldEl);
+}
+
+/** Tap on a Shamsi date field opens a picker.
+    - root[data-shamsi-mode="calendar"] → calendar grid
+    - otherwise → wheel picker */
 (function bindShamsiDateDelegation(){
   if(typeof document === 'undefined') return;
   function onClick(e){
     const t = e.target;
     if(!t || !t.closest) return;
     const field = t.closest('[data-shamsi-field]');
-    if(field){
-      e.preventDefault();
+    if(!field) return;
+    e.preventDefault();
+    const root = field.closest('[data-shamsi-root]');
+    const mode = root && root.getAttribute('data-shamsi-mode');
+    if(mode === 'calendar'){
+      openShamsiCalendarPicker(field);
+    } else {
       openShamsiPicker(field);
     }
   }
@@ -481,7 +587,6 @@ function openShamsiPicker(fieldEl){
     bind();
   }
 })();
-
 
 function daysAgo(iso){
   if(!iso) return Infinity;
@@ -712,4 +817,3 @@ function openSheet(html){
   document.getElementById('closeX').addEventListener('click', closeModal);
   bindSheetDragToDismiss(sheet, sheet.querySelector('.sheet-handle'), closeModal);
 }
-
