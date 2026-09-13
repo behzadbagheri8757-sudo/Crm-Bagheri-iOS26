@@ -254,7 +254,7 @@
         '<span class="name">' + esc(it.productName) +
           '<span class="sub">' + reasonTxt + '</span></span>' +
         '<span class="filler"></span>' +
-        '<span class="amount" style="font-size:.85rem;font-weight:600;">' +
+        '<span class="amount" style="font-size:.85rem;font-weight:500;">' +
           esc(String(it.rejectedCount)) + ' بار رد شده</span></div>';
     }).join('');
 
@@ -319,7 +319,7 @@
         var label = (s.productName ? ('«' + esc(s.productName) + '» — ') : '') + esc(s.reason || '');
         return '<div style="font-size:.85rem;line-height:1.9;display:flex;justify-content:space-between;gap:8px;">' +
           '<span>• ' + label + '</span>' +
-          '<span class="watch-level-label ' + levelClass(s.severity) + '" style="font-weight:600;white-space:nowrap;">' + esc(levelLabel(s.severity)) + '</span>' +
+          '<span class="watch-level-label ' + levelClass(s.severity) + '" style="font-weight:500;white-space:nowrap;">' + esc(levelLabel(s.severity)) + '</span>' +
           '</div>';
       }).join('');
       confirmedHtml = '<div class="card wide" style="margin-bottom:10px;">' +
@@ -333,8 +333,8 @@
         var label = (o.productName ? ('«' + esc(o.productName) + '» — ') : '') + esc(o.generatedReason || '');
         var reviewed = !!(o.reason);
         var badge = reviewed
-          ? '<span style="color:var(--olive-dark);font-weight:600;font-size:.78rem;">بررسی شده</span>'
-          : '<span class="watch-level-unreviewed" style="font-weight:600;font-size:.78rem;">بررسی نشده</span>';
+          ? '<span style="color:var(--olive-dark);font-weight:500;font-size:.78rem;">بررسی شده</span>'
+          : '<span class="watch-level-unreviewed" style="font-weight:500;font-size:.78rem;">بررسی نشده</span>';
         var reasonBit = '';
         if (reviewed && o.reason) {
           var rlabel = (typeof watchReasonLabel === 'function') ? watchReasonLabel(o.reason.code) : (o.reason.code || '');
@@ -348,7 +348,7 @@
           '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;">' +
             '<span>• ' + label + '</span>' +
             '<span style="text-align:left;white-space:nowrap;">' + badge +
-              '<div class="watch-level-label ' + levelClass(o.level) + '" style="font-weight:600;font-size:.78rem;">' + esc(levelLabel(o.level)) + '</div>' +
+              '<div class="watch-level-label ' + levelClass(o.level) + '" style="font-weight:500;font-size:.78rem;">' + esc(levelLabel(o.level)) + '</div>' +
             '</span>' +
           '</div>' + reasonBit +
         '</div>';
@@ -759,11 +759,11 @@
         '<h3 class="sub-title">رفتار خرید و هوش تجاری</h3>' +
         (watchHtmlBlock
           ? '<details open style="margin-bottom:12px;">' +
-            '<summary class="customer-behavior-summary" style="cursor:pointer;color:var(--olive-dark);font-weight:700;padding:6px 0;list-style:none;">نشانه‌ها و هشدارها</summary>' +
+            '<summary class="customer-behavior-summary" style="cursor:pointer;color:var(--olive-dark);font-weight:600;padding:6px 0;list-style:none;">نشانه‌ها و هشدارها</summary>' +
             '<div style="margin-top:8px;">' + watchHtmlBlock + '</div></details>'
           : '') +
         '<details style="margin-bottom:12px;">' +
-        '<summary class="customer-behavior-summary" style="cursor:pointer;color:var(--olive-dark);font-weight:700;padding:6px 0;list-style:none;">تحلیل رفتار خرید</summary>' +
+        '<summary class="customer-behavior-summary" style="cursor:pointer;color:var(--olive-dark);font-weight:600;padding:6px 0;list-style:none;">تحلیل رفتار خرید</summary>' +
         summaryHtml +
         '<div class="cards" style="margin-top:10px;margin-bottom:10px;">' +
         '<div class="card"><div class="label">اولین خرید</div><div class="value" style="font-size:.95rem;">' +
@@ -832,7 +832,7 @@
       customersHref() +
       '">← مشتریان</a></div>' +
       '<div class="card" style="margin-bottom:12px;">' +
-      '<div style="font-size:1.15rem;font-weight:800;color:var(--olive-dark);margin-bottom:8px;">' +
+      '<div style="font-size:1.15rem;font-weight:700;color:var(--olive-dark);margin-bottom:8px;">' +
       esc(c.name) +
       '</div>' +
       '<div style="font-size:.88rem;line-height:1.85;color:var(--ink);">' +

@@ -51,7 +51,7 @@
                     }
                     return '<div class="card" style="margin-bottom:8px;" data-route="' + esc(rt.id) + '">' +
                       '<div class="btn-row" style="justify-content:space-between;">' +
-                      '<button type="button" class="btn small secondary" data-toggle-route="' + esc(rt.id) + '" style="font-weight:800;">' +
+                      '<button type="button" class="btn small secondary" data-toggle-route="' + esc(rt.id) + '" style="font-weight:700;">' +
                       (rOpen ? '▾ ' : '▸ ') + esc(rt.name) + ' <span class="sub">(' + neighCount + ' محله)</span></button>' +
                       '<button type="button" class="btn small danger" data-del-route="' + esc(rt.id) + '">حذف مسیر</button>' +
                       '</div>' + neighHtml + '</div>';
@@ -61,7 +61,7 @@
           }
           return '<div class="card" style="margin-bottom:10px;" data-region="' + esc(r.id) + '">' +
             '<div class="btn-row" style="justify-content:space-between;">' +
-            '<button type="button" class="btn small secondary" data-toggle-region="' + esc(r.id) + '" style="font-weight:800;">' +
+            '<button type="button" class="btn small secondary" data-toggle-region="' + esc(r.id) + '" style="font-weight:700;">' +
             (isOpen ? '▾ ' : '▸ ') + esc(r.name) + ' <span class="sub">(' + routeCount + ' مسیر)</span></button>' +
             '<button type="button" class="btn small danger" data-del-region="' + esc(r.id) + '">حذف منطقه</button>' +
             '</div>' + routesHtml + '</div>';
