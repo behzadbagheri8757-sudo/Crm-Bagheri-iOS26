@@ -222,6 +222,16 @@ function bindBottomNavMinimizeOnScroll(){
   window.addEventListener('scroll', schedule, {passive:true});
   if(window.visualViewport) window.visualViewport.addEventListener('scroll', schedule, {passive:true});
   document.addEventListener('click', function(e){
+    /* Tab taps are handled by their own per-item click listeners, which call
+       e.preventDefault() and drive navigation. If this event has already
+       been consumed by such a listener, we must NOT also run the generic
+       un-minimize path here: it queues a non-animated positionBnIndicator()
+       that would land the indicator on the destination tab before the
+       animated tab-tap motion can run, leaving the real animation with
+       distance = 0 (invisible). Clicks that reach a bottom-nav-item without
+       having been preventDefault'd (non-SPA fallback or future items that
+       don't handle their own click) still un-minimize as before. */
+    if(e.defaultPrevented) return;
     var target = e.target && e.target.closest ? e.target.closest('#bottom-nav .bottom-nav-item') : null;
     if(target) expandFromInteraction();
   }, {passive:true});
@@ -376,17 +386,6 @@ function _bnBuildMove(left0, right0, top0, left1, right1, top1, barWidth){
 function positionBnIndicator(bar, animate){
   if(!bar) return;
   var ind = ensureBnIndicator(bar);
-  /* A route change's own post-navigation scrollTo() (see router.js) fires
-     the scroll/minimize listeners with animate=false a frame or two after
-     a tab tap starts its animate=true move. Without this guard that
-     non-animated reposition was killing the tap animation almost as soon
-     as it started, well before its spring motion could be seen — the
-     motion model itself was never the problem. If a tap animation is
-     already in flight, an animate=false call has nothing useful to do:
-     skip it and let the in-flight animation keep going undisturbed. */
-  if(!animate && ind._bnAnim){
-    return;
-  }
   var active = bar.querySelector('.bottom-nav-item.active');
   if(!active){
     ind.style.opacity = '0';
