@@ -743,8 +743,10 @@ a.ledger-row:active{
     inset 0 1px 0 rgba(255,255,255,.20),
     inset 0 -1px 0 rgba(0,0,0,.015);
 
-  -webkit-backdrop-filter:saturate(150%) blur(3px) brightness(1.04);
-  backdrop-filter:saturate(150%) blur(3px) brightness(1.04);
+  /* TEST: backdrop-filter disabled to isolate icon-blur root cause.
+     All other visual properties left untouched intentionally. */
+  -webkit-backdrop-filter:none;
+  backdrop-filter:none;
 
   overflow:hidden;
   transform-origin:0% 50%;
