@@ -54,13 +54,16 @@
   --vg-type-meta:              .64rem;
   --vg-type-action:            .88rem;
 
-  /* ---------- Font weights ---------- */
+  /* ---------- Font weights ----------
+     Retuned one 100-weight tier lighter (2026-09 iOS Bold-Text retuning pass):
+     baseline visual density now targets iPhone "Bold Text: ON" as the real-world
+     rendering condition instead of "Bold Text: OFF". Floor kept at 400. */
   --vg-weight-regular:         400;
-  --vg-weight-medium:          500;
-  --vg-weight-label:           600;
-  --vg-weight-title:           700;
-  --vg-weight-value:           800;
-  --vg-weight-emphasis:        900;
+  --vg-weight-medium:          400;
+  --vg-weight-label:           500;
+  --vg-weight-title:           600;
+  --vg-weight-value:           700;
+  --vg-weight-emphasis:        800;
 
   /* ---------- Control height (minimum touch target) ---------- */
   --vg-control-height:         44px;

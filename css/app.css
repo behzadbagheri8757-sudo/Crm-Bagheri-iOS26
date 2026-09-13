@@ -80,7 +80,7 @@ a{
 h2.section-title{
   margin:4px 0 14px;
   font-size:1.05rem;
-  font-weight:700;
+  font-weight:600;
   color:#1F2937;
   display:flex;
   align-items:center;
@@ -96,20 +96,20 @@ h3.sub-title{
   font-size:.88rem;
   margin:16px 0 10px;
   color:#1F2937;
-  font-weight:700;
+  font-weight:600;
 }
 
 /* Shared card typography hierarchy (used across list/detail/report cards) */
 .label{
   font-size:.68rem;
-  font-weight:600;
+  font-weight:500;
   color:#667085;
   line-height:1.35;
   margin:0 0 5px;
 }
 .value{
   font-size:1.02rem;
-  font-weight:800;
+  font-weight:700;
   color:#1F2937;
   line-height:1.35;
   font-variant-numeric:tabular-nums;
@@ -153,7 +153,7 @@ header{
 header h1{
   margin:0;
   max-width:calc(100% - 16px);
-  font-weight:800;
+  font-weight:700;
   color:#1F2937;
   letter-spacing:.1px;
   line-height:1.22;
@@ -169,7 +169,7 @@ header .header-date{
   margin:0;
   font-size:.72rem;
   color:#667085;
-  font-weight:650;
+  font-weight:550;
   line-height:1.25;
   white-space:nowrap;
   max-width:40%;
@@ -197,7 +197,7 @@ button.app-back{
   color:#0070D2;
   font-family:inherit;
   font-size:.78rem;
-  font-weight:700;
+  font-weight:600;
   cursor:pointer;
   z-index:12;
   -webkit-tap-highlight-color:transparent;
@@ -395,7 +395,7 @@ main .empty{
 .tx-toolbar-label{
   flex:0 0 auto;
   font-size:.72rem;
-  font-weight:700;
+  font-weight:600;
   color:#667085;
   line-height:1.2;
 }
@@ -532,7 +532,7 @@ main .empty{
 }
 .more-sheet-title{
   font-size:1rem;
-  font-weight:700;
+  font-weight:600;
   color:#1F2937;
   margin:0 0 12px;
   text-align:center;
@@ -551,7 +551,7 @@ main .empty{
   border-radius:12px;
   text-decoration:none;
   color:#1F2937;
-  font-weight:700;
+  font-weight:600;
   font-size:.92rem;
   background:#FFFFFF;
   border:1px solid rgba(31,41,55,.08);
@@ -749,7 +749,7 @@ a.ledger-row:not(.action-row)::after{
 .ledger-row .name,
 .tx-row .name,
 .customer-list-row .name{
-  font-weight:700;
+  font-weight:600;
   font-size:1rem;
   color:#1F2937;
   min-width:0;
@@ -760,7 +760,7 @@ a.ledger-row:not(.action-row)::after{
   gap:3px;
 }
 .tx-row-title{
-  font-weight:700;
+  font-weight:600;
   font-size:1rem;
   color:#1F2937;
   line-height:1.35;
@@ -778,7 +778,7 @@ a.ledger-row:not(.action-row)::after{
   font-size:.72rem;
   color:#667085;
   display:block;
-  font-weight:500;
+  font-weight:400;
   margin-top:0;
   line-height:1.45;
 }
@@ -789,7 +789,7 @@ a.ledger-row:not(.action-row)::after{
   font-size:.72rem;
   color:#667085;
   display:block;
-  font-weight:500;
+  font-weight:400;
   margin-top:0;
   line-height:1.45;
 }
@@ -801,7 +801,7 @@ a.ledger-row:not(.action-row)::after{
 .tx-row-total,
 .tx-row-amount,
 .customer-row-balance-value{
-  font-weight:800;
+  font-weight:700;
   font-size:.9rem;
   color:#1F2937;
   white-space:nowrap;
@@ -851,7 +851,7 @@ a.tx-row:active{
 .customer-row-name.tx-row-title{
   display:block;
   min-width:0;
-  font-weight:700;
+  font-weight:600;
   font-size:1rem;
   color:#1F2937;
   line-height:1.35;
@@ -877,7 +877,7 @@ a.tx-row:active{
   line-height:1.2;
   min-height:22px;
   font-size:.7rem;
-  font-weight:700;
+  font-weight:600;
   border-radius:999px;
   padding:2px 7px;
   white-space:nowrap;
@@ -891,7 +891,7 @@ a.tx-row:active{
   min-width:0;
   font-size:.72rem;
   color:#667085;
-  font-weight:500;
+  font-weight:400;
   line-height:1.35;
   overflow:hidden;
   text-overflow:ellipsis;
@@ -924,7 +924,7 @@ a.tx-row:active{
 }
 .customer-row-balance-label{
   font-size:.66rem;
-  font-weight:700;
+  font-weight:600;
   color:#667085;
   white-space:nowrap;
   line-height:1.35;
@@ -977,13 +977,13 @@ a.tx-row:active{
 .product-row-label,
 .invoice-row-label{
   font-size:.62rem;
-  font-weight:700;
+  font-weight:600;
   color:#667085;
   white-space:nowrap;
 }
 .product-row-qty-value{
   font-size:.76rem;
-  font-weight:800;
+  font-weight:700;
   white-space:nowrap;
 }
 
@@ -999,7 +999,7 @@ a.tx-row:active{
 }
 .tx-identity-title{
   font-size:1.15rem;
-  font-weight:800;
+  font-weight:700;
   color:#1F2937;
 }
 .tx-identity-meta{
@@ -1022,7 +1022,7 @@ a.tx-row:active{
 }
 .tx-details summary{
   cursor:pointer;
-  font-weight:600;
+  font-weight:500;
   color:#1F2937;
   padding:8px 0;
 }
@@ -1081,7 +1081,7 @@ a.tx-row:active{
 .cust-recommended-action-label{
   font-size:.72rem;
   color:#667085;
-  font-weight:600;
+  font-weight:500;
   margin-bottom:7px;
 }
 .cust-recommended-action-btn{
@@ -1096,7 +1096,7 @@ a.tx-row:active{
   gap:8px;
   padding:6px 0;
   cursor:pointer;
-  font-weight:700;
+  font-weight:600;
   color:#0070D2;
   list-style:none;
 }
@@ -1118,7 +1118,7 @@ details[open] > .customer-behavior-summary::after{
 .dashboard-eyebrow{
   font-size:.7rem;
   color:#6F767C;
-  font-weight:700;
+  font-weight:600;
   margin:2px 0 14px;
 }
 .dashboard-block{
@@ -1133,7 +1133,7 @@ details[open] > .customer-behavior-summary::after{
 }
 .dash-section-label{
   font-size:.82rem;
-  font-weight:700;
+  font-weight:600;
   color:#1F2937;
   display:flex;
   align-items:center;
@@ -1165,7 +1165,7 @@ details[open] > .customer-behavior-summary::after{
   padding:2px 7px;
   border-radius:999px;
   font-size:.62rem;
-  font-weight:700;
+  font-weight:600;
   color:#D52B36;
   background:#FFF0EC;
   border:1px solid #FFF0EC;
@@ -1203,7 +1203,7 @@ details[open] > .customer-behavior-summary::after{
 }
 .dash-health-label{
   font-size:.64rem;
-  font-weight:600;
+  font-weight:500;
   color:#667085;
   line-height:1.3;
   letter-spacing:.01em;
@@ -1211,7 +1211,7 @@ details[open] > .customer-behavior-summary::after{
 .dash-health-value{
   /* Primary value: readable floor, fluid scale for long Toman amounts */
   font-size:clamp(.82rem, 3.4vw, 1.02rem);
-  font-weight:700;
+  font-weight:600;
   color:#1F2937;
   font-variant-numeric:tabular-nums;
   letter-spacing:-.3px;
@@ -1298,7 +1298,7 @@ details[open] > .customer-behavior-summary::after{
 }
 .dmt-title{
   font-size:.92rem;
-  font-weight:800;
+  font-weight:700;
   color:#0070D2;
   letter-spacing:-.2px;
 }
@@ -1318,12 +1318,12 @@ details[open] > .customer-behavior-summary::after{
 .dmt-figures{
   margin:0 0 9px;
   font-size:.71rem;
-  font-weight:600;
+  font-weight:500;
   color:#8E8E93;
 }
 .dmt-figures-num{
   color:#3A3A3C;
-  font-weight:700;
+  font-weight:600;
 }
 .dmt-figures-unit{
   margin-inline-start:3px;
@@ -1351,7 +1351,7 @@ details[open] > .customer-behavior-summary::after{
 }
 .dmt-pct{
   font-size:1.12rem;
-  font-weight:900;
+  font-weight:800;
   color:#FF5C35;
   line-height:1;
   flex:none;
@@ -1372,7 +1372,7 @@ details[open] > .customer-behavior-summary::after{
   padding:3px 8px;
   border-radius:999px;
   font-size:.65rem;
-  font-weight:800;
+  font-weight:700;
 }
 .dmt-status-behind{
   color:#D52B36;
@@ -1421,12 +1421,12 @@ details[open] > .customer-behavior-summary::after{
 }
 .biz-stat-label{
   font-size:.66rem;
-  font-weight:600;
+  font-weight:500;
   color:#667085;
 }
 .biz-stat-value{
   font-size:.92rem;
-  font-weight:800;
+  font-weight:700;
   color:#1F2937;
   display:flex;
   align-items:baseline;
@@ -1494,7 +1494,7 @@ details[open] > .customer-behavior-summary::after{
 }
 .dash-qa-label{
   font-size:.64rem;
-  font-weight:600;
+  font-weight:500;
   color:#3A3A3C;
   line-height:1.2;
 }
@@ -1531,14 +1531,14 @@ details[open] > .customer-behavior-summary::after{
   display:inline;
   color:#1F2937;
   font-size:.82rem;
-  font-weight:650;
+  font-weight:550;
 }
 .action-badge{
   display:inline-flex;
   padding:2px 6px;
   border-radius:999px;
   font-size:.58rem;
-  font-weight:600;
+  font-weight:500;
   color:#667085;
   background:rgba(31,41,55,.05);
 }
@@ -1547,7 +1547,7 @@ details[open] > .customer-behavior-summary::after{
   margin-top:4px;
   color:#1F2937;
   font-size:.76rem;
-  font-weight:600;
+  font-weight:500;
   line-height:1.4;
 }
 .action-why,
@@ -1556,12 +1556,12 @@ details[open] > .customer-behavior-summary::after{
   margin-top:3px;
   color:#667085;
   font-size:.63rem;
-  font-weight:500;
+  font-weight:400;
   line-height:1.45;
 }
 .action-why-now{
   color:#D94725;
-  font-weight:600;
+  font-weight:500;
 }
 .action-urgency{
   height:32px;
@@ -1571,7 +1571,7 @@ details[open] > .customer-behavior-summary::after{
   display:flex;
   align-items:center;
   justify-content:center;
-  font-weight:700;
+  font-weight:600;
 }
 .action-urgency svg{
   width:16px;
@@ -1609,7 +1609,7 @@ details[open] > .customer-behavior-summary::after{
   background:transparent;
   color:#D94725;
   font-size:.72rem;
-  font-weight:700;
+  font-weight:600;
   cursor:pointer;
 }
 .dash-action-toggle-ico{
@@ -1628,19 +1628,19 @@ details[open] > .customer-behavior-summary::after{
 }
 .dash-activity .ledger-row .name{
   font-size:.86rem;
-  font-weight:600;
+  font-weight:500;
   line-height:1.35;
   gap:2px;
 }
 .dash-activity .ledger-row .sub{
   font-size:.68rem;
-  font-weight:500;
+  font-weight:400;
   color:#667085;
   line-height:1.4;
 }
 .dash-activity .ledger-row .amount{
   font-size:.8rem;
-  font-weight:650;
+  font-weight:550;
   color:#1F2937;
 }
 .dash-activity-group{
@@ -1686,7 +1686,7 @@ details[open] > .customer-behavior-summary::after{
 }
 .dash-watch-compact-count{
   font-size:1.05rem;
-  font-weight:900;
+  font-weight:800;
   color:#1F2937;
 }
 .dash-watch-compact-label{
@@ -1800,7 +1800,7 @@ details[open] > .customer-behavior-summary::after{
   color:#667085;
   font-family:inherit;
   font-size:.84rem;
-  font-weight:700;
+  font-weight:600;
   cursor:pointer;
 }
 .inv-header-title{
@@ -1812,7 +1812,7 @@ details[open] > .customer-behavior-summary::after{
 }
 .inv-header-title-main{
   font-size:.95rem;
-  font-weight:800;
+  font-weight:700;
   color:#1F2937;
 }
 .inv-header-title-sub{
@@ -1825,7 +1825,7 @@ button.inv-header-save.btn{
   padding:7px 16px;
   border-radius:999px;
   font-size:.86rem;
-  font-weight:800;
+  font-weight:700;
   background:#0070D2;
   color:#fff;
 }
@@ -1847,12 +1847,12 @@ button.inv-header-save.btn{
 }
 .inv-section-title{
   font-size:.8rem;
-  font-weight:700;
+  font-weight:600;
   color:#667085;
   margin:0 0 10px;
 }
 .inv-section-title-optional{
-  font-weight:500;
+  font-weight:400;
   color:#667085;
   opacity:.75;
 }
@@ -1864,7 +1864,7 @@ button.inv-header-save.btn{
 }
 .inv-date-field label{
   font-size:.72rem;
-  font-weight:700;
+  font-weight:600;
   color:#667085;
   margin-bottom:6px;
 }
@@ -1884,7 +1884,7 @@ button.inv-header-save.btn{
 }
 .inv-items-card-label{
   font-size:.72rem;
-  font-weight:700;
+  font-weight:600;
   color:#667085;
 }
 .inv-line{
@@ -1919,7 +1919,7 @@ button.inv-header-save.btn{
   box-shadow:none!important;
   border-radius:0!important;
   font-size:.98rem;
-  font-weight:800;
+  font-weight:700;
   color:#1F2937;
   line-height:1.35;
   cursor:pointer;
@@ -1927,7 +1927,7 @@ button.inv-header-save.btn{
 .inv-line-amount{
   flex:0 0 auto;
   font-size:1rem;
-  font-weight:800;
+  font-weight:700;
   color:#1F2937;
   font-variant-numeric:tabular-nums;
 }
@@ -1941,7 +1941,7 @@ button.inv-header-save.btn{
   background:#F8FAFC!important;
   color:#667085!important;
   font-size:.8rem!important;
-  font-weight:700!important;
+  font-weight:600!important;
   box-shadow:none!important;
 }
 .inv-line-chevron{
@@ -1962,7 +1962,7 @@ button.inv-header-save.btn{
   gap:4px;
   font-size:.8rem;
   color:#667085;
-  font-weight:600;
+  font-weight:500;
 }
 .inv-mini-input{
   width:48px;
@@ -1972,7 +1972,7 @@ button.inv-header-save.btn{
   padding:2px;
   font-size:.84rem;
   font-family:inherit;
-  font-weight:700;
+  font-weight:600;
   color:#1F2937;
   text-align:center;
   min-height:44px;
@@ -2000,7 +2000,7 @@ button.inv-header-save.btn{
 .inv-line-x,
 .inv-line-unit{
   color:#667085;
-  font-weight:600;
+  font-weight:500;
 }
 .inv-line-del{
   width:28px;
@@ -2083,14 +2083,14 @@ button.inv-header-save.btn{
   flex:1 1 auto;
   min-width:0;
   font-size:.95rem;
-  font-weight:700;
+  font-weight:600;
   color:#1F2937;
   line-height:1.35;
 }
 .prod-drop-stock{
   flex:0 0 auto;
   font-size:.72rem;
-  font-weight:600;
+  font-weight:500;
   color:#667085;
   white-space:nowrap;
 }
@@ -2103,7 +2103,7 @@ button.inv-header-save.btn{
 
 .inv-row-profit-line{
   font-size:.72rem;
-  font-weight:600;
+  font-weight:500;
   color:#667085;
   opacity:.9;
 }
@@ -2113,7 +2113,7 @@ button.inv-header-save.btn{
   padding:0;
   margin-top:2px;
   font-size:.72rem;
-  font-weight:600;
+  font-weight:500;
   color:#0070D2;
   cursor:pointer;
 }
@@ -2134,7 +2134,7 @@ button.inv-header-save.btn{
   color:#667085;
 }
 .inv-price-info-row .v{
-  font-weight:700;
+  font-weight:600;
   color:#1F2937;
 }
 .inv-add-line{
@@ -2151,7 +2151,7 @@ button.inv-header-save.btn{
   color:#0070D2;
   font-family:inherit;
   font-size:.88rem;
-  font-weight:700;
+  font-weight:600;
   cursor:pointer;
 }
 .inv-add-line-icon{
@@ -2174,7 +2174,7 @@ button.inv-header-save.btn{
 }
 .inv-payment-total{
   font-size:.8rem;
-  font-weight:800;
+  font-weight:700;
   color:#1F2937;
 }
 .inv-payment-actions{
@@ -2196,7 +2196,7 @@ button.inv-header-save.btn{
   gap:4px;
   font-family:inherit;
   font-size:.72rem;
-  font-weight:700;
+  font-weight:600;
   cursor:pointer;
   box-shadow:0 2px 8px rgba(15,23,42,.03);
 }
@@ -2251,7 +2251,7 @@ button.inv-header-save.btn{
   justify-content:space-between;
   margin-bottom:12px;
   font-size:.9rem;
-  font-weight:800;
+  font-weight:700;
   color:#1F2937;
 }
 .inv-payment-close{
@@ -2269,7 +2269,7 @@ button.inv-header-save.btn{
   display:block;
   margin-bottom:6px;
   font-size:.72rem;
-  font-weight:700;
+  font-weight:600;
   color:#667085;
 }
 .inv-payment-panel > input,
@@ -2304,7 +2304,7 @@ button.inv-header-save.btn{
 }
 .inv-discount-label{
   font-size:.76rem;
-  font-weight:700;
+  font-weight:600;
   color:#667085;
 }
 .inv-discount-block select,
@@ -2317,7 +2317,7 @@ button.inv-header-save.btn{
   background:#F8FAFC;
   font-family:inherit;
   font-size:14px;
-  font-weight:700;
+  font-weight:600;
   box-shadow:none;
 }
 .inv-discount-block input{
@@ -2343,11 +2343,11 @@ button.inv-header-save.btn{
   cursor:default;
 }
 .inv-summary-section #calc-summary .ledger-row .name{
-  font-weight:600;
+  font-weight:500;
   color:inherit;
 }
 .inv-summary-section #calc-summary .ledger-row .amount{
-  font-weight:700;
+  font-weight:600;
   font-variant-numeric:tabular-nums;
   color:#1F2937;
 }
@@ -2359,7 +2359,7 @@ button.inv-header-save.btn{
 .inv-summary-section #calc-summary .inv-total-row .name,
 .inv-summary-section #calc-summary .inv-total-row .amount{
   font-size:1.12rem;
-  font-weight:800;
+  font-weight:700;
   color:#1F2937;
 }
 .inv-summary-section #calc-summary .inv-remain-row{
@@ -2369,7 +2369,7 @@ button.inv-header-save.btn{
 .inv-summary-section #calc-summary .inv-remain-row .name,
 .inv-summary-section #calc-summary .inv-remain-row .amount{
   font-size:1.02rem;
-  font-weight:800;
+  font-weight:700;
 }
 .inv-summary-section #calc-summary .inv-sum-profit{
   margin-top:6px;
@@ -2394,7 +2394,7 @@ button.inv-header-save.btn{
   background:rgba(31,41,55,.03);
 }
 .visit-precontext-title{
-  font-weight:800;
+  font-weight:700;
   color:#1F2937;
   margin-bottom:6px;
 }
@@ -2412,7 +2412,7 @@ button.inv-header-save.btn{
    -------------------------------------------------------------------------- */
 .report-summary-title{
   font-size:.82rem;
-  font-weight:700;
+  font-weight:600;
   color:#1F2937;
   margin:0 0 10px;
   letter-spacing:-.15px;
@@ -2456,14 +2456,14 @@ button.inv-header-save.btn{
 }
 .report-summary-label{
   font-size:.68rem;
-  font-weight:600;
+  font-weight:500;
   color:#667085;
   margin:0 0 5px;
   line-height:1.3;
 }
 .report-summary-value{
   font-size:1.05rem;
-  font-weight:800;
+  font-weight:700;
   color:#1F2937;
   line-height:1.3;
   font-variant-numeric:tabular-nums;
@@ -2483,7 +2483,7 @@ button.inv-header-save.btn{
   color:#667085;
   margin-top:5px;
   line-height:1.4;
-  font-weight:500;
+  font-weight:400;
 }
 .report-summary-meta.up{
   color:#007A50;
@@ -2516,7 +2516,7 @@ button.inv-header-save.btn{
 .report-accordion-header h3{
   margin:0;
   font-size:.85rem;
-  font-weight:700;
+  font-weight:600;
   color:#1F2937;
 }
 .report-accordion-chevron{
@@ -2578,7 +2578,7 @@ button.inv-header-save.btn{
 .settings-section h3{
   font-size:.95rem;
   margin:0 0 10px;
-  font-weight:700;
+  font-weight:600;
   color:#1F2937;
 }
 .settings-warn{
@@ -2598,7 +2598,7 @@ button.inv-header-save.btn{
 .mgmt-section-title{
   font-size:.95rem;
   margin:0 0 10px;
-  font-weight:700;
+  font-weight:600;
   color:#1F2937;
 }
 .auto-backup-row{
@@ -2613,7 +2613,7 @@ button.inv-header-save.btn{
   border-bottom:none;
 }
 .tech-label{
-  font-weight:600;
+  font-weight:500;
   color:#1F2937;
 }
 .tech-chevron{
@@ -2674,7 +2674,7 @@ button.inv-header-save.btn{
   flex:1 1 auto;
   min-width:0;
   font-size:.78rem;
-  font-weight:700;
+  font-weight:600;
   color:#1F2937;
   letter-spacing:-.1px;
   white-space:nowrap;
@@ -2684,7 +2684,7 @@ button.inv-header-save.btn{
 .prospect-daily-target .pdt-pct{
   flex:none;
   font-size:.72rem;
-  font-weight:700;
+  font-weight:600;
   color:#667085;
   font-variant-numeric:tabular-nums;
   letter-spacing:-.1px;
@@ -2700,7 +2700,7 @@ button.inv-header-save.btn{
 }
 .prospect-daily-target .pdt-count{
   font-size:2rem;
-  font-weight:800;
+  font-weight:700;
   color:#1F2937;
   letter-spacing:-.6px;
   font-variant-numeric:tabular-nums;
@@ -2708,13 +2708,13 @@ button.inv-header-save.btn{
 }
 .prospect-daily-target .pdt-caption{
   font-size:.72rem;
-  font-weight:600;
+  font-weight:500;
   color:#667085;
   margin:0;
 }
 .prospect-daily-target .pdt-of{
   font-size:.78rem;
-  font-weight:600;
+  font-weight:500;
   color:#667085;
   font-variant-numeric:tabular-nums;
 }
@@ -2754,18 +2754,18 @@ button.inv-header-save.btn{
   flex:1 1 auto;
   min-width:0;
   font-size:.72rem;
-  font-weight:600;
+  font-weight:500;
   color:#667085;
   margin:0;
 }
 .prospect-daily-target .pdt-unset-msg{
   font-size:.84rem;
-  font-weight:600;
+  font-weight:500;
   color:#667085;
 }
 .prospect-daily-target .pdt-meta{
   font-size:.78rem;
-  font-weight:600;
+  font-weight:500;
   color:#667085;
 }
 .prospect-daily-target .pdt-edit{
@@ -2775,7 +2775,7 @@ button.inv-header-save.btn{
   color:#0070D2;
   font-family:inherit;
   font-size:.78rem;
-  font-weight:700;
+  font-weight:600;
   padding:4px 2px;
   border-radius:0;
   cursor:pointer;
@@ -2793,7 +2793,7 @@ button.inv-header-save.btn{
   padding:4px 10px;
   border-radius:999px;
   color:#fff;
-  font-weight:800;
+  font-weight:700;
   font-size:.72rem;
   /* FIX (discovered during Evaluation V2 work): without this, the bidi
      algorithm reorders "A+" to display as "+A" inside RTL pages. This
@@ -2823,7 +2823,7 @@ button.inv-header-save.btn{
   border-radius:12px;
   padding:12px 14px;
   margin-bottom:12px;
-  font-weight:700;
+  font-weight:600;
   font-size:.9rem;
 }
 .prospect-result-card{
@@ -2834,7 +2834,7 @@ button.inv-header-save.btn{
   align-items:center;
   gap:7px;
   font-size:.82rem;
-  font-weight:700;
+  font-weight:600;
   color:#0070D2;
 }
 .prospect-result-title span{
@@ -2881,7 +2881,7 @@ button.inv-header-save.btn{
   gap:7px;
   color:#0070D2;
   font-size:.76rem;
-  font-weight:700;
+  font-weight:600;
 }
 .answer-index{
   direction:ltr;
@@ -2921,7 +2921,7 @@ button.inv-header-save.btn{
   overflow:hidden;
   text-overflow:ellipsis;
   white-space:nowrap;
-  font-weight:650;
+  font-weight:550;
 }
 .visit-card-stage{
   min-height:120px;
@@ -2935,7 +2935,7 @@ button.inv-header-save.btn{
   to{opacity:1;transform:translateX(0);}
 }
 .q-title{
-  font-weight:750;
+  font-weight:650;
   margin:0 0 12px;
   font-size:.9rem;
   line-height:1.65;
@@ -2982,7 +2982,7 @@ button.inv-header-save.btn{
 .gc-title{
   margin:0;
   font-size:1.15rem;
-  font-weight:800;
+  font-weight:700;
   color:#1F2937!important;
 }
 .gc-title-line{
@@ -3020,7 +3020,7 @@ button.inv-header-save.btn{
   color:#667085;
   font-family:inherit;
   font-size:.78rem;
-  font-weight:700;
+  font-weight:600;
   cursor:pointer;
 }
 .gc-seg-btn.is-active{
@@ -3044,7 +3044,7 @@ button.inv-header-save.btn{
 .gc-section-title{
   margin:0;
   font-size:.9rem;
-  font-weight:800;
+  font-weight:700;
   color:#1F2937;
 }
 .gc-panel{
@@ -3116,12 +3116,12 @@ button.inv-header-save.btn{
 }
 .gc-mission-title{
   font-size:.9rem;
-  font-weight:800;
+  font-weight:700;
   color:#1F2937;
 }
 .gc-mission-count{
   font-size:.88rem;
-  font-weight:700;
+  font-weight:600;
   color:#667085;
 }
 .gc-track{
@@ -3143,14 +3143,14 @@ button.inv-header-save.btn{
 .gc-monthly-pct{
   text-align:center;
   font-size:1.55rem;
-  font-weight:800;
+  font-weight:700;
   color:#1F2937;
   margin-bottom:8px;
 }
 .gc-monthly-amounts{
   text-align:center;
   font-size:.88rem;
-  font-weight:700;
+  font-weight:600;
   color:#1F2937;
 }
 .gc-line{
@@ -3169,11 +3169,11 @@ button.inv-header-save.btn{
   display:inline-flex;
   align-items:center;
   gap:7px;
-  font-weight:600;
+  font-weight:500;
   color:#1F2937;
 }
 .gc-line-val{
-  font-weight:800;
+  font-weight:700;
   color:#1F2937;
 }
 .gc-line-val.is-ok{
@@ -3199,12 +3199,12 @@ button.inv-header-save.btn{
 }
 .gc-hero-num{
   font-size:1.75rem;
-  font-weight:800;
+  font-weight:700;
   color:#1F2937;
 }
 .gc-hero-lab{
   font-size:.85rem;
-  font-weight:700;
+  font-weight:600;
   color:#667085;
 }
 .gc-pill{
@@ -3227,7 +3227,7 @@ button.inv-header-save.btn{
 }
 .gc-xp-num{
   font-size:1.35rem;
-  font-weight:800;
+  font-weight:700;
   color:#1F2937;
 }
 .gc-kpi-grid{
@@ -3244,7 +3244,7 @@ button.inv-header-save.btn{
 }
 .gc-kpi-num{
   font-size:1.15rem;
-  font-weight:800;
+  font-weight:700;
   color:#1F2937;
 }
 
@@ -3273,7 +3273,7 @@ button.inv-header-save.btn{
   background:rgba(31,41,55,.05);
   border:1px solid rgba(31,41,55,.08);
   font-size:.78rem;
-  font-weight:800;
+  font-weight:700;
 }
 .watch-customer-group{
   margin:0 0 10px;
@@ -3292,7 +3292,7 @@ button.inv-header-save.btn{
 }
 .watch-customer-name{
   font-size:.82rem;
-  font-weight:800;
+  font-weight:700;
   color:#1F2937;
 }
 .watch-customer-count{
@@ -3319,7 +3319,7 @@ button.inv-header-save.btn{
 }
 .watch-list-title{
   font-size:.8rem;
-  font-weight:700;
+  font-weight:600;
   color:#1F2937;
 }
 .watch-list-sub{
@@ -3334,7 +3334,7 @@ button.inv-header-save.btn{
 }
 .watch-severity-badge{
   font-size:.72rem;
-  font-weight:700;
+  font-weight:600;
   padding:2px 5px;
   border-radius:6px;
 }
@@ -3372,7 +3372,7 @@ button.inv-header-save.btn{
 }
 .watch-detail-customer-name{
   font-size:1rem;
-  font-weight:800;
+  font-weight:700;
   color:#1F2937;
 }
 .watch-detail-block{
@@ -3380,7 +3380,7 @@ button.inv-header-save.btn{
 }
 .watch-detail-block .label{
   font-size:.7rem;
-  font-weight:600;
+  font-weight:500;
   color:#667085;
   margin-bottom:4px;
 }
@@ -3446,7 +3446,7 @@ button.inv-header-save.btn{
 }
 #pin-lock-overlay .pin-title{
   font-size:1.25rem;
-  font-weight:800;
+  font-weight:700;
   color:#1F2937;
   margin:0 0 8px;
 }
@@ -3476,7 +3476,7 @@ button.inv-header-save.btn{
   align-items:center;
   justify-content:center;
   font-size:1.35rem;
-  font-weight:700;
+  font-weight:600;
   color:#1F2937;
   transition:border-color .15s,background .15s,box-shadow .15s;
 }
@@ -3526,7 +3526,7 @@ button.inv-header-save.btn{
   border-radius:12px;
   background:#0070D2;
   color:#fff;
-  font-weight:700;
+  font-weight:600;
   font-size:.9rem;
   min-height:44px;
   cursor:pointer;
@@ -4043,7 +4043,7 @@ a.ledger-row:active,
 /* 2 — Products: reduce visual weight of total value */
 .product-row-value .tx-row-total{
   font-size:.82rem;
-  font-weight:700;
+  font-weight:600;
   color:#4B5563;
 }
 .product-row-value .product-row-label{
@@ -4055,7 +4055,7 @@ a.ledger-row:active,
   padding:0;
   margin:0 0 10px;
   font-size:.88rem;
-  font-weight:700;
+  font-weight:600;
   color:#1F2937;
   text-align:right;
   background:rgba(0,112,210,.06);
@@ -4071,7 +4071,7 @@ a.ledger-row:active,
 }
 .product-price-history .ledger-row .amount{
   font-size:.78rem;
-  font-weight:600;
+  font-weight:500;
   white-space:normal;
   text-align:left;
   line-height:1.4;
@@ -4080,11 +4080,11 @@ a.ledger-row:active,
 
 /* 6 — Inventory summary hierarchy: value card slightly quieter */
 #main .cards .card .value{
-  font-weight:700;
+  font-weight:600;
 }
 .inv-summary-quiet .value{
   font-size:.95rem;
-  font-weight:700;
+  font-weight:600;
   color:#4B5563;
 }
 
@@ -4125,7 +4125,7 @@ a.ledger-row:active,
   min-height:40px;
   padding:8px 6px;
   font-size:.78rem;
-  font-weight:700;
+  font-weight:600;
   text-align:center;
   line-height:1.25;
   border-radius:10px;
@@ -4160,14 +4160,14 @@ a.ledger-row:active,
 }
 .field-score-value{
   font-size:1.35rem;
-  font-weight:800;
+  font-weight:700;
   color:#1F2937;
   letter-spacing:-.3px;
   line-height:1.2;
 }
 .field-score-meta{
   font-size:.78rem;
-  font-weight:600;
+  font-weight:500;
   color:#667085;
 }
 
@@ -4216,7 +4216,7 @@ a.ledger-row:active,
 }
 .dmt-pct{
   font-size:1rem;
-  font-weight:800;
+  font-weight:700;
   min-width:2.2em;
 }
 .dmt-status-row{
@@ -4233,15 +4233,15 @@ a.ledger-row:active,
 }
 .report-profit-primary .value{
   font-size:1.12rem;
-  font-weight:800;
+  font-weight:700;
 }
 .report-profit-secondary .value{
   font-size:.95rem;
-  font-weight:700;
+  font-weight:600;
   color:#4B5563;
 }
 .report-profit-secondary .label{
-  font-weight:600;
+  font-weight:500;
 }
 
 /* 19 — Settings warn lighter */
@@ -4279,7 +4279,7 @@ button#save-tx{
   min-height:48px;
   border-radius:12px;
   font-size:.95rem;
-  font-weight:700;
+  font-weight:600;
 }
 
 /* Evaluation V2 — optional follow-up date: keep native iOS date picker, replace only the empty-state placeholder visually. */
@@ -4313,7 +4313,7 @@ button#save-tx{
 /* 22 — Invoice product selector: compact plain (empty state already pill; selected is plain) */
 .inv-line:not(.inv-line-empty) .inv-line-name{
   font-size:.92rem;
-  font-weight:700;
+  font-weight:600;
 }
 
 /* 23 — Invoice profit privacy: blur by default, reveal on tap */
@@ -4430,7 +4430,7 @@ button#save-tx{
    adds what those components genuinely don't cover.
    ========================================================================== */
 .eval-step-label{
-  font-weight:700;
+  font-weight:600;
   font-size:.88rem;
   color:#0070D2;
   margin-bottom:8px;
@@ -4461,7 +4461,7 @@ button#save-tx{
   background:var(--vg-color-surface);
   border:1px solid var(--vg-color-border);
   color:var(--vg-color-text);
-  font-weight:700;
+  font-weight:600;
   font-size:.9rem;
   cursor:pointer;
   transition:background .15s,border-color .15s,color .15s,transform .1s;
@@ -4491,7 +4491,7 @@ button#save-tx{
   border:1px solid rgba(31,41,55,.08);
 }
 .eval-incomplete-title{
-  font-weight:700;
+  font-weight:600;
   font-size:.86rem;
   color:#4B5563;
   margin-bottom:2px;
