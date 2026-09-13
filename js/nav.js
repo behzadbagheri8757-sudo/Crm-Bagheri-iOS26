@@ -259,8 +259,25 @@ function ensureBottomNavPinned(){
 }
 
 /* Single persistent liquid/glass indicator for bottom nav.
-   One element moves between tabs; not per-item backgrounds. */
-var _bnIndicatorState = { left: null, top: null, ready: false, animating: false };
+   One element moves between tabs; not per-item backgrounds.
+
+   Motion model: the indicator is treated as having two independent
+   edges — a leading edge (in the direction of travel) and a trailing
+   edge. Each edge follows its own damped-spring position curve, sampled
+   into Web Animations API keyframes:
+     - the leading edge settles quickly with little to no overshoot;
+     - the trailing edge starts slightly delayed and, only as distance
+       grows, is allowed a small controlled overshoot before settling.
+   The gap between the two edges while in transit is what makes the
+   shape stretch toward its destination and reform on arrival, instead
+   of a rigid box translating sideways. Everything scales with actual
+   travel distance (short hops barely deform; the far Dashboard↔More
+   hop deforms the most) and is bounded so it never reads as jelly.
+   WAAPI (not CSS transitions) is used specifically so a move can be
+   interrupted mid-flight: commitStyles() bakes the exact current
+   mid-flight geometry into the inline style before the next move
+   starts, so rapid repeated taps never snap back to a stale position. */
+var _bnIndicatorState = { ready: false };
 
 function ensureBnIndicator(bar){
   var ind = bar.querySelector('.bn-indicator');
@@ -268,9 +285,92 @@ function ensureBnIndicator(bar){
     ind = document.createElement('span');
     ind.className = 'bn-indicator';
     ind.setAttribute('aria-hidden', 'true');
+    /* Anchor scaling to the left edge so scaleX grows the box toward its
+       destination rather than around its own center; the JS below always
+       computes the left edge explicitly, which then works for motion in
+       either direction. */
+    ind.style.transformOrigin = '0% 50%';
     bar.insertBefore(ind, bar.firstChild);
   }
   return ind;
+}
+
+function _bnReduceMotion(){
+  try{ return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }
+  catch(_e){ return false; }
+}
+
+/* Damped-spring position curve at normalized time t in [0,1].
+   zeta < 1 gives one controlled overshoot before settling; zeta >= 1 is
+   a fast, monotonic (no-overshoot) approach. `delay` (0..~0.3) pushes
+   the onset later, used for the trailing edge so it visibly lags the
+   leading edge while the shape is in transit. */
+function _bnSpring(t, zeta, delay){
+  var tt = delay > 0 ? (t - delay) / (1 - delay) : t;
+  if(tt <= 0) return 0;
+  if(tt >= 1) tt = 1;
+  var tau = tt * 6.5; /* enough decay for the curve to settle by tt=1 */
+  if(zeta >= 1){
+    var a = Math.sqrt(zeta*zeta - 1);
+    return 1 - Math.exp(-zeta*tau) * (Math.cosh(a*tau) + (zeta/Math.max(a,1e-6))*Math.sinh(a*tau));
+  }
+  var wd = Math.sqrt(1 - zeta*zeta);
+  return 1 - Math.exp(-zeta*tau) * (Math.cos(wd*tau) + (zeta/wd)*Math.sin(wd*tau));
+}
+
+/* Builds one indicator move as an explicit WAAPI keyframe list, from its
+   true current on-screen edges (left0/right0/top0 — which may already be
+   mid-stretch if this interrupts a prior move) to the destination tab's
+   geometry. Farther moves get a longer duration, more separation between
+   the two edges while traveling, and slightly more settle overshoot. */
+function _bnBuildMove(left0, right0, top0, left1, right1, top1, barWidth){
+  var movingRight = (left1 + right1) >= (left0 + right0);
+  var centerDist = Math.abs(((left1+right1)/2) - ((left0+right0)/2));
+  var distanceRatio = Math.max(0, Math.min(1, centerDist / Math.max(1, barWidth * 0.82)));
+
+  var leadZeta   = 0.90 - 0.08 * distanceRatio; /* 0.90→0.82: quick, near-clean arrival (≤1% overshoot) */
+  var lagZeta    = 0.94 - 0.22 * distanceRatio; /* 0.94→0.72: restrained catch-up overshoot (≤~3.5%) */
+  var lagDelay   = 0.03 + 0.10 * distanceRatio; /* 0.03→0.13: trailing edge starts later */
+  var compress   = 0.015 + 0.045 * distanceRatio; /* 1.5%→6% launch compression on scaleY */
+  var durationMs = Math.round(225 + 190 * distanceRatio); /* 225ms adjacent → ~415ms far */
+
+  var N = 16;
+  var w1 = Math.max(1, right1 - left1);
+  var frames = [];
+  for(var i = 0; i <= N; i++){
+    var t = i / N;
+    var leadP = _bnSpring(t, leadZeta, 0);
+    var lagP  = _bnSpring(t, lagZeta, lagDelay);
+    if(i === N){ leadP = 1; lagP = 1; }
+
+    var leftT, rightT;
+    if(movingRight){
+      rightT = right0 + (right1 - right0) * leadP;
+      leftT  = left0  + (left1  - left0)  * lagP;
+    } else {
+      leftT  = left0  + (left1  - left0)  * leadP;
+      rightT = right0 + (right1 - right0) * lagP;
+    }
+    if(rightT - leftT < w1 * 0.7){
+      var mid = (leftT + rightT) / 2;
+      leftT = mid - (w1*0.7)/2;
+      rightT = mid + (w1*0.7)/2;
+    }
+
+    var topT = top0 + (top1 - top0) * _bnSpring(t, 0.95, 0);
+    if(i === N) topT = top1;
+
+    var dip = t < 0.35 ? compress * Math.sin(Math.PI * (t/0.35)) : 0;
+    var puff = 0.3 * compress * Math.max(0, lagP - 1); /* tiny arrival "puff" tied to overshoot */
+    var scaleY = 1 - dip + puff;
+    var scaleX = (rightT - leftT) / w1;
+
+    frames.push({
+      transform: 'translate3d(' + leftT.toFixed(2) + 'px,' + topT.toFixed(2) + 'px,0) scaleX(' + scaleX.toFixed(4) + ') scaleY(' + scaleY.toFixed(4) + ')',
+      offset: t
+    });
+  }
+  return { frames: frames, durationMs: durationMs };
 }
 
 function positionBnIndicator(bar, animate){
@@ -286,68 +386,75 @@ function positionBnIndicator(bar, animate){
   var itemRect = active.getBoundingClientRect();
   /* iOS 26 selection reads as a compact Liquid Glass surface around the
      selected tab group — not a full-width pill and not a decorative blob. */
-  var padX = 1;
-  var padY = 1;
   /* The iOS 26 selected control nearly fills its tab item; the glass is
      the selected item surface, not a small decorative badge inside it. */
   var w = Math.max(50, Math.round(itemRect.width - 2));
   var h = Math.max(50, Math.round(itemRect.height - 2));
   var left = itemRect.left - barRect.left + (itemRect.width - w) / 2;
   var top = itemRect.top - barRect.top + (itemRect.height - h) / 2;
-  var reduceMotion = false;
-  try{
-    reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-  }catch(_e){}
+  var reduceMotion = _bnReduceMotion();
+
+  /* Any in-flight move is interrupted here, every time this runs — a tab
+     tap, a scroll-driven reposition, a resize. Committing the animation's
+     current mid-flight computed style into the inline style before
+     cancelling means whatever runs next starts from exactly where the
+     shape visually is, never from a stale remembered target. */
+  if(ind._bnAnim){
+    try{
+      var st = ind._bnAnim.playState;
+      if(st === 'running' || st === 'paused') ind._bnAnim.commitStyles();
+    }catch(_e){}
+    try{ ind._bnAnim.cancel(); }catch(_e2){}
+    ind._bnAnim = null;
+  }
+
+  var canAnimate = animate && _bnIndicatorState.ready && !reduceMotion && typeof ind.animate === 'function';
+
+  if(!canAnimate){
+    ind.style.width = w + 'px';
+    ind.style.height = h + 'px';
+    ind.style.opacity = '1';
+    ind.style.transform = 'translate3d(' + left + 'px,' + top + 'px,0) scaleX(1) scaleY(1)';
+    _bnIndicatorState.ready = true;
+    return;
+  }
+
+  /* True current geometry (post-commit above), not a remembered "last
+     settled" position — this is what makes interruption seamless even if
+     the shape was still mid-stretch. */
+  var curRect = ind.getBoundingClientRect();
+  var left0 = curRect.left - barRect.left;
+  var top0 = curRect.top - barRect.top;
+  var right0 = left0 + curRect.width;
+
+  if(Math.abs(left0 - left) < 1 && Math.abs(top0 - top) < 1){
+    /* Already there — repeated tap on the current tab, or a no-op
+       reposition. No motion needed. */
+    ind.style.width = w + 'px';
+    ind.style.height = h + 'px';
+    return;
+  }
 
   ind.style.width = w + 'px';
   ind.style.height = h + 'px';
   ind.style.opacity = '1';
 
-  var prevLeft = _bnIndicatorState.left;
-  var prevTop = _bnIndicatorState.top;
-  var canAnimate = animate && _bnIndicatorState.ready && !reduceMotion &&
-    prevLeft !== null && (Math.abs(prevLeft-left) > 1 || Math.abs(prevTop-top) > 1);
-
-  if(ind._bnSettleTimer){
-    try{ clearTimeout(ind._bnSettleTimer); }catch(_e2){}
-    ind._bnSettleTimer = null;
-  }
-
-  if(!canAnimate){
-    ind.classList.remove('is-traveling','is-settling');
-    ind.style.transition = 'none';
-    ind.style.transform = 'translate3d(' + left + 'px,' + top + 'px,0) scale(1)';
-    _bnIndicatorState.left = left;
-    _bnIndicatorState.top = top;
-    _bnIndicatorState.ready = true;
-    _bnIndicatorState.animating = false;
-    return;
-  }
-
-  /* One restrained, interruptible ease-out move. No scale compression or
-     spring overshoot is used; the indicator simply travels to the new tab. */
-  ind.classList.remove('is-traveling','is-settling');
-  ind.style.transition = 'none';
-  /* iOS 26 tab selection uses a visible control interaction. Start slightly
-     compressed, then settle into the selected surface; one transition keeps
-     the motion interruptible when the user changes tabs again. */
-  ind.style.transform = 'translate3d(' + prevLeft + 'px,' + prevTop + 'px,0) scale(1)';
-  _bnIndicatorState.animating = true;
-
-  requestAnimationFrame(function(){
-    requestAnimationFrame(function(){
-      ind.style.transition = 'transform 320ms cubic-bezier(.25,1,.5,1)';
-      ind.style.transform = 'translate3d(' + left + 'px,' + top + 'px,0) scale(1)';
-      ind._bnSettleTimer = setTimeout(function(){
-        ind.style.transition = 'none';
-        ind.classList.remove('is-traveling','is-settling');
-        _bnIndicatorState.left = left;
-        _bnIndicatorState.top = top;
-        _bnIndicatorState.animating = false;
-        ind._bnSettleTimer = null;
-      }, 360);
-    });
+  var move = _bnBuildMove(left0, right0, top0, left, left + w, top, barRect.width);
+  var anim = ind.animate(move.frames, {
+    duration: move.durationMs,
+    easing: 'linear', /* the spring shape is already baked into the sampled keyframes */
+    fill: 'forwards'
   });
+  ind._bnAnim = anim;
+  anim.onfinish = function(){
+    try{ anim.commitStyles(); }catch(_e){}
+    try{ anim.cancel(); }catch(_e2){}
+    if(ind._bnAnim === anim) ind._bnAnim = null;
+  };
+  anim.oncancel = function(){
+    if(ind._bnAnim === anim) ind._bnAnim = null;
+  };
+  _bnIndicatorState.ready = true;
 }
 function renderBottomNav(activeId){
   ensureBottomNavDOM();
