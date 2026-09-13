@@ -54,13 +54,34 @@
     }
   }
 
+  // Canvas background hook (iOS 26 two-tier patch). Independent of the
+  // .vg-route-* namespace by design — see css/visual-grammar.css. Only ever
+  // touches these two class names on <html>, never anything else.
+  var WHITE_CANVAS_ROUTES = ['/customers', '/products', '/invoices', '/suppliers', '/visits'];
+  function applyCanvasClass(path) {
+    try {
+      var root = document.documentElement;
+      if (!root) return;
+      var isWhite = WHITE_CANVAS_ROUTES.indexOf(path) !== -1;
+      root.classList.remove('vg-canvas-white', 'vg-canvas-grouped');
+      root.classList.add(isWhite ? 'vg-canvas-white' : 'vg-canvas-grouped');
+    } catch (e) { /* ignore */ }
+  }
+
   function resolve() {
     if (resolving) return;
     resolving = true;
     try {
       const hash = location.hash || '#/';
       const { path, params } = parseHash();
+      applyCanvasClass(path);
       const handler = routes.get(path);
+      // A route change must not leave a sheet mounted over the new route.
+      // If a save is in flight, let its continuation finish first; its own
+      // success/error path owns the sheet lifecycle.
+      if(!(global.__sheetSaveInFlight > 0)){
+        try { if(typeof global.closeModal === 'function') global.closeModal(); } catch(_e) {}
+      }
       unmountCurrent();
 
       const main = document.getElementById('main');

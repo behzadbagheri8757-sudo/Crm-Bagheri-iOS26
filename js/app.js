@@ -1350,7 +1350,7 @@ function noPurchasePromptHtml(candidates, source, introText){
       ? ((data.products.find(function(p){ return p && p.id === s.productId; }) || {}).name || s.productId)
       : s.productId);
     return '<div class="npr-product" style="margin:8px 0 4px;">' +
-      '<div style="font-weight:600;margin-bottom:4px;">' + esc(name) + '</div>' +
+      '<div style="font-weight:500;margin-bottom:4px;">' + esc(name) + '</div>' +
       '<div class="chip-wrap">' + noPurchaseReasonChipsHtml(s.productId, s.category, source) + '</div>' +
       '</div>';
   }).join('');
@@ -1557,7 +1557,7 @@ function openAddVisit(cid){
     } else if (step === 'reaction') {
       html =
         '<div class="visit-card visit-card-enter" data-visit-step="reaction">' +
-          '<div class="q-title">واکنش مشتری؟ <span class="sub" style="display:inline;font-weight:500;">(' + esc(productLabel(state.pendingProductId)) + ')</span></div>' +
+          '<div class="q-title">واکنش مشتری؟ <span class="sub" style="display:inline;font-weight:400;">(' + esc(productLabel(state.pendingProductId)) + ')</span></div>' +
           '<div class="chip-wrap">' + REACTION_CHIPS.map(function (o) {
             return chipBtn('reaction', o.value, o.label);
           }).join('') + '</div>' +
@@ -1565,7 +1565,7 @@ function openAddVisit(cid){
     } else if (step === 'rejectReason') {
       html =
         '<div class="visit-card visit-card-enter" data-visit-step="rejectReason">' +
-          '<div class="q-title">چرا نخرید؟ <span class="sub" style="display:inline;font-weight:500;">(' + esc(productLabel(state.pendingProductId)) + ')</span></div>' +
+          '<div class="q-title">چرا نخرید؟ <span class="sub" style="display:inline;font-weight:400;">(' + esc(productLabel(state.pendingProductId)) + ')</span></div>' +
           '<div class="chip-wrap">' + REJECTION_REASON_CHIPS.map(function (o) {
             return chipBtn('rejectReason', o.value, o.label);
           }).join('') + '</div>' +
@@ -1573,7 +1573,7 @@ function openAddVisit(cid){
     } else if (step === 'stockSource') {
       html =
         '<div class="visit-card visit-card-enter" data-visit-step="stockSource">' +
-          '<div class="q-title">این موجودی از کجا بود؟ <span class="sub" style="display:inline;font-weight:500;">(' + esc(productLabel(state.pendingProductId)) + ')</span></div>' +
+          '<div class="q-title">این موجودی از کجا بود؟ <span class="sub" style="display:inline;font-weight:400;">(' + esc(productLabel(state.pendingProductId)) + ')</span></div>' +
           '<div class="chip-wrap">' + STOCK_SOURCE_CHIPS.map(function (o) {
             return chipBtn('stockSource', o.value, o.label);
           }).join('') + '</div>' +

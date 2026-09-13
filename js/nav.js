@@ -829,7 +829,7 @@ function waitForCrmDataLoad() {
       }
       main.innerHTML =
         '<div class="empty" style="padding:28px 16px;text-align:center;direction:rtl;">' +
-        '<div style="font-size:1.05rem;font-weight:600;margin-bottom:8px;">خطا در بارگذاری اطلاعات</div>' +
+        '<div style="font-size:1.05rem;font-weight:500;margin-bottom:8px;">خطا در بارگذاری اطلاعات</div>' +
         '<div style="opacity:.85;margin-bottom:16px;line-height:1.6;">داده‌های CRM خوانده نشد. برنامه با حالت خالی باز نمی‌شود تا از نمایش نادرست جلوگیری شود.</div>' +
         '<button type="button" class="btn" id="crm-load-retry">تلاش مجدد</button>' +
         '</div>';
