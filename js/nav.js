@@ -416,7 +416,14 @@ function positionBnIndicator(bar, animate){
   /* The iOS 26 selected control nearly fills its tab item; the glass is
      the selected item surface, not a small decorative badge inside it. */
   var w = Math.max(50, Math.round(itemRect.width - 2));
-  var h = Math.max(50, Math.round(itemRect.height - 2));
+  /* Indicator is intentionally shorter than the tab item (≈48px inside the
+     resting ≈56px item) so its 69:48 ratio (≈1.44:1) reads as a short, wide
+     capsule with true semicircular ends — border-radius = h/2. The floor of
+     44 prevents the shape from collapsing during the minimize animation,
+     where the tab item itself shrinks to ≈44px. Width calculation is
+     unchanged, so the indicator stays aligned with the tab's horizontal
+     center in every state. */
+  var h = Math.max(44, Math.round(itemRect.height - 8));
   var left = itemRect.left - barRect.left + (itemRect.width - w) / 2;
   var top = itemRect.top - barRect.top + (itemRect.height - h) / 2;
   var reduceMotion = _bnReduceMotion();
