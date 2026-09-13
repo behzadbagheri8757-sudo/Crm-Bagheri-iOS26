@@ -277,31 +277,12 @@ header.has-back .header-date{
   }
 }
 
-/* Active tab: selected label/icon stay accent-colored; the selection surface
-   is a quiet Liquid Glass layer that follows the item as one object. */
-.bn-indicator{
-  position:absolute;
-  left:0;
-  top:0;
-  width:52px;
-  height:48px;
-  border-radius:15px;
-  pointer-events:none;
-  z-index:0;
-  opacity:1;
-  box-sizing:border-box;
-  isolation:isolate;
-  background:rgba(255,255,255,.48);
-  border:1px solid rgba(255,255,255,.72);
-  box-shadow:0 2px 10px rgba(26,38,52,.08);
-  -webkit-backdrop-filter:saturate(155%) blur(10px);
-  backdrop-filter:saturate(155%) blur(10px);
-  transform:translate3d(0,0,0) scale(1);
-  transform-origin:center;
-  will-change:transform;
-}
-.bn-indicator.is-traveling,
-.bn-indicator.is-settling{background:rgba(255,255,255,.48);}
+/* Bottom-nav geometry (.bottom-nav / .bottom-nav-item / .bn-indicator) is
+   owned entirely by css/visual-grammar-components.css — see that file's
+   "Floating Glass Bottom Navigation" + "iOS-native Bottom Navigation
+   Indicator" sections. Do not add bottom-nav rules here: this file loads
+   before the VG files, so anything defined here for these selectors is
+   dead weight that only wins for properties VG doesn't set. */
 
 /* Main page frame (base mobile composition) */
 main{
@@ -379,68 +360,6 @@ main .empty{
   font-weight:600;
   color:#667085;
   line-height:1.2;
-}
-
-/* Floating Detached Glass Bottom Navigation (owned by VG) - restrained refinements only */
-.bottom-nav{
-  position:relative;
-  bottom:calc(16px + env(safe-area-inset-bottom,0px));
-  background:rgba(255,255,255,.82);
-  box-shadow:0 8px 28px rgba(26,38,52,.14),0 1px 3px rgba(26,38,52,.06);
-}
-.bottom-nav-item{
-  position:relative;
-  z-index:1;
-  border-radius:999px;
-  transition:color .2s ease,transform .12s ease,opacity .12s ease;
-  background:transparent;
-}
-.bottom-nav-item:active{
-  transform:scale(.96);
-  opacity:.88;
-}
-.bottom-nav-item.active{
-  background:transparent;
-  color:#0070D2;
-}
-.bottom-nav-item.active .bn-ico{
-  color:#0070D2;
-}
-/* Single persistent transparent-ice jelly — covers icon+label; not circle/ring/pill. */
-.bn-indicator{
-  position:absolute;
-  left:0;
-  top:0;
-  width:52px;
-  height:52px;
-  /* Clean symmetric squircle */
-  border-radius:16px;
-  pointer-events:none;
-  z-index:0;
-  opacity:1;
-  box-sizing:border-box;
-  isolation:isolate;
-  overflow:visible;
-  /* Neutral translucent surface — present, watery, not blue/cyan */
-  background: rgba(247, 248, 250, 0.72);
-  border: 1px solid rgba(255, 255, 255, 0.88);
-  /* Soft low elevation (outer only — no inner top light, which previously
-     drew a visible horizontal seam across the indicator) */
-  box-shadow:
-    0 2px 10px rgba(26,38,52,.09),
-    0 1px 2px rgba(26,38,52,.04);
-  /* Very restrained translucency — clarity over blur */
-  -webkit-backdrop-filter: saturate(130%) blur(6px);
-  backdrop-filter: saturate(130%) blur(6px);
-  transform:translate3d(0,0,0) scale(1,1);
-  transform-origin:center center;
-  will-change:transform;
-}
-.bn-indicator.is-traveling{
-  background: rgba(247, 248, 250, 0.72);
-}
-.bn-indicator.is-settling{
-  background: rgba(247, 248, 250, 0.72);
 }
 
 /* More menu (composition + visibility) */
@@ -3754,38 +3673,8 @@ main.route-transition{
   to{opacity:1;transform:translateY(0) scale(1);}
 }
 
-/* Floating navigation: more dynamic glass, but still restrained. */
-.bottom-nav{
-  background:rgba(255,255,255,.76);
-  border-color:rgba(255,255,255,.68);
-  backdrop-filter:saturate(185%) blur(24px);
-  -webkit-backdrop-filter:saturate(185%) blur(24px);
-  box-shadow:0 10px 30px rgba(26,38,52,.13),
-             0 2px 6px rgba(26,38,52,.055),
-             inset 0 1px 0 rgba(255,255,255,.72);
-}
-.bottom-nav-item{
-  position:relative;
-  z-index:1;
-  isolation:isolate;
-  overflow:visible;
-  transition:color var(--ios-control) var(--ios-ease-out),
-             transform var(--ios-touch) var(--ios-ease-out),
-             opacity var(--ios-touch) ease;
-  background:transparent;
-}
-/* Per-item ::before active backgrounds removed — single .bn-indicator owns selection. */
-.bottom-nav-item.active{
-  background:transparent;
-  color:#0070D2;
-}
-.bottom-nav-item.active .bn-ico{
-  color:#0070D2;
-}
-.bottom-nav-item:active{
-  transform:scale(.965);
-  opacity:.84;
-}
+/* .bottom-nav / .bottom-nav-item stacking + material now live only in
+   css/visual-grammar-components.css (single canonical definition). */
 
 /* Buttons and capsules: immediate tactile response, then a slightly longer material settle. */
 .btn{
@@ -3979,9 +3868,6 @@ a.ledger-row:active,
 @media (prefers-reduced-motion:reduce){
   main.route-transition{
     animation:none!important;
-  }
-  .bn-indicator{
-    transition:none!important;
   }
 }
 
@@ -4326,39 +4212,6 @@ button#save-tx{
   .inv-mini-input{ width:40px; }
   .inv-mini-input-price{ width:72px; }
   .inv-line-del{ width:30px; height:30px; min-width:30px; flex-basis:30px; }
-}
-
-/* iOS 26 selected-tab surface: the item itself rests on the Liquid Glass
-   layer. Size and position are supplied by js/nav.js from the real tab item
-   rect; this rule only defines the material and its interaction character.
-   Inner glow (::before) and inner hairline (::after) are intentionally
-   omitted — they previously drew a visible horizontal seam ("pocket") and
-   a ring across the indicator on iPhone. The material is now produced
-   purely by the base rule's background, outer shadows, border and
-   backdrop-filter. */
-.bn-indicator{
-  border-radius:18px;
-  background:
-    linear-gradient(145deg,rgba(255,255,255,.48),rgba(255,255,255,.22) 52%,rgba(255,255,255,.34)),
-    rgba(255,255,255,.30);
-  border:1px solid rgba(255,255,255,.62);
-  box-shadow:
-    0 3px 14px rgba(26,38,52,.10),
-    0 1px 3px rgba(26,38,52,.06);
-  -webkit-backdrop-filter:saturate(180%) blur(18px);
-  backdrop-filter:saturate(180%) blur(18px);
-  overflow:hidden;
-  transform-origin:center;
-}
-.bn-indicator.is-traveling{
-  background:
-    linear-gradient(145deg,rgba(255,255,255,.56),rgba(255,255,255,.24) 52%,rgba(255,255,255,.38)),
-    rgba(255,255,255,.34);
-}
-.bn-indicator.is-settling{
-  background:
-    linear-gradient(145deg,rgba(255,255,255,.48),rgba(255,255,255,.22) 52%,rgba(255,255,255,.34)),
-    rgba(255,255,255,.30);
 }
 
 /* ==========================================================================

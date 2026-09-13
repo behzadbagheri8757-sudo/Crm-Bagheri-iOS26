@@ -61,25 +61,31 @@ input[placeholder*="جستجو"]{
   right:12px;
   bottom:calc(10px + env(safe-area-inset-bottom,0px));
   z-index:40;
+  box-sizing:border-box;
 
   display:flex;
   align-items:stretch;
   justify-content:space-around;
 
-  min-height:calc(68px - (18px * var(--bn-minimize-progress)));
-  padding:calc(7px - (2px * var(--bn-minimize-progress))) 8px;
+  /* Short floating capsule: 60px at rest → 46px minimized. border-radius
+     is set far larger than any of these heights on purpose — the browser
+     clamps border-radius to half the box's own height/width, so the two
+     ends are always a true semicircle (radius = height/2) at every single
+     step of the scroll-linked minimize progress, not just at the two
+     endpoints. */
+  min-height:calc(60px - (14px * var(--bn-minimize-progress)));
+  padding:calc(6px - (2px * var(--bn-minimize-progress))) 10px;
+  border-radius:999px;
 
-  background:rgba(255,255,255,.55);
-  border:none;
-  border-radius:calc(24px - (3px * var(--bn-minimize-progress)));
+  background:rgba(255,255,255,.82);
+  border:0.5px solid rgba(15,23,42,.08);
 
   box-shadow:
-    0 4px 12px rgba(0,0,0,.06),
-    0 1px 3px rgba(0,0,0,.04),
-    inset 0 1px 0 rgba(255,255,255,.70);
+    0 8px 24px rgba(15,23,42,.12),
+    0 2px 6px rgba(15,23,42,.06);
 
-  -webkit-backdrop-filter:saturate(180%) blur(20px);
-  backdrop-filter:saturate(180%) blur(20px);
+  -webkit-backdrop-filter:saturate(160%) blur(20px);
+  backdrop-filter:saturate(160%) blur(20px);
 
   -webkit-overflow-scrolling:auto;
 
@@ -91,6 +97,11 @@ input[placeholder*="جستجو"]{
 }
 
 .bottom-nav-item{
+  position:relative;
+  z-index:1;
+  isolation:isolate;
+  overflow:visible;
+
   flex:1 1 0;
   display:flex;
   flex-direction:column;
@@ -98,7 +109,11 @@ input[placeholder*="جستجو"]{
   justify-content:center;
   gap:2px;
 
-  min-height:calc(56px - (12px * var(--bn-minimize-progress)));
+  /* Content-area height that exactly matches the bar's own border-box
+     shrink above (bar min-height minus the bar's own top+bottom padding
+     at the same progress), so the item never gets taller or shorter than
+     the capsule actually has room for. */
+  min-height:calc(48px - (10px * var(--bn-minimize-progress)));
   padding:calc(4px - (1px * var(--bn-minimize-progress))) 2px;
 
   border:none;
@@ -167,14 +182,16 @@ input[placeholder*="جستجو"]{
   transition:stroke-width 0.2s ease;
 }
 
-/* Minimized state while scrolling */
+/* Minimized state while scrolling — matches the calc() endpoints above
+   (progress=1) exactly, so this class taking over at progress>=.98 never
+   produces a visible pop. */
 .bottom-nav.is-minimized{
-  min-height:50px;
-  padding-block:5px;
+  min-height:46px;
+  padding-block:4px;
 }
 
 .bottom-nav.is-minimized .bottom-nav-item{
-  min-height:40px;
+  min-height:38px;
   padding-block:2px;
 }
 
@@ -730,32 +747,63 @@ a.ledger-row:active{
 
 /* ============================================================
    iOS-native Bottom Navigation Indicator
+   Single canonical definition — position/width/height/transform are
+   written inline by js/nav.js (positionBnIndicator) every frame; this
+   rule supplies everything JS doesn't: material, stacking and the
+   static defaults used before JS has placed it once.
    ============================================================ */
 
 .bn-indicator{
-  z-index:2;
-  border-radius:24px;
+  position:absolute;
+  left:0;
+  top:0;
+  box-sizing:border-box;
+  pointer-events:none;
+  isolation:isolate;
+  opacity:1;
 
-  background:rgba(120,120,128,.14);
-  border:none;
+  /* Sits BEHIND the tab's icon/label (.bottom-nav-item is z-index:1, its
+     own stacking context via isolation:isolate) so the icon is never
+     visually softened by the indicator's own edge/shadow — independent
+     of backdrop-filter, which is off below for the same reason. */
+  z-index:0;
+
+  /* Set larger than the indicator will ever be tall; the browser clamps
+     border-radius to half the box's live height, so this always renders
+     as a true semicircle-ended capsule at whatever height JS sets. */
+  border-radius:999px;
+
+  background:rgba(120,120,128,.18);
+  border:1px solid rgba(120,120,128,.16);
+  transition:background-color 120ms ease, border-color 120ms ease;
 
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,.20),
     inset 0 -1px 0 rgba(0,0,0,.015);
 
-  /* TEST: backdrop-filter disabled to isolate icon-blur root cause.
-     All other visual properties left untouched intentionally. */
+  /* Non-negotiable: the active icon must stay perfectly sharp. Any blur
+     here softens it, tested and confirmed — do not reintroduce. */
   -webkit-backdrop-filter:none;
   backdrop-filter:none;
 
   overflow:hidden;
+  transform:translate3d(0,0,0) scale(1,1);
   transform-origin:0% 50%;
+  will-change:transform;
 }
 
+/* Toggled by js/nav.js for the duration of a tab-tap move: a touch more
+   fill while actually in flight, distinguishable from the resting state,
+   so the capsule's motion reads clearly against the bar's own light
+   surface even during a fast short hop. */
 .bn-indicator.is-traveling{
-  background:rgba(120,120,128,.14);
+  background:rgba(120,120,128,.26);
+  border-color:rgba(120,120,128,.22);
 }
 
+/* Toggled briefly on arrival, then removed — the very soft settle/rebound
+   the motion spec calls for, expressed as material rather than geometry. */
 .bn-indicator.is-settling{
-  background:rgba(120,120,128,.14);
+  background:rgba(120,120,128,.20);
+  border-color:rgba(120,120,128,.17);
 }
