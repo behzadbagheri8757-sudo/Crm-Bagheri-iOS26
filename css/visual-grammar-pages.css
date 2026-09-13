@@ -239,3 +239,23 @@ main .empty{margin:14px 0;}
     padding-bottom:40px;
   }
 }
+
+/* --------------------------------------------------------------------------
+   MICRO TYPOGRAPHY TUNING — Products list only (post system-font A/B test)
+   ID-scoped to the live #product-list element (set at runtime by
+   js/views/products.js). Deliberately NOT using .tx-row-title /
+   .tx-row-total directly, and NOT using .vg-route-products — both are
+   shared with/dormant across many other views; see patch report.
+   -------------------------------------------------------------------------- */
+#product-list .tx-row-title{
+  font-weight:600;
+  letter-spacing:.1px;
+}
+#product-list .tx-row-total{
+  font-weight:700;
+  letter-spacing:-.1px;
+}
+#product-list .product-row-qty-value{
+  font-weight:700;
+  letter-spacing:.1px;
+}
