@@ -7,6 +7,11 @@
  */
 'use strict';
 
+/* CHANGED: v55 -> v56 (global typography weight retuning: all UI font-weight tokens/literals
+   lowered by one 100-weight tier, floor 400, so the app is visually balanced with iPhone
+   "Bold Text" accessibility setting ON, which is the user's real-world baseline. Print/export
+   invoice document typography intentionally left unchanged. No font-family, font-size,
+   line-height, layout, or business logic changed.) */
 /* CHANGED: v53 -> v54 (surgical retry-orphan graph preservation, validation focus, header geometry, in-app confirmations, and scoped hint/touch fixes). Previous v53 behavior is otherwise preserved.
    The build also retains the v53 scroll-linked header geometry and native-style tab selection.
    */
@@ -18,7 +23,7 @@
    scrollY 1:1 and reverses identically. Removed the now-duplicate "داشبورد"
    <h2> inside Dashboard's own content — the header already shows it as the
    page title since the brand-name/page-title fix) */
-const CACHE_NAME = 'baqeri-shell-v55';
+const CACHE_NAME = 'baqeri-shell-v56';
 
 /** App Shell — paths relative to this SW (same directory as index.html). */
 const PRECACHE_URLS = [
