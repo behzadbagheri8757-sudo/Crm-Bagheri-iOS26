@@ -305,6 +305,14 @@ function ensureBnIndicator(bar){
   return ind;
 }
 
+function _bnClearIndicatorMotionClasses(ind){
+  ind.classList.remove('is-traveling', 'is-settling');
+  if(ind._bnSettleTimer){
+    clearTimeout(ind._bnSettleTimer);
+    ind._bnSettleTimer = null;
+  }
+}
+
 function _bnReduceMotion(){
   try{ return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }
   catch(_e){ return false; }
@@ -416,11 +424,12 @@ function positionBnIndicator(bar, animate){
   /* The iOS 26 selected control nearly fills its tab item; the glass is
      the selected item surface, not a small decorative badge inside it. */
   var w = Math.max(50, Math.round(itemRect.width - 2));
-  /* Indicator is intentionally shorter than the tab item (≈48px inside the
-     resting ≈56px item) so its 69:48 ratio (≈1.44:1) reads as a short, wide
-     capsule with true semicircular ends — border-radius = h/2. The floor of
-     44 prevents the shape from collapsing during the minimize animation,
-     where the tab item itself shrinks to ≈44px. Width calculation is
+  /* Indicator is intentionally a little shorter than the tab item itself,
+     so it reads as a short, wide capsule inset within the tab rather than
+     filling it edge to edge; border-radius:999px in CSS auto-clamps to
+     h/2, so the ends are always a true semicircle at whatever height this
+     computes. The floor of 44 prevents the shape from collapsing once the
+     tab item itself has shrunk to its minimized size. Width calculation is
      unchanged, so the indicator stays aligned with the tab's horizontal
      center in every state. */
   var h = Math.max(44, Math.round(itemRect.height - 8));
@@ -440,6 +449,7 @@ function positionBnIndicator(bar, animate){
     }catch(_e){}
     try{ ind._bnAnim.cancel(); }catch(_e2){}
     ind._bnAnim = null;
+    _bnClearIndicatorMotionClasses(ind);
   }
 
   var canAnimate = animate && _bnIndicatorState.ready && !reduceMotion && typeof ind.animate === 'function';
@@ -466,6 +476,7 @@ function positionBnIndicator(bar, animate){
        reposition. No motion needed. */
     ind.style.width = w + 'px';
     ind.style.height = h + 'px';
+    _bnClearIndicatorMotionClasses(ind);
     return;
   }
 
@@ -480,13 +491,25 @@ function positionBnIndicator(bar, animate){
     fill: 'forwards'
   });
   ind._bnAnim = anim;
+  _bnClearIndicatorMotionClasses(ind);
+  ind.classList.add('is-traveling');
   anim.onfinish = function(){
     try{ anim.commitStyles(); }catch(_e){}
     try{ anim.cancel(); }catch(_e2){}
     if(ind._bnAnim === anim) ind._bnAnim = null;
+    /* Very soft settle beat after arrival, then back to rest. Short enough
+       to read as a rebound, not a lingering highlight. */
+    ind.classList.remove('is-traveling');
+    ind.classList.add('is-settling');
+    if(ind._bnSettleTimer) clearTimeout(ind._bnSettleTimer);
+    ind._bnSettleTimer = setTimeout(function(){
+      ind.classList.remove('is-settling');
+      ind._bnSettleTimer = null;
+    }, 150);
   };
   anim.oncancel = function(){
     if(ind._bnAnim === anim) ind._bnAnim = null;
+    ind.classList.remove('is-traveling');
   };
   _bnIndicatorState.ready = true;
 }
