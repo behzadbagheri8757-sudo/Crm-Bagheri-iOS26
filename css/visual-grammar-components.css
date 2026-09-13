@@ -18,7 +18,7 @@
 .tx-toolbar-select,
 input[type="search"],
 input[placeholder*="جستجو"]{
-  border-radius:var(--vg-radius-control); /* 999px = real capsule */
+  border-radius:var(--vg-radius-control);
 }
 
 /* ---------- Circle geometry ---------- */
@@ -28,7 +28,7 @@ input[placeholder*="جستجو"]{
 .icon-button,
 .dash-section-ico,
 .dash-qa-ico{
-  border-radius:var(--vg-radius-circle); /* 50% */
+  border-radius:var(--vg-radius-circle);
 }
 
 /* ---------- Soft Surface geometry ---------- */
@@ -39,33 +39,55 @@ input[placeholder*="جستجو"]{
 .prospect-result-card,
 .cust-summary,
 .overlay .sheet{
-  border-radius:var(--vg-radius-soft); /* 14px */
+  border-radius:var(--vg-radius-soft);
 }
 
 .sheet{
-  border-radius:var(--vg-radius-raised) var(--vg-radius-raised) 0 0; /* 16px top */
+  border-radius:var(--vg-radius-raised) var(--vg-radius-raised) 0 0;
 }
 
-/* ---------- Floating Glass Bottom Navigation ---------- */
+
+/* ============================================================
+   Floating Glass Bottom Navigation
+   Single canonical definition.
+   ============================================================ */
+
 .bottom-nav{
+  --bn-minimize-progress:0;
+
   position:fixed!important;
   top:auto!important;
   left:12px;
   right:12px;
   bottom:calc(10px + env(safe-area-inset-bottom,0px));
   z-index:40;
+
   display:flex;
   align-items:stretch;
   justify-content:space-around;
-  background:rgba(255,255,255,.78);
-  backdrop-filter:saturate(180%) blur(20px);
+
+  min-height:calc(68px - (18px * var(--bn-minimize-progress)));
+  padding:calc(7px - (2px * var(--bn-minimize-progress))) 8px;
+
+  background:rgba(255,255,255,.55);
+  border:none;
+  border-radius:calc(24px - (3px * var(--bn-minimize-progress)));
+
+  box-shadow:
+    0 4px 12px rgba(0,0,0,.06),
+    0 1px 3px rgba(0,0,0,.04),
+    inset 0 1px 0 rgba(255,255,255,.70);
+
   -webkit-backdrop-filter:saturate(180%) blur(20px);
-  border:1px solid rgba(255,255,255,.5);
-  border-radius:var(--vg-radius-control); /* capsule */
-  box-shadow:var(--vg-shadow-glass);
-  padding:6px 8px;
-  min-height:54px;
+  backdrop-filter:saturate(180%) blur(20px);
+
   -webkit-overflow-scrolling:auto;
+
+  transform-origin:center bottom;
+
+  /* Preserve final behavior: geometry is driven by JS progress. */
+  transition:background-color 220ms ease,
+             box-shadow 220ms ease;
 }
 
 .bottom-nav-item{
@@ -75,87 +97,58 @@ input[placeholder*="جستجو"]{
   align-items:center;
   justify-content:center;
   gap:2px;
-  min-height:44px;
-  padding:4px 2px;
+
+  min-height:calc(56px - (12px * var(--bn-minimize-progress)));
+  padding:calc(4px - (1px * var(--bn-minimize-progress))) 2px;
+
   border:none;
+  border-radius:0;
   background:transparent;
+
   color:var(--vg-color-text-muted);
   text-decoration:none;
   font-family:inherit;
   font-size:.62rem;
   font-weight:var(--vg-weight-label);
   line-height:1.15;
+
   cursor:pointer;
-  border-radius:0; /* NOT capsule */
   -webkit-tap-highlight-color:transparent;
-}
 
-.bottom-nav-item .bn-ico{
-  width:24px;
-  height:24px;
-  color:var(--vg-color-text-muted);
-}
-
-.bottom-nav-item .bn-ico svg{
-  width:22px;
-  height:22px;
-  stroke-width:1.55;
-}
-
-.bottom-nav-item .bn-label{
-  max-width:100%;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-
-/* iOS 26 floating tab bar — minimized state while scrolling. The bar remains
-   available and tappable; only secondary labels and excess vertical chrome
-   collapse. Restoring on upward scroll keeps navigation discoverable. */
-.bottom-nav{
-  transform-origin:center bottom;
-  transition:min-height 180ms cubic-bezier(.22,1,.36,1),
-             padding-block 180ms cubic-bezier(.22,1,.36,1),
-             bottom 180ms cubic-bezier(.22,1,.36,1);
-}
-.bottom-nav-item{
   transition:color var(--ios-control) var(--ios-ease-out),
              transform var(--ios-touch) var(--ios-ease-out),
              opacity var(--ios-touch) ease,
              min-height 180ms cubic-bezier(.22,1,.36,1),
              padding-block 180ms cubic-bezier(.22,1,.36,1);
 }
+
+.bottom-nav-item .bn-ico{
+  width:calc(24px - (1px * var(--bn-minimize-progress)));
+  height:calc(24px - (1px * var(--bn-minimize-progress)));
+  color:var(--vg-color-text-muted);
+}
+
+.bottom-nav-item .bn-ico svg{
+  width:calc(24px - (1px * var(--bn-minimize-progress)));
+  height:calc(24px - (1px * var(--bn-minimize-progress)));
+  stroke-width:1.55;
+}
+
 .bottom-nav-item .bn-label{
-  max-height:2em;
-  opacity:1;
+  max-width:100%;
+  max-height:calc(2em * (1 - var(--bn-minimize-progress)));
+
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+
+  opacity:calc(1 - var(--bn-minimize-progress));
+  transform:translateY(calc(-2px * var(--bn-minimize-progress)));
+
+  pointer-events:auto;
+
   transition:max-height 160ms cubic-bezier(.22,1,.36,1),
              opacity 120ms ease;
-}
-.bottom-nav.is-minimized{
-  min-height:50px;
-  padding-block:5px;
-}
-.bottom-nav.is-minimized .bottom-nav-item{
-  min-height:40px;
-  padding-block:2px;
-}
-.bottom-nav.is-minimized .bottom-nav-item .bn-label{
-  max-height:0;
-  opacity:0;
-  overflow:hidden;
-  pointer-events:none;
-}
-.bottom-nav.is-minimized .bottom-nav-item .bn-ico,
-.bottom-nav.is-minimized .bottom-nav-item .bn-ico svg{
-  width:23px;
-  height:23px;
-}
-@media (prefers-reduced-motion: reduce){
-  .bottom-nav,
-  .bottom-nav-item,
-  .bottom-nav-item .bn-label{
-    transition:none!important;
-  }
 }
 
 /* Active = tint-only (no pill, no glass box) */
@@ -174,7 +167,49 @@ input[placeholder*="جستجو"]{
   transition:stroke-width 0.2s ease;
 }
 
-/* ---------- Buttons ---------- */
+/* Minimized state while scrolling */
+.bottom-nav.is-minimized{
+  min-height:50px;
+  padding-block:5px;
+}
+
+.bottom-nav.is-minimized .bottom-nav-item{
+  min-height:40px;
+  padding-block:2px;
+}
+
+.bottom-nav.is-minimized .bottom-nav-item .bn-label{
+  max-height:0;
+  opacity:0;
+  overflow:hidden;
+  pointer-events:none;
+}
+
+.bottom-nav.is-minimized .bottom-nav-item .bn-ico,
+.bottom-nav.is-minimized .bottom-nav-item .bn-ico svg{
+  width:23px;
+  height:23px;
+}
+
+@media (prefers-reduced-motion: reduce){
+  .bottom-nav,
+  .bottom-nav-item,
+  .bottom-nav-item .bn-label{
+    transition:none!important;
+  }
+}
+
+@media (min-width:901px){
+  .bottom-nav{
+    display:none!important;
+  }
+}
+
+
+/* ============================================================
+   Buttons
+   ============================================================ */
+
 .btn{
   min-height:var(--vg-control-height);
   padding:12px 16px;
@@ -218,7 +253,11 @@ input[placeholder*="جستجو"]{
   box-shadow:none;
 }
 
-/* ---------- Chips ---------- */
+
+/* ============================================================
+   Chips
+   ============================================================ */
+
 .chip,
 .chip-opt{
   min-height:40px;
@@ -238,7 +277,11 @@ input[placeholder*="جستجو"]{
   color:#fff;
 }
 
-/* ---------- Badges ---------- */
+
+/* ============================================================
+   Badges
+   ============================================================ */
+
 .badge{
   display:inline-block;
   padding:3px 9px;
@@ -277,7 +320,11 @@ input[placeholder*="جستجو"]{
   color:var(--vg-color-text-secondary);
 }
 
-/* ---------- Form Controls ---------- */
+
+/* ============================================================
+   Form Controls
+   ============================================================ */
+
 .field{
   margin-bottom:var(--vg-space-group);
 }
@@ -315,25 +362,37 @@ input[placeholder*="جستجو"]{
 
 .field textarea{
   min-height:72px;
-  border-radius:var(--vg-radius-soft); /* not capsule because multi-line */
+  border-radius:var(--vg-radius-soft);
 }
 
-/* ---------- Search Inputs (Capsule) ---------- */
+
+/* ============================================================
+   Search Inputs
+   ============================================================ */
+
 input[type="search"],
 input[placeholder*="جستجو"]{
   min-height:var(--vg-control-height);
   padding:11px 14px;
   padding-right:38px;
+
   background-color:var(--ios-glass, var(--vg-color-surface));
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='11' cy='11' r='7' fill='none' stroke='%2398A2B3' stroke-width='2'/%3E%3Cline x1='16.65' y1='16.65' x2='21' y2='21' stroke='%2398A2B3' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
   background-repeat:no-repeat;
   background-position:right 12px center;
   background-size:16px 16px;
+
   border:1px solid var(--ios-glass-border, var(--vg-color-border));
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.62), 0 1px 3px rgba(26,38,52,.035);
+
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.62),
+    0 1px 3px rgba(26,38,52,.035);
+
   backdrop-filter:saturate(150%) blur(12px);
   -webkit-backdrop-filter:saturate(150%) blur(12px);
-  border-radius:var(--vg-radius-control); /* capsule */
+
+  border-radius:var(--vg-radius-control);
+
   font-size:16px;
   font-family:inherit;
 }
@@ -345,12 +404,17 @@ input[placeholder*="جستجو"]:focus{
   box-shadow:0 0 0 3px rgba(0,112,210,.10);
 }
 
-/* ---------- Toolbar Selects (Capsule) ---------- */
+
+/* ============================================================
+   Toolbar Selects
+   ============================================================ */
+
 .field select,
 .tx-toolbar-select,
 .inv-discount-block select{
   -webkit-appearance:none;
   appearance:none;
+
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23667085' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
   background-repeat:no-repeat;
   background-position:left 12px center;
@@ -368,7 +432,11 @@ input[placeholder*="جستجو"]:focus{
   cursor:pointer;
 }
 
-/* ---------- Icon-only actions (Circle) ---------- */
+
+/* ============================================================
+   Icon-only actions
+   ============================================================ */
+
 .close-x,
 .icon-btn,
 .icon-button{
@@ -392,7 +460,11 @@ input[placeholder*="جستجو"]:focus{
   background:var(--vg-color-surface);
 }
 
-/* ---------- Surface grammar ---------- */
+
+/* ============================================================
+   Surface grammar
+   ============================================================ */
+
 .card,
 .report-summary-card,
 .gc-panel,
@@ -407,7 +479,11 @@ input[placeholder*="جستجو"]:focus{
   padding:14px;
 }
 
-/* ---------- Sheets / Modals ---------- */
+
+/* ============================================================
+   Sheets / Modals
+   ============================================================ */
+
 .sheet{
   background:var(--vg-color-surface);
   border-top-left-radius:var(--vg-radius-raised);
@@ -421,8 +497,11 @@ input[placeholder*="جستجو"]:focus{
   font-weight:var(--vg-weight-title);
 }
 
-/* ---------- Empty states ---------- */
-/* ---------- Empty / Error states (Phase 8) ---------- */
+
+/* ============================================================
+   Empty / Error states
+   ============================================================ */
+
 .empty{
   display:flex;
   flex-direction:column;
@@ -436,10 +515,7 @@ input[placeholder*="جستجو"]:focus{
   font-size:.88rem;
   line-height:1.6;
 }
-/* One shared icon slot for every .empty usage app-wide (55+ call sites) —
-   plain "nothing here yet" state gets an inbox glyph; a Load Error variant
-   (role="alert", set by router.js/nav.js's error-recovery screens) gets a
-   warning triangle instead, purely via CSS — no view file needed editing. */
+
 .empty::before{
   content:'';
   width:40px;
@@ -447,8 +523,9 @@ input[placeholder*="جستجو"]:focus{
   flex:none;
   opacity:.32;
   background-color:currentColor;
+
   -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859m-19.5.338V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 0 0-2.15-1.588H6.911a2.25 2.25 0 0 0-2.15 1.588L2.35 13.177a2.25 2.25 0 0 0-.1.661Z'/%3E%3C/svg%3E");
-  mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859m-19.5.338V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 0 0-2.15-1.588H6.911a2.25 2.25 0 0 0-2.15 1.588L2.35 13.177a2.25 2.25 0 0 0-.1.661Z'/%3E%3C/svg%3E");
+  mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 0-2.013-1.244h3.859m-19.5.338V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 0 0-2.15-1.588H6.911a2.25 2.25 0 0 0-2.15 1.588L2.35 13.177a2.25 2.25 0 0 0-.1.661Z'/%3E%3C/svg%3E");
   -webkit-mask-size:contain;
   mask-size:contain;
   -webkit-mask-repeat:no-repeat;
@@ -456,20 +533,21 @@ input[placeholder*="جستجو"]:focus{
   -webkit-mask-position:center;
   mask-position:center;
 }
+
 .empty[role="alert"]{
   color:#B45309;
 }
+
 .empty[role="alert"]::before{
   opacity:.4;
   -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z'/%3E%3C/svg%3E");
   mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z'/%3E%3C/svg%3E");
 }
-/* router.js's retry button already exists in markup; just give it breathing
-   room now that the empty state has more visual weight (icon + gap). */
+
 .empty .btn{
   margin-top:4px;
 }
-/* Form guidance is not an empty-state: suppress the decorative empty icon. */
+
 .field > .empty{
   display:block;
   padding:4px 0 0;
@@ -478,10 +556,11 @@ input[placeholder*="جستجو"]:focus{
   font-size:.75rem;
   line-height:1.55;
 }
-.field > .empty::before{display:none;}
 
+.field > .empty::before{
+  display:none;
+}
 
-/* Form guidance rendered outside a .field is still not an empty state. */
 .form-hint{
   display:block;
   padding:4px 0;
@@ -489,17 +568,27 @@ input[placeholder*="جستجو"]:focus{
   text-align:right;
   line-height:1.55;
 }
-.form-hint::before{display:none;}
 
-/* Financial check status: preserve surrounding row layout while meeting the
-   minimum iOS touch target for the state-changing control. */
+.form-hint::before{
+  display:none;
+}
+
+
+/* ============================================================
+   Financial check status
+   ============================================================ */
+
 [data-toggle-check].tx-status-btn,
 button[data-toggle-check]{
   min-height:44px;
   min-width:44px;
 }
 
-/* ---------- Lists / Ledger rows ---------- */
+
+/* ============================================================
+   Lists / Ledger rows
+   ============================================================ */
+
 .ledger-row,
 .tx-row,
 .customer-list-row{
@@ -541,15 +630,29 @@ a.ledger-row:active{
   background:var(--vg-color-surface-soft);
 }
 
-/* ---------- Semantic accent colors (protected) ---------- */
-.accent-olive{color:var(--vg-color-success)!important;}
+
+/* ============================================================
+   Semantic accent colors
+   ============================================================ */
+
+.accent-olive{
+  color:var(--vg-color-success)!important;
+}
+
 .accent-rust,
-.accent-red{color:var(--vg-color-danger)!important;}
-.accent-amber{color:var(--vg-color-warning)!important;}
+.accent-red{
+  color:var(--vg-color-danger)!important;
+}
 
-/* Warning/status text must remain readable on white surfaces. */
+.accent-amber{
+  color:var(--vg-color-warning)!important;
+}
 
-/* ---------- Toolbars ---------- */
+
+/* ============================================================
+   Toolbars
+   ============================================================ */
+
 .btn-row{
   display:flex;
   flex-wrap:wrap;
@@ -570,7 +673,11 @@ a.ledger-row:active{
   font-weight:var(--vg-weight-label);
 }
 
-/* ---------- Toast (floating, not glass) ---------- */
+
+/* ============================================================
+   Toast
+   ============================================================ */
+
 .toast{
   position:fixed;
   bottom:calc(84px + env(safe-area-inset-bottom,0px) + var(--keyboard-height,0px));
@@ -593,7 +700,11 @@ a.ledger-row:active{
   transform:translateX(-50%) translateY(0);
 }
 
-/* ---------- Overlay ---------- */
+
+/* ============================================================
+   Overlay
+   ============================================================ */
+
 .overlay{
   position:fixed;
   inset:0;
@@ -604,54 +715,11 @@ a.ledger-row:active{
   z-index:60;
 }
 
+
 /* ============================================================
-   iOS 26 TAB BAR — FINAL NATIVE-FIDELITY LAYER
-   The bar remains floating/glass while its geometry follows the same
-   scroll-linked progress used by js/nav.js. No delayed CSS transition is
-   allowed to keep it collapsed after scrolling stops.
+   Chip rows
    ============================================================ */
-.bottom-nav{
-  --bn-minimize-progress:0;
-  min-height:calc(68px - (18px * var(--bn-minimize-progress)));
-  padding-block:calc(7px - (2px * var(--bn-minimize-progress)));
-  border-radius:calc(24px - (3px * var(--bn-minimize-progress)));
-  transition:background-color 220ms ease, box-shadow 220ms ease;
-}
-.bottom-nav-item{
-  min-height:calc(56px - (12px * var(--bn-minimize-progress)));
-  padding-block:calc(4px - (1px * var(--bn-minimize-progress)));
-}
-.bottom-nav-item .bn-label{
-  max-height:calc(2em * (1 - var(--bn-minimize-progress)));
-  opacity:calc(1 - var(--bn-minimize-progress));
-  transform:translateY(calc(-2px * var(--bn-minimize-progress)));
-  pointer-events:auto;
-}
-.bottom-nav-item .bn-ico,
-.bottom-nav-item .bn-ico svg{
-  width:calc(24px - (1px * var(--bn-minimize-progress)));
-  height:calc(24px - (1px * var(--bn-minimize-progress)));
-}
-.bottom-nav.is-minimized{
-  min-height:50px;
-  padding-block:5px;
-}
-.bottom-nav.is-minimized .bottom-nav-item{
-  min-height:40px;
-  padding-block:2px;
-}
-.bottom-nav.is-minimized .bottom-nav-item .bn-label{
-  pointer-events:none;
-}
-@media (prefers-reduced-motion: reduce){
-  .bottom-nav{transition:none!important;}
-}
 
-@media (min-width:901px){
-  .bottom-nav{display:none!important;}
-}
-
-/* Chip rows are explicit flex containers so gap is deterministic on iOS Safari. */
 .chip-row{
   display:flex;
   flex-wrap:wrap;
@@ -660,14 +728,57 @@ a.ledger-row:active{
 }
 
 
-/* Final surgical Bottom Navigation material — scoped to the floating tab bar. */
-.bottom-nav{
-  background:rgba(255,255,255,.55);
+/* ============================================================
+   iOS-native Bottom Navigation Indicator
+   ============================================================ */
+
+.bn-indicator{
+  z-index:2;
+  border-radius:24px;
+
+  background:rgba(120,120,128,.14);
   border:none;
-  -webkit-backdrop-filter:saturate(180%) blur(20px);
-  backdrop-filter:saturate(180%) blur(20px);
+
   box-shadow:
-    0 4px 12px rgba(0,0,0,.06),
-    0 1px 3px rgba(0,0,0,.04),
-    inset 0 1px 0 rgba(255,255,255,.70);
+    inset 0 1px 0 rgba(255,255,255,.28),
+    inset 0 -1px 0 rgba(0,0,0,.02);
+
+  -webkit-backdrop-filter:saturate(160%) blur(3px) brightness(1.07);
+  backdrop-filter:saturate(160%) blur(3px) brightness(1.07);
+
+  overflow:hidden;
+  transform-origin:0% 50%;
+}
+
+.bn-indicator::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:inherit;
+
+  background:radial-gradient(
+    ellipse 62% 68% at 50% 40%,
+    rgba(255,255,255,.22) 0%,
+    rgba(255,255,255,.07) 42%,
+    rgba(255,255,255,0) 72%
+  );
+
+  pointer-events:none;
+}
+
+.bn-indicator::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:inherit;
+  box-shadow:inset 0 0 0 .5px rgba(255,255,255,.34);
+  pointer-events:none;
+}
+
+.bn-indicator.is-traveling{
+  background:rgba(120,120,128,.14);
+}
+
+.bn-indicator.is-settling{
+  background:rgba(120,120,128,.14);
 }
