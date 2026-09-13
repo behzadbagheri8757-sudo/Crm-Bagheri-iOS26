@@ -386,6 +386,23 @@ function _bnBuildMove(left0, right0, top0, left1, right1, top1, barWidth){
 function positionBnIndicator(bar, animate){
   if(!bar) return;
   var ind = ensureBnIndicator(bar);
+
+  /* A non-animated reposition request — which comes from the scroll /
+     resize / visualViewport listeners in bindBottomNavMinimizeOnScroll
+     and ensureBottomNavPinned, including the window.scrollTo(0, saved)
+     that router.resolve() runs on every route change — must NOT
+     interrupt an in-flight tab-tap animation. The tab tap is the user's
+     current intent; those incidental events would otherwise commitStyles
+     + cancel the running WAAPI animation on its first or second frame,
+     then snap the indicator to its destination, which reads on iPhone
+     as a plain slide instead of the intended spring/morph travel.
+     A real tab tap still comes through here with animate === true, and
+     that path keeps the existing commitStyles + cancel interruption so
+     rapid repeated taps start from the true current mid-flight geometry. */
+  if(!animate && ind._bnAnim){
+    return;
+  }
+
   var active = bar.querySelector('.bottom-nav-item.active');
   if(!active){
     ind.style.opacity = '0';
