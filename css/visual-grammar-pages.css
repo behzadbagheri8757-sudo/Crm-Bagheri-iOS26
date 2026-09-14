@@ -213,7 +213,15 @@ main .empty{margin:14px 0;}
 /* ---------- More (full page) — #/more ----------
    Full-page replacement for the old More bottom sheet. All selectors are
    scoped under .more-page and use only existing visual-grammar tokens.
-   The old .more-sheet* rules in app.css remain untouched for rollback. */
+   The old .more-sheet* rules in app.css remain untouched for rollback.
+
+   Divider treatment (PHASE 3): a single inset 1px line between adjacent
+   rows. It starts at the text-area start (after the icon column and the
+   gap) and stops just past the chevron column, with a small breathing
+   gap so it never touches the chevron glyph or the card edge. It is
+   implemented as a ::before pseudo-element on every row that follows
+   another row, so the first row of each card and the last row of each
+   card never carry a line — matching native iOS grouped-list behavior. */
 .more-page{
   display:flex;
   flex-direction:column;
@@ -247,6 +255,7 @@ main .empty{margin:14px 0;}
 }
 
 .more-row{
+  position:relative;
   display:flex;
   align-items:center;
   gap:12px;
@@ -260,8 +269,21 @@ main .empty{margin:14px 0;}
   transition:background-color 140ms ease;
 }
 
-.more-row + .more-row{
-  border-top:1px solid var(--vg-color-divider);
+/* Inset divider: 1px line at the top edge of every row except the first
+   in its card. Horizontal extents (RTL logical):
+     inset-inline-start = padding-inline-start + icon + gap = 14 + 24 + 12 = 50px
+     inset-inline-end   = padding-inline-end + chevron + gap = 14 + 16 + 4 = 34px
+   so the line never runs under the icon column and never touches the
+   chevron glyph or the outer card edge. */
+.more-row + .more-row::before{
+  content:'';
+  position:absolute;
+  top:0;
+  inset-inline-start:calc(14px + 24px + 12px);
+  inset-inline-end:calc(14px + 16px + 4px);
+  height:1px;
+  background:var(--vg-color-divider);
+  pointer-events:none;
 }
 
 .more-row:active{
@@ -294,10 +316,19 @@ main .empty{margin:14px 0;}
 
 .more-row-chevron{
   flex:0 0 auto;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:16px;
+  height:16px;
   color:var(--vg-color-text-muted);
-  font-size:1.2rem;
-  line-height:1;
   opacity:.6;
+}
+
+.more-row-chevron svg{
+  display:block;
+  width:16px;
+  height:16px;
 }
 
 /* ---------- Mobile responsiveness ---------- */
