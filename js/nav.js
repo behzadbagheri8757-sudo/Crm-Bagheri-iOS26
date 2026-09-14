@@ -345,28 +345,34 @@ function _bnSmoothStep(t){
    deformation is applied with real scaleX/scaleY so even a one-tab hop has
    an obvious material change. */
 function _bnJellyEnvelope(t){
+  /* مرحله A: اول grow یکنواخت؛ کشش افقی هنوز کم است. */
   if(t <= 0.10){
     var a = _bnSmoothStep(t / 0.10);
-    return { x: 1.00 + 0.20*a, y: 1.00 - 0.10*a };
+    return { x: 1.00 + 0.08*a, y: 1.00 + 0.08*a, liftY: -4*a };
   }
-  if(t <= 0.48){
-    var b = _bnSmoothStep((t - 0.10) / 0.38);
-    return { x: 1.20 - 0.15*b, y: 0.90 + 0.07*b };
+  /* مرحله B: بعد از grow، کشش اصلی در جهت حرکت. */
+  if(t <= 0.35){
+    var b = _bnSmoothStep((t - 0.10) / 0.25);
+    return { x: 1.08 + 0.16*b, y: 1.08 - 0.16*b, liftY: -4 };
   }
-  if(t <= 0.68){
-    var c = _bnSmoothStep((t - 0.48) / 0.20);
-    return { x: 1.05 - 0.18*c, y: 0.97 + 0.06*c };
+  /* مرحله C: کشش تا نزدیک مقصد حفظ می‌شود. */
+  if(t <= 0.70){
+    var c = _bnSmoothStep((t - 0.35) / 0.35);
+    return { x: 1.24 - 0.04*c, y: 0.92 + 0.02*c, liftY: -4 + 2*c };
   }
-  if(t <= 0.84){
-    var d = _bnSmoothStep((t - 0.68) / 0.16);
-    return { x: 0.87 + 0.17*d, y: 1.03 - 0.03*d };
+  /* مرحله D: فشردگی اصلی به نزدیکی مقصد منتقل می‌شود. */
+  if(t <= 0.85){
+    var d = _bnSmoothStep((t - 0.70) / 0.15);
+    return { x: 1.20 - 0.30*d, y: 0.94 + 0.12*d, liftY: -2 + 2*d };
   }
-  if(t <= 0.93){
-    var e = _bnSmoothStep((t - 0.84) / 0.09);
-    return { x: 1.04 - 0.04*e, y: 1.00 + 0.015*e };
+  /* مرحله E: rebound کوچک برای نشستن نرم روی مقصد. */
+  if(t <= 0.94){
+    var e = _bnSmoothStep((t - 0.85) / 0.09);
+    return { x: 0.90 + 0.14*e, y: 1.06 - 0.08*e, liftY: 0 };
   }
-  var f = _bnSmoothStep((t - 0.93) / 0.07);
-  return { x: 1.00, y: 1.00 };
+  /* مرحله F: بازگشت کامل به اندازه عادی. */
+  var f = _bnSmoothStep((t - 0.94) / 0.06);
+  return { x: 1.04 - 0.04*f, y: 0.98 + 0.02*f, liftY: 0 };
 }
 
 function _bnTargetKey(item){
@@ -462,7 +468,8 @@ function _bnAnimateIndicatorToItem(bar, item){
     if(last){ translateX = deltaX; widthAt = targetW; }
 
     frames.push({
-      transform:'translate3d(' + translateX.toFixed(2) + 'px,0,0) scaleX(' + env.x.toFixed(4) + ') scaleY(' + env.y.toFixed(4) + ')',
+      /* lift واقعی در خود مسیر؛ مستقل از scale جداگانه‌ی pointerdown. */
+      transform:'translate3d(' + translateX.toFixed(2) + 'px,' + env.liftY.toFixed(2) + 'px,0) scaleX(' + env.x.toFixed(4) + ') scaleY(' + env.y.toFixed(4) + ')',
       width:Math.max(1,widthAt).toFixed(2)+'px',
       top:(top0 + (targetTop-top0)*p).toFixed(2)+'px',
       offset:t
