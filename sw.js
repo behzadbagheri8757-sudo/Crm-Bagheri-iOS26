@@ -7,6 +7,10 @@
  */
 'use strict';
 
+/* CHANGED: v56 -> v57 (More bottom sheet converted to a dedicated full-page
+   SPA route #/more. New view js/views/more.js added to the precache list;
+   old More sheet code and CSS left in place for rollback. No other shell
+   asset changed.) */
 /* CHANGED: v55 -> v56 (global typography weight retuning: all UI font-weight tokens/literals
    lowered by one 100-weight tier, floor 400, so the app is visually balanced with iPhone
    "Bold Text" accessibility setting ON, which is the user's real-world baseline. Print/export
@@ -23,7 +27,7 @@
    scrollY 1:1 and reverses identically. Removed the now-duplicate "داشبورد"
    <h2> inside Dashboard's own content — the header already shows it as the
    page title since the brand-name/page-title fix) */
-const CACHE_NAME = 'baqeri-shell-v56';
+const CACHE_NAME = 'baqeri-shell-v57';
 
 /** App Shell — paths relative to this SW (same directory as index.html). */
 const PRECACHE_URLS = [
@@ -71,6 +75,7 @@ const PRECACHE_URLS = [
   './js/views/invoice.js',
   './js/views/game-center.js',
   './js/views/settings.js',
+  './js/views/more.js',
   './vendor/xlsx.full.min.js',
   './vendor/html2canvas.min.js',
   './manifest.json',
