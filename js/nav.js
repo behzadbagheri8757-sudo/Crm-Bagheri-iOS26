@@ -340,60 +340,56 @@ function _bnSmoothStep(t){
   return t * t * (3 - 2 * t);
 }
 
-function _bnLerp(a, b, t){ return a + (b - a) * t; }
-
-/* The visible jelly is explicit: lift+grow → directional stretch while
-   traveling → converge back to an isotropic "still slightly bigger" shape
-   → monotonic settle to 1. Two independent curves are combined:
-     - sx/sy: size/stretch envelope (this function).
-     - liftY: a single-peak vertical arc (see _bnJumpArc), so the motion
-       reads as a jump, not a slide.
-   Critical constraint (do not reintroduce the old bug): once the isotropic
-   "still bigger" shape is reached (~0.72), sx/sy must move in ONE direction
-   only, straight down to 1 — never dip below 1 and grow back, which reads
-   as an artificial bounce at landing. Any dip below 1 that happens earlier
-   (the sy stretch, by design) is fine because it's mid-flight material
-   deformation, not the landing. */
-function _bnJellyEnvelope(t){
-  /* Phase 1 (0 → 0.12): lift off the surface, uniform grow, no stretch yet. */
-  if(t <= 0.12){
-    var a = _bnSmoothStep(t / 0.12);
-    var s1 = _bnLerp(1.00, 1.07, a);
-    return { sx: s1, sy: s1 };
-  }
-  /* Phase 2 (0.12 → 0.45): main travel — stretch along the direction of
-     motion. scaleX rises a bit above 1, scaleY dips a bit below 1. */
-  if(t <= 0.45){
-    var b = _bnSmoothStep((t - 0.12) / 0.33);
-    return { sx: _bnLerp(1.07, 1.14, b), sy: _bnLerp(1.07, 0.94, b) };
-  }
-  /* Phase 3 (0.45 → 0.72): the stretch relaxes — sx and sy converge back
-     to a single isotropic value that is still a little larger than rest. */
-  if(t <= 0.72){
-    var c = _bnSmoothStep((t - 0.45) / 0.27);
-    return { sx: _bnLerp(1.14, 1.05, c), sy: _bnLerp(0.94, 1.05, c) };
-  }
-  /* Phase 4 (0.72 → 1.0): arrival settle. Strictly monotonic 1.05 → 1.00,
-     one direction only — this is what keeps the landing clean. */
-  var d = _bnSmoothStep((t - 0.72) / 0.28);
-  var s4 = _bnLerp(1.05, 1.00, d);
-  return { sx: s4, sy: s4 };
+/* Smooth single-peak "bump": exactly 0 at t=0 and t=1, normalized to a peak
+   of exactly 1 at t = a/(a+b). This is a plain polynomial (t^a * (1-t)^b),
+   so it is infinitely differentiable everywhere in [0,1] — there is no
+   internal point where its own velocity hits zero. That property is the
+   whole fix for the old "move / stop / move / stop" rhythm: the previous
+   envelope was stitched from separate smoothstep segments, each of which
+   has zero velocity at both of ITS OWN endpoints — meaning velocity
+   actually passed through zero at every single phase boundary. A bump
+   built this way has no such seams; the only zero-velocity points are the
+   two ends of the whole travel, which is where they belong (rest states). */
+function _bnBump(t, a, b){
+  t = t < 0 ? 0 : (t > 1 ? 1 : t);
+  var peakT = a / (a + b);
+  var peakVal = Math.pow(peakT, a) * Math.pow(1 - peakT, b);
+  if(peakVal <= 0) return 0;
+  return Math.pow(t, a) * Math.pow(1 - t, b) / peakVal;
 }
 
-/* Single-peak vertical arc, independent of the size envelope above. Rises
-   for the first ~40% of the travel (the "jump" launch), then comes back
-   down to the nav's own baseline well before arrival, so the landing is
-   flat and clean rather than still-descending. peakPx is deliberately
-   small — a hint of a hop, not a bounce. */
-function _bnJumpArc(t, peakPx){
-  var peakT = 0.40, fallEndT = 0.85;
-  if(t <= peakT){
-    return -peakPx * _bnSmoothStep(t / peakT);
-  }
-  if(t <= fallEndT){
-    return -peakPx * (1 - _bnSmoothStep((t - peakT) / (fallEndT - peakT)));
-  }
-  return 0;
+/* One continuous envelope for the entire travel — no phase boundaries, no
+   piecewise stitching:
+     - g(t): overall isotropic "lift off the surface" grow. A wide bump
+       (peak ≈0.40) that returns to exactly 0 by t=1. This single curve
+       covers BOTH take-off and landing — there's no seam between them
+       because it's the same formula throughout.
+     - d(t): directional stretch layered on top of g. A narrower, sharper
+       bump (peak ≈0.375) that has mostly resolved before the landing
+       window, so scaleX/scaleY reconverge to an isotropic, still-slightly-
+       enlarged shape well before arrival. This relative shape — not a
+       hand-placed boundary — is what keeps the landing free of any dip
+       below 1.00: by the last ~25% of the travel d(t) is negligible next to
+       g(t), so sy = 1+g-d is guaranteed to recover above 1 and then ease
+       down to exactly 1 as g(t) itself fades to 0.
+   sx = 1+g+d, sy = 1+g-d: the stretch is a pure perturbation around the
+   same growing baseline, so grow and directional stretch read as one
+   material deforming, not two separate effects. */
+function _bnJellyEnvelope(t){
+  var g = 0.049 * _bnBump(t, 2, 3);
+  var d = 0.0914 * _bnBump(t, 3, 5);
+  return { sx: 1 + g + d, sy: 1 + g - d };
+}
+
+/* Vertical jump arc, independent of the size envelope. Built from the same
+   bump primitive, so it too reaches exactly 0 at t=1 — the same instant
+   horizontal travel reaches its destination (see _bnEaseOutCubic in
+   _bnAnimateIndicatorToItem, which also resolves to exactly 1 at t=1).
+   Arc-end and horizontal-arrival are therefore always simultaneous by
+   construction, for any travel distance/duration, with no separate tuning
+   needed. */
+function _bnJumpArc(t){
+  return -6 * _bnBump(t, 2, 3);
 }
 
 function _bnTargetKey(item){
@@ -451,9 +447,32 @@ function _bnPulseActiveIcon(bar){
   );
 }
 
-/* Animate immediately toward the tab under the finger. This is the key
-   behavioral difference from the old implementation: the indicator starts
-   moving on touch-down, rather than waiting for the route render after tap.
+/* Ease-out cubic: nonzero velocity at t=0 (movement starts immediately, no
+   perceptible pause after touch-down) and zero velocity at t=1 (soft,
+   snap-free arrival). Replaces the old ease-in-out smoothstep, which had
+   zero velocity at BOTH ends and read as a small hesitation before the
+   indicator actually started moving. */
+function _bnEaseOutCubic(t){
+  var u = 1 - (t < 0 ? 0 : (t > 1 ? 1 : t));
+  return 1 - u*u*u;
+}
+
+/* Reads the indicator's actual rendered transform (translate + scale)
+   straight off its computed matrix. Used only when a travel animation is
+   interrupted mid-flight by another tap: without this, the new travel would
+   silently start its scale channel over at 1.00 even though the indicator
+   was still visibly stretched from the animation just cancelled, producing
+   a visible size "snap" at the exact moment of interruption. */
+function _bnReadCurrentTransform(ind){
+  try{
+    var m = new DOMMatrixReadOnly(window.getComputedStyle(ind).transform);
+    return { tx:m.m41, ty:m.m42, sx:m.a, sy:m.d };
+  }catch(_e){
+    return { tx:0, ty:0, sx:1, sy:1 };
+  }
+}
+
+/* Animate immediately toward the tab under the finger.
 
    Technique: FLIP. The indicator's static box (left/top/width/height) is
    set to the DESTINATION slot immediately, and the entire remaining visual
@@ -461,10 +480,15 @@ function _bnPulseActiveIcon(bar){
    animated with WAAPI. This is what actually makes the deformation visible:
    animating left/top/width per frame forces a layout + backdrop-filter
    repaint on every sample, which — especially with two blurred glass
-   surfaces stacked (.bottom-nav and .bn-indicator) — reliably drops most
-   frames on-device, collapsing six carefully-shaped stages into what reads
-   as a single instant jump. A transform-only animation stays entirely on
-   the compositor, so every sampled frame actually renders. */
+   surfaces stacked — reliably drops frames on-device. A transform-only
+   animation stays entirely on the compositor, so every sampled frame
+   actually renders.
+
+   `transform` is the ONLY channel driving the indicator during travel —
+   press-lift (the separate CSS `scale` property) is intentionally not
+   engaged for a cross-tab tap (see bindBottomNavIndicatorGestures below),
+   so there is never a second, competing transform source on the element
+   while it's in flight. */
 function _bnAnimateIndicatorToItem(bar, item){
   var ind = ensureBnIndicator(bar);
   if(!item || _bnReduceMotion() || typeof ind.animate !== 'function') return;
@@ -476,51 +500,62 @@ function _bnAnimateIndicatorToItem(bar, item){
   var targetLeft = targetRect.left - barRect.left + (targetRect.width - targetW)/2;
   var targetTop = targetRect.top - barRect.top + (targetRect.height - targetH)/2;
 
+  /* The static box the indicator was sitting in before this call. */
+  var prevLeft = parseFloat(ind.style.left);
+  var prevTop = parseFloat(ind.style.top);
+  if(isNaN(prevLeft)) prevLeft = targetLeft;
+  if(isNaN(prevTop)) prevTop = targetTop;
+
+  if(ind._bnIconTimer){ clearTimeout(ind._bnIconTimer); ind._bnIconTimer = null; }
   if(ind._bnAnim){
     try{ ind._bnAnim.commitStyles(); }catch(_e){}
     try{ ind._bnAnim.cancel(); }catch(_e2){}
     ind._bnAnim = null;
   }
 
-  /* Current *visual* rect (bakes in any transform already applied by a
-     just-cancelled in-flight animation, so rapid repeated taps continue
-     smoothly from wherever the indicator actually is on screen). */
-  var currentRect = ind.getBoundingClientRect();
-  var left0 = currentRect.left - barRect.left;
-  var top0 = currentRect.top - barRect.top;
+  /* Exact visual transform at the moment of interruption (identity if the
+     indicator was idle — the common case). */
+  var cur = _bnReadCurrentTransform(ind);
 
-  /* Lock the static box to the destination now; the gap to the current
-     visual position becomes the animation's starting transform offset. */
+  /* Lock the static box to the destination now; everything else is a pure
+     transform animation from here on. */
   ind.style.left = targetLeft + 'px';
   ind.style.top = targetTop + 'px';
   ind.style.width = targetW + 'px';
   ind.style.height = targetH + 'px';
 
-  var offsetX = left0 - targetLeft;
-  var offsetY = top0 - targetTop;
+  var offsetX = (prevLeft + cur.tx) - targetLeft;
+  var offsetY = (prevTop + cur.ty) - targetTop;
+  var startSx = cur.sx, startSy = cur.sy;
+
   var distanceRatio = Math.max(0, Math.min(1, Math.abs(offsetX) / Math.max(1, barRect.width * .82)));
-  /* Long enough that lift/stretch/travel/settle are each actually visible
-     (roughly a dozen-plus frames per stage at 60fps), short enough to still
-     feel like a snappy iOS tab switch rather than a slow-motion replay. */
-  var durationMs = Math.round(400 + 90 * distanceRatio);
-  var liftPeakPx = 6;
+  /* Responsive first: just long enough for take-off/stretch/jump/landing to
+     each register as part of one continuous event, not a slow-motion
+     replay. */
+  var durationMs = Math.round(300 + 60 * distanceRatio);
+
+  /* If this travel inherited a non-1.00 scale from an animation that was
+     just interrupted, fold that discrepancy out smoothly over the first
+     ~22% of the NEW travel instead of resetting it to 1.00 instantly — this
+     is the fix for the rapid-tab-switching scale snap. In the common case
+     (indicator was idle, startSx=startSy=1) this term is simply zero. */
+  var fadeSpan = 0.22;
 
   var N = 54;
   var frames = [];
   for(var i=0;i<=N;i++){
     var t = i/N;
-    var last = i===N;
-    /* Monotonic ease for position — no spring overshoot on the X axis.
-       The "jump" character comes from the vertical arc + size envelope
-       below, not from the indicator overshooting its horizontal target. */
-    var pos = last ? 1 : _bnSmoothStep(t);
-    var env = last ? { sx:1, sy:1 } : _bnJellyEnvelope(t);
-    var liftY = last ? 0 : _bnJumpArc(t, liftPeakPx);
+    var pos = _bnEaseOutCubic(t);
+    var env = _bnJellyEnvelope(t);
+    var liftY = _bnJumpArc(t);
+    var fade = t >= fadeSpan ? 0 : (1 - _bnSmoothStep(t / fadeSpan));
+    var sx = env.sx + (startSx - 1) * fade;
+    var sy = env.sy + (startSy - 1) * fade;
     var tx = offsetX * (1 - pos);
     var ty = offsetY * (1 - pos) + liftY;
 
     frames.push({
-      transform:'translate3d(' + tx.toFixed(2) + 'px,' + ty.toFixed(2) + 'px,0) scaleX(' + env.sx.toFixed(4) + ') scaleY(' + env.sy.toFixed(4) + ')',
+      transform:'translate3d(' + tx.toFixed(2) + 'px,' + ty.toFixed(2) + 'px,0) scaleX(' + sx.toFixed(4) + ') scaleY(' + sy.toFixed(4) + ')',
       offset:t
     });
   }
@@ -534,6 +569,19 @@ function _bnAnimateIndicatorToItem(bar, item){
   ind._bnTargetKey = _bnTargetKey(item);
   _bnClearIndicatorMotionClasses(ind);
   ind.classList.add('is-traveling');
+
+  /* The destination icon's zoom starts DURING the landing window — not
+     after the travel animation fully finishes — so the two read as one
+     coordinated landing rather than "jelly stops, then icon reacts". The
+     delay is derived from this travel's own duration, so it stays in sync
+     regardless of how far the indicator is traveling. Guarded by the timer
+     handle above so an interrupting tap cancels a stale, still-pending
+     pulse for the old destination. */
+  ind._bnIconTimer = setTimeout(function(){
+    ind._bnIconTimer = null;
+    _bnPulseActiveIcon(bar);
+  }, Math.round(durationMs * 0.72));
+
   anim.onfinish = function(){
     try{ anim.commitStyles(); }catch(_e){}
     try{ anim.cancel(); }catch(_e2){}
@@ -547,8 +595,7 @@ function _bnAnimateIndicatorToItem(bar, item){
       ind.classList.remove('is-settling');
       ind._bnSettleTimer = null;
       ind._bnTargetKey = '';
-    }, 220); // زمان settle بیشتر برای فرود نرم‌تر
-    _bnPulseActiveIcon(bar);
+    }, 180);
   };
   anim.oncancel = function(){
     if(ind._bnAnim === anim) ind._bnAnim = null;
@@ -571,15 +618,25 @@ function bindBottomNavIndicatorGestures(bar){
     var targetKey = _bnTargetKey(item);
     _bnIndicatorState.pointer = { id:e.pointerId, activeKey:activeKey, targetKey:targetKey };
 
-    _bnLiftIndicator(ind);
-    if(targetKey && targetKey !== activeKey) _bnAnimateIndicatorToItem(bar, item);
+    if(targetKey && targetKey !== activeKey){
+      /* Switching tabs: _bnAnimateIndicatorToItem owns the transform channel
+         end to end, including its own take-off grow (see
+         _bnJellyEnvelope) — engaging the separate press-lift here would be
+         a second, competing transform source on the same element while
+         it's in flight. */
+      _bnAnimateIndicatorToItem(bar, item);
+    } else {
+      /* Same-tab tap: no travel is happening, so the lightweight press
+         acknowledgment (CSS `scale`, independent of `transform`) is safe. */
+      _bnLiftIndicator(ind);
+    }
   }, {passive:true});
 
   function release(e){
     var state = _bnIndicatorState.pointer;
     if(!state || (e && e.pointerId != null && state.id !== e.pointerId)) return;
     var ind = ensureBnIndicator(bar);
-    _bnReleaseLift(ind);
+    if(ind.classList.contains('is-lifted')) _bnReleaseLift(ind);
     _bnIndicatorState.pointer = null;
   }
 
