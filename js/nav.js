@@ -436,7 +436,7 @@ function _bnAnimateIndicatorToItem(bar, item){
   var center1 = targetLeft + targetW/2;
   var centerDist = Math.abs(center1 - center0);
   var distanceRatio = Math.max(0, Math.min(1, centerDist / Math.max(1, barRect.width * .82)));
-  var durationMs = Math.round(320 + 150 * distanceRatio);
+  var durationMs = Math.round(220 + 100 * distanceRatio); // مدت کوتاه‌تر: 220 تا 320ms برای حس iOS-native
 
   /* Normalize the current visual rect into a clean transform origin before
      starting the new compositor animation. */
@@ -448,13 +448,13 @@ function _bnAnimateIndicatorToItem(bar, item){
 
   var deltaX = center1 - (left0 + width0/2);
   var widthRatio = targetW / width0;
-  var N = 36;
+  var N = 60; // نمونه‌برداری متراکم‌تر: 61 فریم برای حرکت نرم‌تر
   var frames = [];
 
   for(var i=0;i<=N;i++){
     var t = i/N;
     var first = i===0, last = i===N;
-    var p = last ? 1 : _bnSpring(t, .72, 0);
+    var p = last ? 1 : _bnSpring(t, .75, 0); // damping کمی بیشتر برای کاهش پرتاب
     var env = last ? {x:1,y:1} : _bnJellyEnvelope(t);
     var translateX = deltaX * p;
     var widthAt = width0 + (targetW - width0) * p;
@@ -495,7 +495,7 @@ function _bnAnimateIndicatorToItem(bar, item){
       ind.classList.remove('is-settling');
       ind._bnSettleTimer = null;
       ind._bnTargetKey = '';
-    }, 120);
+    }, 220); // زمان settle بیشتر برای فرود نرم‌تر
   };
   anim.oncancel = function(){
     if(ind._bnAnim === anim) ind._bnAnim = null;
