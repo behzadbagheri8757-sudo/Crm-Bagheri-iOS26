@@ -39,7 +39,7 @@ const BOTTOM_NAV_ITEMS = [
   { id: 'customers', href: '#/customers', spaPath: '/customers', label: 'مشتریان',  iconKey: 'users' },
   { id: 'products',  href: '#/products',  spaPath: '/products',  label: 'اجناس',    iconKey: 'cube' },
   { id: 'invoices',  href: '#/invoices',  spaPath: '/invoices',  label: 'فاکتورها', iconKey: 'documentText' },
-  { id: 'more',      href: '#more',       label: 'بیشتر',        iconKey: 'more' },
+  { id: 'more',      href: '#/more',      spaPath: '/more',      label: 'بیشتر',    iconKey: 'more' },
 ];
 
 /** Secondary destinations opened from «بیشتر». iconKey references js/icons.js. */
@@ -130,6 +130,7 @@ function bindMoreSheetDragToDismiss(){
 }
 
 function isMoreSectionActive(activeId){
+  if(activeId === 'more') return true;
   if(MORE_NAV_ITEMS.some(t => t.id === activeId)) return true;
   return activeId === 'watches';
 }
@@ -734,12 +735,6 @@ function renderBottomNav(activeId){
     else active = t.id === activeId;
     const cls = 'bottom-nav-item' + (active ? ' active' : '');
     const ico = navIcon(t.iconKey, active);
-    if(t.id === 'more'){
-      return `<button type="button" class="${cls}" data-bottom-more="1" aria-label="بیشتر">
-        <span class="bn-ico">${ico}</span>
-        <span class="bn-label">${t.label}</span>
-      </button>`;
-    }
     let href = t.href;
     if (spa && t.spaPath) href = '#' + t.spaPath;
     return `<a class="${cls}" href="${href}" data-spa-path="${t.spaPath || ''}">
@@ -763,14 +758,6 @@ function renderBottomNav(activeId){
         if (typeof AppRouter !== 'undefined' && AppRouter.navigate) AppRouter.navigate(path);
         else location.hash = path;
       });
-    });
-  }
-
-  const moreBtn = bar.querySelector('[data-bottom-more]');
-  if(moreBtn){
-    moreBtn.addEventListener('click', function(e){
-      e.preventDefault();
-      openMoreSheet(activeId);
     });
   }
 
@@ -1299,6 +1286,7 @@ async function bootSpaShell() {
       if (path === '/checks') return 'checks';
       if (path === '/game') return 'game';
       if (path === '/settings') return 'settings';
+      if (path === '/more') return 'more';
       return 'dashboard';
     }
 
@@ -1335,6 +1323,7 @@ async function bootSpaShell() {
       '/checks': 'چک‌ها',
       '/game': 'مرکز بازی فروش',
       '/settings': 'تنظیمات و Backup',
+      '/more': 'بیشتر',
       '/locations': 'مناطق و مسیرها',
       '/watches': 'واچ‌ها',
       '/watch': 'جزئیات واچ'
@@ -1374,6 +1363,7 @@ async function bootSpaShell() {
     AppRouter.registerRoute('/checks', makeViewHandler(typeof ChecksView !== 'undefined' ? ChecksView : null, 'checks', '/checks'));
     AppRouter.registerRoute('/game', makeViewHandler(typeof GameCenterView !== 'undefined' ? GameCenterView : null, 'game', '/game'));
     AppRouter.registerRoute('/settings', makeViewHandler(typeof SettingsView !== 'undefined' ? SettingsView : null, 'settings', '/settings'));
+    AppRouter.registerRoute('/more', makeViewHandler(typeof MoreView !== 'undefined' ? MoreView : null, 'more', '/more'));
     AppRouter.registerRoute('/locations', makeViewHandler(typeof LocationsView !== 'undefined' ? LocationsView : null, 'settings', '/locations'));
     AppRouter.registerRoute('/watches', makeViewHandler(typeof WatchesView !== 'undefined' ? WatchesView : null, 'watches', '/watches'));
     AppRouter.registerRoute('/watch', makeViewHandler(typeof WatchDetailView !== 'undefined' ? WatchDetailView : null, 'watches', '/watch'));
