@@ -55,6 +55,16 @@
     },
   ];
 
+  // Canonical project chevron — same inline SVG used in js/nav.js
+  // (fillMoreSheetList → .more-sheet-item-chevron) and, as a mask-image,
+  // in css/app.css (a.ledger-row:not(.action-row)::after). Path
+  // "m15 18-6-6 6-6" draws a "<" shape (tip pointing to the left edge),
+  // which is the correct forward direction in this RTL layout.
+  const CHEVRON_SVG =
+    '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+      '<path d="m15 18-6-6 6-6"/>' +
+    '</svg>';
+
   function iconHtml(iconKey) {
     try {
       if (typeof AppIcons !== 'undefined' && typeof AppIcons.render === 'function') {
@@ -69,7 +79,7 @@
     return '<a class="more-row" href="' + item.href + '" data-spa-path="' + spaPath + '">' +
       '<span class="more-row-icon" aria-hidden="true">' + iconHtml(item.iconKey) + '</span>' +
       '<span class="more-row-title">' + item.label + '</span>' +
-      '<span class="more-row-chevron" aria-hidden="true">‹</span>' +
+      '<span class="more-row-chevron" aria-hidden="true">' + CHEVRON_SVG + '</span>' +
     '</a>';
   }
 
