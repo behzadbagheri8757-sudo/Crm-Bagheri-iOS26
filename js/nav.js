@@ -271,18 +271,15 @@ function ensureBottomNavPinned(){
 /* Single persistent liquid/glass indicator for bottom nav.
    One element moves between tabs; not per-item backgrounds.
 
-   Motion model: the indicator is treated as having two independent
-   edges — a leading edge (in the direction of travel) and a trailing
-   edge. Each edge follows its own damped-spring position curve, sampled
-   into Web Animations API keyframes:
-     - the leading edge settles quickly with little to no overshoot;
-     - the trailing edge starts slightly delayed and, only as distance
-       grows, is allowed a small controlled overshoot before settling.
-   The gap between the two edges while in transit is what makes the
-   shape stretch toward its destination and reform on arrival, instead
-   of a rigid box translating sideways. Everything scales with actual
-   travel distance (short hops barely deform; the far Dashboard↔More
-   hop deforms the most) and is bounded so it never reads as jelly.
+   Motion model: the indicator's center travels on a single, mildly
+   underdamped spring (a small real positional rebound at arrival), while
+   its width follows an explicit 7-stage envelope — anticipation squash,
+   launch stretch, elongated travel, recovery, arrival compression, soft
+   rebound, exact rest (see _bnDeformEnvelope) — biased toward whichever
+   edge is leading in the direction of travel. Amplitude has a floor so
+   even the shortest, most common hop (an adjacent tab) visibly deforms;
+   distance mainly grows the duration and the sustained mid-travel level,
+   not whether the deformation is visible at all.
    WAAPI (not CSS transitions) is used specifically so a move can be
    interrupted mid-flight: commitStyles() bakes the exact current
    mid-flight geometry into the inline style before the next move
@@ -336,51 +333,116 @@ function _bnSpring(t, zeta, delay){
   return 1 - Math.exp(-zeta*tau) * (Math.cos(wd*tau) + (zeta/wd)*Math.sin(wd*tau));
 }
 
+/* Eases one segment of the deformation envelope between two control
+   points with a half-cosine, which has zero slope at both t0 and t1.
+   Chaining several of these back to back (see _bnDeformEnvelope) means
+   the whole multi-hump curve has zero velocity at every control point —
+   i.e. no jerk anywhere — without needing a physically-simulated spring
+   for this part. */
+function _bnDeformSeg(t, t0, v0, t1, v1){
+  if(t <= t0) return v0;
+  if(t >= t1) return v1;
+  var f = (t - t0) / (t1 - t0);
+  var e = (1 - Math.cos(Math.PI * f)) / 2;
+  return v0 + (v1 - v0) * e;
+}
+
+/* The indicator's width-multiplier over the whole move, as seven explicit,
+   named stages rather than an emergent side-effect of two similar spring
+   curves (which is what made the previous version's deformation too small
+   to actually see on device):
+     0.00–0.10  m0 (true current width ratio) → anticipation: a small squash
+     0.10–0.24  launch: rapid stretch toward its peak
+     0.24–0.52  elongated travel: holds near peak stretch
+     0.52–0.76  recovery: eases back toward normal width
+     0.76–0.90  arrival compression: squashes narrow as it reaches target
+     0.90–0.97  rebound: a short, soft overshoot past normal
+     0.97–1.00  settle: eases to exactly 1 (REST)
+   `m0` anchors the very start of the curve to the indicator's actual
+   current width relative to the new target — not always 1 — so
+   interrupting an in-flight move never pops to a different width on the
+   first frame of the new one; a fresh tap from rest already has m0=1, so
+   this doesn't change that case. `squash`/`peak`/`compress`/`rebound` are
+   amplitudes (fractions), each with a floor so the shortest, most common
+   hop (adjacent tab) still visibly deforms — only the sustained
+   mid-travel level and duration grow with distance, not whether the
+   deformation is visible at all. */
+function _bnDeformEnvelope(t, m0, squash, peak, compress, rebound){
+  if(t <= 0.10) return _bnDeformSeg(t, 0.00, m0,             0.10, 1 - squash);
+  if(t <= 0.24) return _bnDeformSeg(t, 0.10, 1 - squash,      0.24, 1 + peak);
+  if(t <= 0.52) return _bnDeformSeg(t, 0.24, 1 + peak,        0.52, 1 + peak * 0.82);
+  if(t <= 0.76) return _bnDeformSeg(t, 0.52, 1 + peak * 0.82, 0.76, 1);
+  if(t <= 0.90) return _bnDeformSeg(t, 0.76, 1,               0.90, 1 - compress);
+  if(t <= 0.97) return _bnDeformSeg(t, 0.90, 1 - compress,    0.97, 1 + rebound);
+  return _bnDeformSeg(t, 0.97, 1 + rebound, 1.00, 1);
+}
+
 /* Builds one indicator move as an explicit WAAPI keyframe list, from its
    true current on-screen edges (left0/right0/top0 — which may already be
-   mid-stretch if this interrupts a prior move) to the destination tab's
-   geometry. Farther moves get a longer duration, more separation between
-   the two edges while traveling, and slightly more settle overshoot. */
+   mid-deformation if this interrupts a prior move) to the destination
+   tab's geometry. Center position travels on a single, mildly underdamped
+   spring (a small, real positional rebound at arrival); width is driven
+   by the named-phase envelope above and biased toward whichever edge is
+   leading in the direction of travel, so the shape visibly reaches out on
+   launch and visibly gives on arrival, instead of pulsing symmetrically.
+   Farther moves get a longer duration and a larger deformation, but even
+   the shortest adjacent-tab hop always has the full 7-stage motion. */
 function _bnBuildMove(left0, right0, top0, left1, right1, top1, barWidth){
   var movingRight = (left1 + right1) >= (left0 + right0);
   var centerDist = Math.abs(((left1+right1)/2) - ((left0+right0)/2));
   var distanceRatio = Math.max(0, Math.min(1, centerDist / Math.max(1, barWidth * 0.82)));
 
-  var leadZeta   = 0.90 - 0.08 * distanceRatio; /* 0.90→0.82: quick, near-clean arrival (≤1% overshoot) */
-  var lagZeta    = 0.94 - 0.22 * distanceRatio; /* 0.94→0.72: restrained catch-up overshoot (≤~3.5%) */
-  var lagDelay   = 0.03 + 0.10 * distanceRatio; /* 0.03→0.13: trailing edge starts later */
-  var compress   = 0.015 + 0.045 * distanceRatio; /* 1.5%→6% launch compression on scaleY */
-  var durationMs = Math.round(225 + 190 * distanceRatio); /* 225ms adjacent → ~415ms far */
+  var squash   = 0.035 + 0.020 * distanceRatio; /* 3.5%→5.5% pre-launch anticipation dip */
+  var peak     = 0.16  + 0.20  * distanceRatio; /* 16%→36% elongation while traveling — floored so short hops still visibly stretch */
+  var compress = 0.055 + 0.035 * distanceRatio; /* 5.5%→9% squash on arrival */
+  var rebound  = 0.030 + 0.020 * distanceRatio; /* 3%→5% soft overshoot before settling */
+  var centerZeta = 0.85; /* mild, distance-independent underdamp: a small real positional rebound */
+  var durationMs = Math.round(270 + 190 * distanceRatio); /* 270ms adjacent → ~460ms far — enough real
+     milliseconds for the 7 named stages to each get a few frames; this is not a blanket slowdown of
+     the old linear slide, the shape of the motion is what changed. */
 
-  var N = 16;
+  var cx0 = (left0 + right0) / 2, cx1 = (left1 + right1) / 2;
   var w1 = Math.max(1, right1 - left1);
+  var w0 = Math.max(1, right0 - left0);
+  var m0 = w0 / w1; /* true current width ratio — anchors t=0 so an interrupted move never pops */
+  var leadShare = 0.62, lagShare = 0.38; /* leading edge (direction of travel) carries more of the deformation */
+  var N = 24;
   var frames = [];
   for(var i = 0; i <= N; i++){
     var t = i / N;
-    var leadP = _bnSpring(t, leadZeta, 0);
-    var lagP  = _bnSpring(t, lagZeta, lagDelay);
-    if(i === N){ leadP = 1; lagP = 1; }
+    var first = (i === 0);
+    var last = (i === N);
+
+    var cp = last ? 1 : _bnSpring(t, centerZeta, 0);
+    var cx = cx0 + (cx1 - cx0) * cp;
+
+    var m = last ? 1 : _bnDeformEnvelope(t, m0, squash, peak, compress, rebound);
+    var width = w1 * m;
+    var extra = width - w1;
 
     var leftT, rightT;
     if(movingRight){
-      rightT = right0 + (right1 - right0) * leadP;
-      leftT  = left0  + (left1  - left0)  * lagP;
+      rightT = cx + w1/2 + extra * leadShare;
+      leftT  = cx - w1/2 - extra * lagShare;
     } else {
-      leftT  = left0  + (left1  - left0)  * leadP;
-      rightT = right0 + (right1 - right0) * lagP;
+      leftT  = cx - w1/2 - extra * leadShare;
+      rightT = cx + w1/2 + extra * lagShare;
     }
-    if(rightT - leftT < w1 * 0.7){
+    if(first){ leftT = left0; rightT = right0; }
+    if(last){ leftT = left1; rightT = right1; }
+    if(rightT - leftT < w1 * 0.6){
       var mid = (leftT + rightT) / 2;
-      leftT = mid - (w1*0.7)/2;
-      rightT = mid + (w1*0.7)/2;
+      leftT = mid - (w1*0.6)/2;
+      rightT = mid + (w1*0.6)/2;
     }
 
-    var topT = top0 + (top1 - top0) * _bnSpring(t, 0.95, 0);
-    if(i === N) topT = top1;
+    var topT = first ? top0 : (last ? top1 : top0 + (top1 - top0) * _bnSpring(t, 0.95, 0));
 
-    var dip = t < 0.35 ? compress * Math.sin(Math.PI * (t/0.35)) : 0;
-    var puff = 0.3 * compress * Math.max(0, lagP - 1); /* tiny arrival "puff" tied to overshoot */
-    var scaleY = 1 - dip + puff;
+    /* Squash-and-stretch: a wide frame reads a touch shorter, a compressed
+       frame a touch taller, so the elongation looks physical rather than
+       like a plain width resize. Amplitude is deliberately small relative
+       to the width change so it reads as material, not rubber. */
+    var scaleY = last ? 1 : (1 - 0.30 * (m - 1));
     var scaleX = (rightT - leftT) / w1;
 
     frames.push({
