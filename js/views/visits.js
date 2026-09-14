@@ -98,7 +98,7 @@
       const scoreBit = (typeof v.score === 'number')
         ? ` · امتیاز ${v.score}`
         : '';
-      return `<a class="ledger-row tx-row" href="#/customer?id=${encodeURIComponent(r.customerId)}" style="text-decoration:none;color:inherit;">
+      return `<a class="ledger-row tx-row" href="#/customer?id=${encodeURIComponent(r.customerId)}">
         <span class="name">
           <span class="tx-row-title">${esc(r.customerName)}</span>
           <span class="sub">${faDate(v.date)}${v.time ? ' ' + esc(v.time) : ''}${r.region ? ' · ' + esc(r.region) : ''}${scoreBit}</span>
@@ -107,7 +107,7 @@
         </span>
         <span class="filler"></span>
         <span class="amount tx-row-amount ${cls}">
-          <span class="tx-row-total" style="font-size:.82rem;">${ordered ? 'سفارش' : 'ویزیت'}</span>
+          <span class="tx-row-total">${ordered ? 'سفارش' : 'ویزیت'}</span>
         </span>
       </a>`;
     }).join('');

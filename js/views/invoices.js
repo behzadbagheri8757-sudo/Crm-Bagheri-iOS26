@@ -81,7 +81,7 @@
           ? `<span class="tx-row-meta accent-rust">مانده ${toman(Math.max(0, remain))} ت</span>`
           : `<span class="tx-row-meta accent-olive">تسویه</span>`;
         return `
-        <a class="ledger-row tx-row" href="#/invoice?id=${encodeURIComponent(inv.id)}" style="text-decoration:none;color:inherit;">
+        <a class="ledger-row tx-row" href="#/invoice?id=${encodeURIComponent(inv.id)}">
           <span class="name invoice-row-main">
             <span class="tx-row-title">#${esc(String(inv.number||''))} · ${esc(custName)}</span>
             <span class="sub">${faDate(inv.date)} — <span class="${st.cls}">${st.label}</span></span>

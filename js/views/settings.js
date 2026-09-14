@@ -55,12 +55,12 @@
 
     let autoHtml = '';
     if (!autoList.length) {
-      autoHtml = '<div class="empty" style="padding:8px 0;">هنوز بکاپ خودکاری ذخیره نشده (هر ۱۲ ساعت حداکثر یک نسخه، تا ۵ نسخه).</div>';
+      autoHtml = '<div class="empty settings-empty">هنوز بکاپ خودکاری ذخیره نشده (هر ۱۲ ساعت حداکثر یک نسخه، تا ۵ نسخه).</div>';
     } else {
       autoHtml = autoList.slice().reverse().map(function (item) {
         const when = item.ts ? new Date(item.ts).toLocaleString('fa-IR') : '—';
         return `<div class="auto-backup-row">
-          <span class="name" style="font-size:.85rem;">${esc(when)}</span>
+          <span class="name auto-backup-name">${esc(when)}</span>
           <button type="button" class="btn small secondary" data-auto-key="${esc(item.key)}">بازیابی این نسخه</button>
         </div>`;
       }).join('');
@@ -94,7 +94,7 @@
             بازگشت به نسخه قبل از آخرین بازیابی
           </button>
         </div>
-        <div class="sub" style="margin-top:8px;font-size:.78rem;">
+        <div class="sub settings-restore-note">
           ${canUndo
             ? 'نسخهٔ قبل از آخرین Restore در دسترس است و می‌توانید برگردید.'
             : 'هنوز نسخهٔ قبل از Restore ذخیره نشده (بعد از یک بازیابی موفق فعال می‌شود).'}
@@ -103,7 +103,7 @@
 
       <div class="settings-section mgmt-section">
         <h3 class="mgmt-section-title">بکاپ خودکار داخلی</h3>
-        <div class="sub" style="margin-bottom:8px;font-size:.8rem;line-height:1.5;">
+        <div class="sub settings-description">
           برنامه در صورت استفاده، حداکثر هر ۱۲ ساعت یک نسخه از داده‌های CRM، FIFO، هدف فروش، ProspectScout و Intelligence داخل IndexedDB نگه می‌دارد (تا ۵ نسخه). این جایگزین Backup فایل JSON نیست.
         </div>
         <div class="card">${autoHtml}</div>
@@ -111,7 +111,7 @@
 
       <div class="settings-section mgmt-section">
         <h3 class="mgmt-section-title">موقعیت مکانی</h3>
-        <div class="sub" style="margin-bottom:8px;font-size:.8rem;line-height:1.5;">
+        <div class="sub settings-description">
           مدیریت ساختار منطقه › مسیر › محله، مشترک بین مشتریان و مغازه‌های بالقوه.
         </div>
         <div class="btn-row">
@@ -121,7 +121,7 @@
 
       <details class="tx-details mgmt-section">
         <summary>آمار دادهٔ فعلی</summary>
-        <div class="cards" style="margin-top:10px;">
+        <div class="cards settings-stats">
           <div class="card"><div class="label">مشتریان</div><div class="value">${enToFaDigits(String((data.customers || []).length))}</div></div>
           <div class="card"><div class="label">کالاها</div><div class="value">${enToFaDigits(String((data.products || []).length))}</div></div>
           <div class="card"><div class="label">فاکتورها</div><div class="value">${enToFaDigits(String((data.invoices || []).length))}</div></div>
@@ -134,10 +134,10 @@
 
       <div class="settings-section mgmt-section">
         <h3 class="mgmt-section-title">امنیت — قفل PIN</h3>
-        <div class="sub" style="margin-bottom:8px;font-size:.8rem;line-height:1.5;">
+        <div class="sub settings-description">
           با فعال‌سازی PIN، بعد از خروج از برنامه یا رفتن به پس‌زمینه، برای ورود دوباره باید کد شش‌رقمی را وارد کنید. PIN روی همین دستگاه در localStorage ذخیره می‌شود (هش‌شده) و داخل Backup نیست.
         </div>
-        <div id="pin-settings-status" class="card" style="margin-bottom:10px;"></div>
+        <div id="pin-settings-status" class="card pin-status"></div>
         <div class="btn-row">
           <button type="button" class="btn small" id="pin-set-btn">تنظیم PIN</button>
           <button type="button" class="btn small secondary" id="pin-change-btn">تغییر PIN</button>
@@ -160,8 +160,8 @@
       if (!statusEl) return;
       const set = window.pinLock && typeof window.pinLock.isPinSet === 'function' && window.pinLock.isPinSet();
       statusEl.innerHTML = set
-        ? '<div class="label">وضعیت</div><div class="value accent-olive" style="font-size:.95rem;">PIN فعال است</div>'
-        : '<div class="label">وضعیت</div><div class="value" style="font-size:.95rem;">PIN تنظیم نشده</div>';
+         ? '<div class="label">وضعیت</div><div class="value accent-olive settings-status-value">PIN فعال است</div>'
+         : '<div class="label">وضعیت</div><div class="value settings-status-value">PIN تنظیم نشده</div>';
     }
     refreshPinStatus();
 
@@ -247,20 +247,20 @@
       const seq = data.invoiceSeq != null ? data.invoiceSeq : '—';
       openSheet(`
         <h3>اطلاعات فنی</h3>
-        <div class="cards" style="margin-top:4px;">
+        <div class="cards settings-tech-stats">
           <div class="card wide"><div class="label">نام</div>
-            <div class="value" style="font-size:1rem;">حبوبات و خشکبار باقری — دفتر حساب</div></div>
+             <div class="value">حبوبات و خشکبار باقری — دفتر حساب</div></div>
           <div class="card"><div class="label">نسخه معماری</div>
-            <div class="value" style="font-size:.95rem;">چندصفحه‌ای · فاز ۹</div></div>
+             <div class="value">چندصفحه‌ای · فاز ۹</div></div>
           <div class="card"><div class="label">schemaVersion</div>
             <div class="value">${esc(enToFaDigits(String(schema)))}</div></div>
           <div class="card wide"><div class="label">ذخیره‌سازی محلی</div>
-            <div class="value" style="font-size:.9rem;">${esc(storageStatusLabel())}</div>
-            <div class="sub" style="margin-top:4px;">DB: baqeriDB · store: appdata · کلید: main</div>
+             <div class="value">${esc(storageStatusLabel())}</div>
+             <div class="sub settings-storage-meta">DB: baqeriDB · store: appdata · کلید: main</div>
           </div>
           <div class="card"><div class="label">سری فاکتور</div><div class="value">${esc(enToFaDigits(String(seq)))}</div></div>
         </div>
-        <div class="report-note" style="font-size:.78rem;color:var(--ink-soft);margin-top:12px;line-height:1.55;">
+        <div class="report-note settings-tech-note">
           برنامه آفلاین است. داده‌ها روی همین دستگاه ذخیره می‌شوند. برای امنیت، به‌طور منظم Backup بگیرید.
         </div>
       `);

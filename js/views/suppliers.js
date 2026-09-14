@@ -64,14 +64,14 @@
         if (s.phone) metaBits.push(s.phone);
         if (purchaseCount) metaBits.push(purchaseCount + ' خرید');
         const meta = metaBits.length ? `<span class="sub">${esc(metaBits.join(' · '))}</span>` : '';
-        return `<a class="ledger-row tx-row" data-open-supplier="${esc(s.id)}" style="text-decoration:none;color:inherit;">
+        return `<a class="ledger-row tx-row" data-open-supplier="${esc(s.id)}">
           <span class="name">
             <span class="tx-row-title">${esc(s.name)}${s.active === false ? ' <span class="badge pending">غیرفعال</span>' : ''}</span>
             ${meta}
           </span>
           <span class="filler"></span>
           <span class="amount tx-row-amount ${color}">
-            <span class="tx-row-total" style="font-size:.88rem;">${amt}</span>
+            <span class="tx-row-total">${amt}</span>
           </span>
         </a>`;
       }).join('');
