@@ -615,13 +615,30 @@ button[data-toggle-check]{
 .ledger-row,
 .tx-row,
 .customer-list-row{
+  position:relative;
   background:transparent;
-  border-bottom:1px solid var(--vg-color-divider);
+  border-bottom:0;
 }
 
 .ledger-row:last-child,
 .tx-row:last-child{
   border-bottom-color:transparent;
+}
+
+/* Shared inset rhythm for data lists. The line is deliberately kept out of
+   the trailing disclosure/value track, matching the More reference without
+   forcing every data list into a grouped-navigation layout. */
+.tx-list > .ledger-row + .ledger-row::before,
+.tx-list > .tx-row + .tx-row::before,
+#customer-list > .customer-list-row + .customer-list-row::before{
+  content:'';
+  position:absolute;
+  top:0;
+  inset-inline-start:0;
+  inset-inline-end:20px;
+  height:1px;
+  background:var(--vg-color-divider);
+  pointer-events:none;
 }
 
 .ledger-row .name,

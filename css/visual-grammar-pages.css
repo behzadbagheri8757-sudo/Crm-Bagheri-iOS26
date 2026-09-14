@@ -68,6 +68,48 @@ main .empty{margin:14px 0;}
   box-shadow:none;
 }
 
+/* Summary metrics share one quiet surface instead of a grid of nested cards.
+   The page-specific contents remain unchanged. */
+.vg-route-payments #payment-summary,
+.vg-route-checks #check-summary,
+.vg-route-visits #visit-summary,
+.vg-route-prospects #prospect-summary{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:0;
+  padding:0;
+  overflow:hidden;
+  background:var(--vg-color-surface);
+  border:1px solid var(--vg-color-border);
+  border-radius:var(--vg-radius-raised);
+  box-shadow:var(--vg-shadow-group);
+}
+
+.vg-route-payments #payment-summary > .card,
+.vg-route-checks #check-summary > .card,
+.vg-route-visits #visit-summary > .card,
+.vg-route-prospects #prospect-summary > .card{
+  background:transparent;
+  border:0;
+  border-radius:0;
+  box-shadow:none;
+  padding:14px;
+}
+
+.vg-route-payments #payment-summary > .card:nth-child(odd),
+.vg-route-checks #check-summary > .card:nth-child(odd),
+.vg-route-visits #visit-summary > .card:nth-child(odd),
+.vg-route-prospects #prospect-summary > .card:nth-child(odd){
+  border-inline-end:1px solid var(--vg-color-divider);
+}
+
+.vg-route-payments #payment-summary > .card:nth-child(-n+2),
+.vg-route-checks #check-summary > .card:nth-child(-n+2),
+.vg-route-visits #visit-summary > .card:nth-child(-n+2),
+.vg-route-prospects #prospect-summary > .card:nth-child(-n+2){
+  border-bottom:1px solid var(--vg-color-divider);
+}
+
 /* ---------- Customers: native list-row alignment ----------
    Keep identity, financial value and disclosure affordance on stable tracks.
    This prevents status/date/warning content from changing the horizontal or
@@ -171,6 +213,33 @@ main .empty{margin:14px 0;}
   margin-bottom:7px;
 }
 
+.vg-route-customer .customer-identity-card{
+  margin-bottom:12px;
+}
+
+.vg-route-customer .customer-identity-name{
+  font-size:1.15rem;
+  font-weight:var(--vg-weight-value);
+  color:var(--vg-color-text);
+  margin-bottom:8px;
+}
+
+.vg-route-customer .customer-identity-meta{
+  font-size:.88rem;
+  line-height:1.85;
+  color:var(--vg-color-text);
+}
+
+.vg-route-customer .customer-balance-block{
+  margin-top:12px;
+  padding-top:10px;
+  border-top:1px dotted var(--vg-color-divider);
+}
+
+.vg-route-customer .customer-balance-value{
+  font-size:1.25rem;
+}
+
 .vg-route-customer > main .sub-title{
   margin-top:20px;
   margin-bottom:9px;
@@ -185,6 +254,138 @@ main .empty{margin:14px 0;}
 .vg-route-customer .tx-list .ledger-row{
   background:transparent;
   box-shadow:none;
+}
+
+.vg-route-customer .customer-static-row{
+  cursor:default;
+}
+
+.vg-route-customer .customer-static-value{
+  font-size:.85rem;
+  font-weight:var(--vg-weight-label);
+}
+
+.vg-route-customer .customer-rejection-list{
+  margin-bottom:var(--vg-space-group);
+}
+
+.vg-route-customer .watch-confirmed-card,
+.vg-route-customer .watch-lifecycle-card{
+  margin-bottom:var(--vg-space-related);
+}
+
+.vg-route-customer .watch-confirmed-list,
+.vg-route-customer .watch-occ-list{
+  margin-top:var(--vg-space-tight);
+}
+
+.vg-route-customer .watch-confirmed-row{
+  display:flex;
+  justify-content:space-between;
+  gap:var(--vg-space-related);
+  font-size:.85rem;
+  line-height:1.9;
+}
+
+.vg-route-customer .watch-confirmed-row .watch-level-label,
+.vg-route-customer .watch-reviewed,
+.vg-route-customer .watch-level-unreviewed{
+  font-weight:var(--vg-weight-label);
+  font-size:.78rem;
+  white-space:nowrap;
+}
+
+.vg-route-customer .watch-occ-row{
+  font-size:.85rem;
+  line-height:1.7;
+  padding:8px 0;
+  border-bottom:1px dotted var(--vg-color-divider);
+}
+
+.vg-route-customer .watch-occ-row:last-child{
+  border-bottom:0;
+}
+
+.vg-route-customer .watch-occ-head{
+  display:flex;
+  justify-content:space-between;
+  gap:var(--vg-space-related);
+  align-items:flex-start;
+}
+
+.vg-route-customer .watch-occ-status{
+  text-align:left;
+  white-space:nowrap;
+}
+
+.vg-route-customer .watch-reason{
+  font-size:.78rem;
+  color:var(--vg-color-text-muted);
+  margin-top:2px;
+}
+
+.vg-route-customer .watch-note{
+  margin:4px 0 8px;
+}
+
+.vg-route-customer details > .cards{
+  gap:0;
+  padding:0;
+  overflow:hidden;
+  background:var(--vg-color-surface);
+  border:1px solid var(--vg-color-border);
+  border-radius:var(--vg-radius-raised);
+  box-shadow:var(--vg-shadow-group);
+}
+
+.vg-route-customer details > .cards > .card{
+  background:transparent;
+  border:0;
+  border-radius:0;
+  box-shadow:none;
+}
+
+.vg-route-customer .customer-behavior-summary{
+  color:var(--vg-color-text);
+}
+
+.vg-route-customer .customer-watch-details,
+.vg-route-customer .customer-behavior-details{
+  margin-bottom:12px;
+}
+
+.vg-route-customer .customer-behavior-summary{
+  cursor:pointer;
+  font-weight:var(--vg-weight-title);
+  padding:6px 0;
+  list-style:none;
+}
+
+.vg-route-customer .customer-detail-watch-body{
+  margin-top:8px;
+}
+
+.vg-route-customer .customer-detail-subtitle{
+  margin-top:4px;
+}
+
+.vg-route-customer .customer-detail-subtitle-secondary{
+  margin-top:10px;
+}
+
+.vg-route-customer .customer-last-visit-card{
+  margin-top:10px;
+  margin-bottom:12px;
+}
+
+.vg-route-customer .customer-last-visit-body{
+  font-size:.88rem;
+  line-height:1.7;
+  margin-top:6px;
+}
+
+.vg-route-customer .customer-empty{
+  padding:8px 0 12px;
 }
 
 /* ---------- Reports ---------- */
@@ -209,6 +410,68 @@ main .empty{margin:14px 0;}
 }
 
 .vg-route-settings .mgmt-section-title{margin-bottom:9px;}
+
+.vg-route-settings .settings-section .card{
+  background:transparent;
+  border:0;
+  box-shadow:none;
+}
+
+.vg-route-settings .settings-description{
+  margin-bottom:var(--vg-space-related);
+  font-size:.8rem;
+  line-height:1.5;
+}
+
+.vg-route-settings .settings-restore-note{
+  margin-top:var(--vg-space-related);
+  font-size:.78rem;
+}
+
+.vg-route-settings .settings-empty{
+  padding:8px 0;
+}
+
+.vg-route-settings .auto-backup-name{
+  font-size:.85rem;
+}
+
+.vg-route-settings .pin-status{
+  margin-bottom:var(--vg-space-related);
+}
+
+.vg-route-settings .settings-status-value{
+  font-size:.95rem;
+}
+
+.vg-route-settings .settings-stats,
+.vg-route-settings .settings-tech-stats{
+  margin-top:var(--vg-space-related);
+}
+
+.vg-route-settings .settings-storage-meta{
+  margin-top:4px;
+}
+
+.vg-route-settings .settings-tech-note{
+  font-size:.78rem;
+  margin-top:12px;
+  line-height:1.55;
+}
+
+.vg-route-suppliers .tx-list .tx-row{
+  min-height:56px;
+}
+
+.vg-route-suppliers .tx-list .tx-row-amount{
+  min-width:96px;
+}
+
+.vg-route-suppliers .tx-list .tx-row-title,
+.vg-route-products .tx-list .tx-row-title,
+.vg-route-invoices .tx-list .tx-row-title{
+  font-weight:var(--vg-weight-title);
+}
 
 /* ---------- More (full page) — #/more ----------
    Full-page replacement for the old More bottom sheet. All selectors are
@@ -369,7 +632,7 @@ main .empty{margin:14px 0;}
    shared with/dormant across many other views; see patch report.
    -------------------------------------------------------------------------- */
 #product-list .tx-row-title{
-  font-weight:500;
+  font-weight:var(--vg-weight-title);
   letter-spacing:.1px;
 }
 #product-list .tx-row-total{

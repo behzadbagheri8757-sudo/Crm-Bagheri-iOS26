@@ -824,6 +824,16 @@ a.tx-row:active{
   align-items:flex-end;
   line-height:1.15;
 }
+.invoice-row-total .tx-row-total{
+  font-size:.92rem;
+  font-weight:var(--vg-weight-value);
+  color:var(--vg-color-text);
+}
+.invoice-row-remain .tx-row-meta,
+.invoice-row-paid .tx-row-meta{
+  font-size:.78rem;
+  font-weight:var(--vg-weight-label);
+}
 .invoice-row-main .tx-row-title{
   white-space:normal;
   overflow:visible;
@@ -846,9 +856,9 @@ a.tx-row:active{
 }
 .product-row-label,
 .invoice-row-label{
-  font-size:.62rem;
-  font-weight:600;
-  color:#667085;
+  font-size:var(--vg-type-meta);
+  font-weight:var(--vg-weight-label);
+  color:var(--vg-color-text-muted);
   white-space:nowrap;
 }
 .product-row-qty-value{
@@ -971,12 +981,23 @@ a.tx-row:active{
   list-style:none;
 }
 .customer-behavior-summary::after{
-  content:'⌄';
+  content:'';
+  width:16px;
+  height:16px;
+  flex:none;
+  background-color:currentColor;
   color:#667085;
-  font-size:1rem;
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  -webkit-mask-size:contain;
+  mask-size:contain;
+  -webkit-mask-repeat:no-repeat;
+  mask-repeat:no-repeat;
+  -webkit-mask-position:center;
+  mask-position:center;
 }
 details[open] > .customer-behavior-summary::after{
-  content:'⌃';
+  transform:rotate(180deg);
 }
 /* --------------------------------------------------------------------------
    07. DASHBOARD (Consolidated - no duplicate geometry)
@@ -1011,24 +1032,22 @@ details[open] > .customer-behavior-summary::after{
   gap:7px;
 }
 .dash-section-label::after{
-  content:"";
-  flex:1;
-  border-bottom:1px solid rgba(31,41,55,.08);
+  display:none;
 }
 .dash-section-ico{
-  width:28px;
-  height:28px;
-  flex:0 0 28px;
+  width:24px;
+  height:24px;
+  flex:0 0 24px;
   display:inline-flex;
   align-items:center;
   justify-content:center;
   color:#0070D2;
-  border-radius:50%;
-  background:rgba(0,112,210,.1);
+  border-radius:0;
+  background:transparent;
 }
 .dash-section-ico svg{
-  width:15px;
-  height:15px;
+  width:20px;
+  height:20px;
 }
 .dash-risk-badge{
   display:inline-flex;
@@ -1348,19 +1367,19 @@ details[open] > .customer-behavior-summary::after{
 }
 /* Modest icon well — not a giant container */
 .dash-qa-ico{
-  width:28px;
-  height:28px;
-  border-radius:50%;
+  width:24px;
+  height:24px;
+  border-radius:0;
   display:flex;
   align-items:center;
   justify-content:center;
-  background:rgba(0,112,210,.08);
+  background:transparent;
   color:#0070D2;
 }
 /* Actual SVG size (~20px) — the primary optical correction */
 .dash-qa-ico svg{
-  width:20px;
-  height:20px;
+  width:22px;
+  height:22px;
   display:block;
 }
 .dash-qa-label{
@@ -2293,27 +2312,26 @@ button.inv-header-save.btn{
 .report-summary{
   display:grid;
   grid-template-columns:1fr 1fr;
-  gap:10px;
+  gap:0;
   margin-bottom:18px;
+  padding:0;
+  overflow:hidden;
+  background:var(--vg-color-surface);
+  border:1px solid var(--vg-color-border);
+  border-radius:var(--vg-radius-raised);
+  box-shadow:var(--vg-shadow-group);
 }
 .report-summary-card{
-  padding:12px 13px;
+  padding:14px;
   position:relative;
   overflow:hidden;
-  background:#FFFFFF;
-  border:1px solid rgba(31,41,55,.08);
-  border-radius:14px;
-  box-shadow:0 2px 10px rgba(31,41,55,.045);
+  background:transparent;
+  border:0;
+  border-radius:0;
+  box-shadow:none;
 }
 .report-summary-card::before{
-  content:"";
-  position:absolute;
-  right:0;
-  top:10px;
-  bottom:10px;
-  width:4px;
-  border-radius:4px 0 0 4px;
-  background:#1F2937;
+  display:none;
 }
 .report-summary-card.sales::before{
   background:#0070D2;
@@ -2325,7 +2343,13 @@ button.inv-header-save.btn{
   background:#FA3946;
 }
 .report-summary-card.inventory::before{
-  background:#1F2937;
+  display:none;
+}
+.report-summary-card:nth-child(odd){
+  border-inline-end:1px solid var(--vg-color-divider);
+}
+.report-summary-card:nth-child(-n+2){
+  border-bottom:1px solid var(--vg-color-divider);
 }
 .report-summary-label{
   font-size:.68rem;
@@ -2432,12 +2456,12 @@ button.inv-header-save.btn{
   padding:12px;
 }
 .settings-section{
-  margin-bottom:18px;
-  background:#fff;
-  border:1px solid rgba(31,41,55,.07);
-  border-radius:14px;
+  margin-bottom:var(--vg-space-section);
+  background:var(--vg-color-surface);
+  border:1px solid var(--vg-color-border);
+  border-radius:var(--vg-radius-raised);
   padding:14px;
-  box-shadow:0 1px 3px rgba(26,38,52,.03);
+  box-shadow:var(--vg-shadow-group);
 }
 /* Avoid a "card inside a card" look: a couple of settings sections wrap
    their content in a plain .card (as a content box, not a second surface) —
@@ -2460,9 +2484,9 @@ button.inv-header-save.btn{
   font-size:.8rem;
   line-height:1.55;
   color:#D94725;
-  background:#FFF0EC;
-  border:1px solid rgba(255,92,53,.2);
-  border-radius:8px;
+  background:var(--vg-color-warning-soft);
+  border:0;
+  border-radius:10px;
   text-align:right;
 }
 .mgmt-section{
@@ -2921,10 +2945,11 @@ button.inv-header-save.btn{
   color:#1F2937;
 }
 .gc-panel{
-  background:#fff;
-  border:1px solid rgba(31,41,55,.08);
-  border-radius:14px;
+  background:var(--vg-color-surface);
+  border:1px solid var(--vg-color-border);
+  border-radius:var(--vg-radius-soft);
   padding:12px 14px;
+  box-shadow:var(--vg-shadow-group);
 }
 .gc-panel-inline{
   display:flex;
@@ -2939,10 +2964,11 @@ button.inv-header-save.btn{
   gap:10px;
 }
 .gc-mission{
-  background:#fff;
-  border:1px solid rgba(31,41,55,.08);
-  border-radius:14px;
+  background:var(--vg-color-surface);
+  border:1px solid var(--vg-color-border);
+  border-radius:var(--vg-radius-soft);
   padding:12px 14px;
+  box-shadow:none;
 }
 .gc-mission.is-dormant{
   opacity:.78;
@@ -3112,8 +3138,8 @@ button.inv-header-save.btn{
 .gc-kpi{
   text-align:center;
   padding:8px 4px;
-  border-radius:10px;
-  background:rgba(0,0,0,.03);
+  border-radius:0;
+  background:transparent;
 }
 .gc-kpi-num{
   font-size:1.15rem;
@@ -3855,7 +3881,7 @@ a.ledger-row:active,
              0 1px 5px rgba(26,38,52,.06);
 }
 .dash-qa-ico{
-  background:rgba(0,112,210,.08);
+  background:transparent;
 }
 
 /* Cards: slightly more elevated, without turning the content layer into glass. */
@@ -3863,8 +3889,7 @@ a.ledger-row:active,
 .report-summary-card,
 .gc-panel,
 .prospect-result-card{
-  box-shadow:0 2px 10px rgba(26,38,52,.045),
-             0 1px 2px rgba(26,38,52,.025);
+  box-shadow:var(--vg-shadow-group);
 }
 
 /* Respect reduced-motion users; iOS does the same for motion-sensitive settings. */
@@ -3882,12 +3907,13 @@ a.ledger-row:active,
 
 /* 2 — Products: reduce visual weight of total value */
 .product-row-value .tx-row-total{
-  font-size:.82rem;
-  font-weight:600;
-  color:#4B5563;
+  font-size:.88rem;
+  font-weight:var(--vg-weight-value);
+  color:var(--vg-color-text);
 }
 .product-row-value .product-row-label{
-  font-size:.6rem;
+  font-size:var(--vg-type-meta);
+  font-weight:var(--vg-weight-label);
 }
 
 /* 3 — Product detail profit % readability */
