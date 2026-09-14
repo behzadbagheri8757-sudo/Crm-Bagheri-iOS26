@@ -340,39 +340,60 @@ function _bnSmoothStep(t){
   return t * t * (3 - 2 * t);
 }
 
-/* The visible jelly is deliberately explicit: lift → stretch → travel →
-   pinch → rebound → rest. Unlike the old edge-difference model, the
-   deformation is applied with real scaleX/scaleY so even a one-tab hop has
-   an obvious material change. */
+function _bnLerp(a, b, t){ return a + (b - a) * t; }
+
+/* The visible jelly is explicit: lift+grow → directional stretch while
+   traveling → converge back to an isotropic "still slightly bigger" shape
+   → monotonic settle to 1. Two independent curves are combined:
+     - sx/sy: size/stretch envelope (this function).
+     - liftY: a single-peak vertical arc (see _bnJumpArc), so the motion
+       reads as a jump, not a slide.
+   Critical constraint (do not reintroduce the old bug): once the isotropic
+   "still bigger" shape is reached (~0.72), sx/sy must move in ONE direction
+   only, straight down to 1 — never dip below 1 and grow back, which reads
+   as an artificial bounce at landing. Any dip below 1 that happens earlier
+   (the sy stretch, by design) is fine because it's mid-flight material
+   deformation, not the landing. */
 function _bnJellyEnvelope(t){
-  /* مرحله A: اول grow یکنواخت؛ کشش افقی هنوز کم است. */
-  if(t <= 0.10){
-    var a = _bnSmoothStep(t / 0.10);
-    return { x: 1.00 + 0.08*a, y: 1.00 + 0.08*a, liftY: -4*a };
+  /* Phase 1 (0 → 0.12): lift off the surface, uniform grow, no stretch yet. */
+  if(t <= 0.12){
+    var a = _bnSmoothStep(t / 0.12);
+    var s1 = _bnLerp(1.00, 1.07, a);
+    return { sx: s1, sy: s1 };
   }
-  /* مرحله B: بعد از grow، کشش اصلی در جهت حرکت. */
-  if(t <= 0.35){
-    var b = _bnSmoothStep((t - 0.10) / 0.25);
-    return { x: 1.08 + 0.16*b, y: 1.08 - 0.16*b, liftY: -4 };
+  /* Phase 2 (0.12 → 0.45): main travel — stretch along the direction of
+     motion. scaleX rises a bit above 1, scaleY dips a bit below 1. */
+  if(t <= 0.45){
+    var b = _bnSmoothStep((t - 0.12) / 0.33);
+    return { sx: _bnLerp(1.07, 1.14, b), sy: _bnLerp(1.07, 0.94, b) };
   }
-  /* مرحله C: کشش تا نزدیک مقصد حفظ می‌شود. */
-  if(t <= 0.70){
-    var c = _bnSmoothStep((t - 0.35) / 0.35);
-    return { x: 1.24 - 0.04*c, y: 0.92 + 0.02*c, liftY: -4 + 2*c };
+  /* Phase 3 (0.45 → 0.72): the stretch relaxes — sx and sy converge back
+     to a single isotropic value that is still a little larger than rest. */
+  if(t <= 0.72){
+    var c = _bnSmoothStep((t - 0.45) / 0.27);
+    return { sx: _bnLerp(1.14, 1.05, c), sy: _bnLerp(0.94, 1.05, c) };
   }
-  /* مرحله D: فشردگی اصلی به نزدیکی مقصد منتقل می‌شود. */
-  if(t <= 0.85){
-    var d = _bnSmoothStep((t - 0.70) / 0.15);
-    return { x: 1.20 - 0.30*d, y: 0.94 + 0.12*d, liftY: -2 + 2*d };
+  /* Phase 4 (0.72 → 1.0): arrival settle. Strictly monotonic 1.05 → 1.00,
+     one direction only — this is what keeps the landing clean. */
+  var d = _bnSmoothStep((t - 0.72) / 0.28);
+  var s4 = _bnLerp(1.05, 1.00, d);
+  return { sx: s4, sy: s4 };
+}
+
+/* Single-peak vertical arc, independent of the size envelope above. Rises
+   for the first ~40% of the travel (the "jump" launch), then comes back
+   down to the nav's own baseline well before arrival, so the landing is
+   flat and clean rather than still-descending. peakPx is deliberately
+   small — a hint of a hop, not a bounce. */
+function _bnJumpArc(t, peakPx){
+  var peakT = 0.40, fallEndT = 0.85;
+  if(t <= peakT){
+    return -peakPx * _bnSmoothStep(t / peakT);
   }
-  /* مرحله E: rebound کوچک برای نشستن نرم روی مقصد. */
-  if(t <= 0.94){
-    var e = _bnSmoothStep((t - 0.85) / 0.09);
-    return { x: 0.90 + 0.14*e, y: 1.06 - 0.08*e, liftY: 0 };
+  if(t <= fallEndT){
+    return -peakPx * (1 - _bnSmoothStep((t - peakT) / (fallEndT - peakT)));
   }
-  /* مرحله F: بازگشت کامل به اندازه عادی. */
-  var f = _bnSmoothStep((t - 0.94) / 0.06);
-  return { x: 1.04 - 0.04*f, y: 0.98 + 0.02*f, liftY: 0 };
+  return 0;
 }
 
 function _bnTargetKey(item){
@@ -414,9 +435,36 @@ function _bnReleaseLift(ind){
   };
 }
 
+/* Very short, subtle zoom on the destination tab's icon, fired right when
+   the indicator arrives so the two settle at roughly the same moment. Reads
+   the *live* DOM at call time (not a reference captured earlier), because
+   renderBottomNav() rebuilds the tab markup on every route change and any
+   node captured before that would already be detached. */
+function _bnPulseActiveIcon(bar){
+  if(_bnReduceMotion()) return;
+  var activeItem = bar.querySelector('.bottom-nav-item.active');
+  var iconEl = activeItem && (activeItem.querySelector('.bn-ico svg') || activeItem.querySelector('.bn-ico'));
+  if(!iconEl || typeof iconEl.animate !== 'function') return;
+  iconEl.animate(
+    [{ transform: 'scale(1)' }, { transform: 'scale(1.14)' }, { transform: 'scale(1)' }],
+    { duration: 200, easing: 'cubic-bezier(.34,1.56,.64,1)' }
+  );
+}
+
 /* Animate immediately toward the tab under the finger. This is the key
    behavioral difference from the old implementation: the indicator starts
-   moving on touch-down, rather than waiting for the route render after tap. */
+   moving on touch-down, rather than waiting for the route render after tap.
+
+   Technique: FLIP. The indicator's static box (left/top/width/height) is
+   set to the DESTINATION slot immediately, and the entire remaining visual
+   gap is expressed as a single `transform` (translate + scaleX/scaleY),
+   animated with WAAPI. This is what actually makes the deformation visible:
+   animating left/top/width per frame forces a layout + backdrop-filter
+   repaint on every sample, which — especially with two blurred glass
+   surfaces stacked (.bottom-nav and .bn-indicator) — reliably drops most
+   frames on-device, collapsing six carefully-shaped stages into what reads
+   as a single instant jump. A transform-only animation stays entirely on
+   the compositor, so every sampled frame actually renders. */
 function _bnAnimateIndicatorToItem(bar, item){
   var ind = ensureBnIndicator(bar);
   if(!item || _bnReduceMotion() || typeof ind.animate !== 'function') return;
@@ -434,44 +482,45 @@ function _bnAnimateIndicatorToItem(bar, item){
     ind._bnAnim = null;
   }
 
+  /* Current *visual* rect (bakes in any transform already applied by a
+     just-cancelled in-flight animation, so rapid repeated taps continue
+     smoothly from wherever the indicator actually is on screen). */
   var currentRect = ind.getBoundingClientRect();
   var left0 = currentRect.left - barRect.left;
   var top0 = currentRect.top - barRect.top;
-  var width0 = Math.max(1, currentRect.width);
-  var center0 = left0 + width0/2;
-  var center1 = targetLeft + targetW/2;
-  var centerDist = Math.abs(center1 - center0);
-  var distanceRatio = Math.max(0, Math.min(1, centerDist / Math.max(1, barRect.width * .82)));
-  var durationMs = Math.round(220 + 100 * distanceRatio); // مدت کوتاه‌تر: 220 تا 320ms برای حس iOS-native
 
-  /* Normalize the current visual rect into a clean transform origin before
-     starting the new compositor animation. */
-  ind.style.left = left0 + 'px';
-  ind.style.top = top0 + 'px';
-  ind.style.width = width0 + 'px';
+  /* Lock the static box to the destination now; the gap to the current
+     visual position becomes the animation's starting transform offset. */
+  ind.style.left = targetLeft + 'px';
+  ind.style.top = targetTop + 'px';
+  ind.style.width = targetW + 'px';
   ind.style.height = targetH + 'px';
-  ind.style.transform = 'translate3d(0,0,0) scaleX(1) scaleY(1)';
 
-  var deltaX = center1 - (left0 + width0/2);
-  var widthRatio = targetW / width0;
-  var N = 60; // نمونه‌برداری متراکم‌تر: 61 فریم برای حرکت نرم‌تر
+  var offsetX = left0 - targetLeft;
+  var offsetY = top0 - targetTop;
+  var distanceRatio = Math.max(0, Math.min(1, Math.abs(offsetX) / Math.max(1, barRect.width * .82)));
+  /* Long enough that lift/stretch/travel/settle are each actually visible
+     (roughly a dozen-plus frames per stage at 60fps), short enough to still
+     feel like a snappy iOS tab switch rather than a slow-motion replay. */
+  var durationMs = Math.round(400 + 90 * distanceRatio);
+  var liftPeakPx = 6;
+
+  var N = 54;
   var frames = [];
-
   for(var i=0;i<=N;i++){
     var t = i/N;
-    var first = i===0, last = i===N;
-    var p = last ? 1 : _bnSpring(t, .75, 0); // damping کمی بیشتر برای کاهش پرتاب
-    var env = last ? {x:1,y:1} : _bnJellyEnvelope(t);
-    var translateX = deltaX * p;
-    var widthAt = width0 + (targetW - width0) * p;
-    if(first){ translateX = 0; widthAt = width0; }
-    if(last){ translateX = deltaX; widthAt = targetW; }
+    var last = i===N;
+    /* Monotonic ease for position — no spring overshoot on the X axis.
+       The "jump" character comes from the vertical arc + size envelope
+       below, not from the indicator overshooting its horizontal target. */
+    var pos = last ? 1 : _bnSmoothStep(t);
+    var env = last ? { sx:1, sy:1 } : _bnJellyEnvelope(t);
+    var liftY = last ? 0 : _bnJumpArc(t, liftPeakPx);
+    var tx = offsetX * (1 - pos);
+    var ty = offsetY * (1 - pos) + liftY;
 
     frames.push({
-      /* lift واقعی در خود مسیر؛ مستقل از scale جداگانه‌ی pointerdown. */
-      transform:'translate3d(' + translateX.toFixed(2) + 'px,' + env.liftY.toFixed(2) + 'px,0) scaleX(' + env.x.toFixed(4) + ') scaleY(' + env.y.toFixed(4) + ')',
-      width:Math.max(1,widthAt).toFixed(2)+'px',
-      top:(top0 + (targetTop-top0)*p).toFixed(2)+'px',
+      transform:'translate3d(' + tx.toFixed(2) + 'px,' + ty.toFixed(2) + 'px,0) scaleX(' + env.sx.toFixed(4) + ') scaleY(' + env.sy.toFixed(4) + ')',
       offset:t
     });
   }
@@ -489,10 +538,6 @@ function _bnAnimateIndicatorToItem(bar, item){
     try{ anim.commitStyles(); }catch(_e){}
     try{ anim.cancel(); }catch(_e2){}
     if(ind._bnAnim === anim) ind._bnAnim = null;
-    ind.style.left = targetLeft + 'px';
-    ind.style.top = targetTop + 'px';
-    ind.style.width = targetW + 'px';
-    ind.style.height = targetH + 'px';
     ind.style.transform = 'translate3d(0,0,0) scaleX(1) scaleY(1)';
     ind.style.scale = '1';
     ind.classList.remove('is-traveling');
@@ -503,6 +548,7 @@ function _bnAnimateIndicatorToItem(bar, item){
       ind._bnSettleTimer = null;
       ind._bnTargetKey = '';
     }, 220); // زمان settle بیشتر برای فرود نرم‌تر
+    _bnPulseActiveIcon(bar);
   };
   anim.oncancel = function(){
     if(ind._bnAnim === anim) ind._bnAnim = null;
