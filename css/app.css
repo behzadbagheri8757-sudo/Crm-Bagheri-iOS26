@@ -977,7 +977,8 @@ a.tx-row:active{
 }
 details[open] > .customer-behavior-summary::after{
   content:'⌃';
-}/* --------------------------------------------------------------------------
+}
+/* --------------------------------------------------------------------------
    07. DASHBOARD (Consolidated - no duplicate geometry)
    -------------------------------------------------------------------------- */
 .dashboard-shell{
@@ -1065,7 +1066,7 @@ details[open] > .customer-behavior-summary::after{
   background:#FFFFFF;
   border:1px solid rgba(31,41,55,.08);
   border-radius:14px;
-  box-shadow:0 2px 8px rgba(26,38,52,.04);
+  box-shadow:var(--vg-shadow-group);
   text-decoration:none;
   color:inherit;
   min-width:0;
@@ -1332,8 +1333,8 @@ details[open] > .customer-behavior-summary::after{
   padding:8px 6px;
   background:#FFFFFF;
   border:0;
-  border-radius:12px;
-  box-shadow:0 1px 2px rgba(0,0,0,.04),0 3px 10px rgba(0,0,0,.045);
+  border-radius:var(--vg-radius-soft);
+  box-shadow:var(--vg-shadow-group);
   text-decoration:none;
   color:#1F2937;
   font-family:inherit;
@@ -1378,12 +1379,12 @@ details[open] > .customer-behavior-summary::after{
   gap:10px;
   padding:11px 2px;
   min-height:0;
-  border-bottom:1px solid rgba(31,41,55,.05);
+  border-bottom:1px solid var(--vg-color-divider);
 }
 .action-row::after{
   content:"";
   position:absolute;
-  right:-11px;
+  inset-inline-start:-11px;
   top:9px;
   bottom:9px;
   width:2px;
@@ -1520,7 +1521,7 @@ details[open] > .customer-behavior-summary::after{
   background:#FFFFFF;
   border:1px solid rgba(31,41,55,.06);
   border-radius:16px;
-  box-shadow:0 6px 22px rgba(31,41,55,.05);
+  box-shadow:var(--vg-shadow-group);
   overflow:hidden;
   margin-bottom:10px;
   padding:4px 12px 6px;
@@ -1566,7 +1567,8 @@ details[open] > .customer-behavior-summary::after{
 .dash-watch-compact-chevron{
   font-size:1.2rem;
   color:#667085;
-}/* --------------------------------------------------------------------------
+}
+/* --------------------------------------------------------------------------
    08. CUSTOMERS (Composition continued)
    -------------------------------------------------------------------------- */
 .customer-list-row{
@@ -2249,7 +2251,8 @@ button.inv-header-save.btn{
 /* Unique V4 compatibility radius */
 .sheet.inv-sheet-host .inv-section{
   border-radius:18px;
-}/* --------------------------------------------------------------------------
+}
+/* --------------------------------------------------------------------------
    12. PAYMENTS / CHECKS (Already covered via ledger row composition)
    -------------------------------------------------------------------------- */
 
@@ -4021,7 +4024,7 @@ a.ledger-row:active,
   z-index:1;
   background:rgba(255,255,255,.88);
   border:.5px solid rgba(60,60,67,.1);
-  box-shadow:0 1px 2px rgba(0,0,0,.03),0 4px 14px rgba(0,0,0,.045);
+  box-shadow:var(--vg-shadow-group);
 }
 .dmt-top{
   margin-bottom:6px;
