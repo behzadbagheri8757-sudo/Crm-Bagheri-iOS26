@@ -9,11 +9,11 @@
   --vg-color-bg:               #F5F7FA;
   --vg-color-surface:          #FFFFFF;
   --vg-color-surface-soft:     #F7F8FA;
-  --vg-color-text:             #1C1C1E;
-  --vg-color-text-secondary:   #4A4A4E;
-  --vg-color-text-muted:       #71717A;
-  --vg-color-border:           rgba(60,60,67,.09);
-  --vg-color-divider:          rgba(60,60,67,.065);
+  --vg-color-text:             #1F2937;
+  --vg-color-text-secondary:   #4B5563;
+  --vg-color-text-muted:       #667085;
+  --vg-color-border:           rgba(31,41,55,.075);
+  --vg-color-divider:          rgba(31,41,55,.055);
   --vg-color-primary:          #0070D2;
   --vg-color-primary-soft:     #E8F2FC;
   --vg-color-success:          #00A068;

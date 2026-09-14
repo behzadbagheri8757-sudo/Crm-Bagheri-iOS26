@@ -62,6 +62,12 @@ input[placeholder*="جستجو"]{
   bottom:calc(10px + env(safe-area-inset-bottom,0px));
   z-index:40;
   box-sizing:border-box;
+  /* Keeps the jelly indicator's travel-time grow/stretch (see js/nav.js
+     _bnAnimateIndicatorToItem) confined to the capsule at every tab,
+     including the first/last where there's least padding to spare. Doesn't
+     clip the bar's own box-shadow (that's painted outside this element's
+     own border box, unaffected by its own overflow). */
+  overflow:hidden;
 
   display:flex;
   align-items:stretch;
