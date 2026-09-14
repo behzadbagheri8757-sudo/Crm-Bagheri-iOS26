@@ -210,6 +210,96 @@ main .empty{margin:14px 0;}
 
 .vg-route-settings .mgmt-section-title{margin-bottom:9px;}
 
+/* ---------- More (full page) — #/more ----------
+   Full-page replacement for the old More bottom sheet. All selectors are
+   scoped under .more-page and use only existing visual-grammar tokens.
+   The old .more-sheet* rules in app.css remain untouched for rollback. */
+.more-page{
+  display:flex;
+  flex-direction:column;
+  gap:26px;
+  padding-top:6px;
+}
+
+.more-group{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.more-group-title{
+  margin:0;
+  padding:0 4px;
+  font-size:.78rem;
+  font-weight:var(--vg-weight-label);
+  color:var(--vg-color-text-muted);
+  line-height:1.35;
+  letter-spacing:.01em;
+  text-align:start;
+}
+
+.more-group-card{
+  background:var(--vg-color-surface);
+  border:1px solid var(--vg-color-border);
+  border-radius:var(--vg-radius-raised);
+  box-shadow:var(--vg-shadow-group);
+  overflow:hidden;
+}
+
+.more-row{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  min-height:54px;
+  padding:12px 14px;
+  color:var(--vg-color-text);
+  text-decoration:none;
+  font-size:.95rem;
+  font-weight:var(--vg-weight-title);
+  -webkit-tap-highlight-color:transparent;
+  transition:background-color 140ms ease;
+}
+
+.more-row + .more-row{
+  border-top:1px solid var(--vg-color-divider);
+}
+
+.more-row:active{
+  background:var(--vg-color-surface-soft);
+}
+
+.more-row-icon{
+  flex:0 0 auto;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:24px;
+  height:24px;
+  color:var(--vg-color-primary);
+}
+
+.more-row-icon svg{
+  width:22px;
+  height:22px;
+  display:block;
+}
+
+.more-row-title{
+  flex:1 1 auto;
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.more-row-chevron{
+  flex:0 0 auto;
+  color:var(--vg-color-text-muted);
+  font-size:1.2rem;
+  line-height:1;
+  opacity:.6;
+}
+
 /* ---------- Mobile responsiveness ---------- */
 @media (max-width:419px){
   :root{
