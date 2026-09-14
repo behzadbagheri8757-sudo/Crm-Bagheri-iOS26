@@ -283,7 +283,7 @@ function ensureBottomNavPinned(){
    mid-flight. commitStyles() bakes the exact current width/transform into
    inline styles before the next move starts, preserving continuity on
    rapid repeated taps. */
-var _bnIndicatorState = { ready: false };
+var _bnIndicatorState = { ready: false, gestureBound: false, pointer: null };
 
 function ensureBnIndicator(bar){
   var ind = bar.querySelector('.bn-indicator');
@@ -291,17 +291,15 @@ function ensureBnIndicator(bar){
     ind = document.createElement('span');
     ind.className = 'bn-indicator';
     ind.setAttribute('aria-hidden', 'true');
-    /* Width is animated directly, so scaling is no longer used as a second
-       geometry layer. Keep the transform origin centered for the subtle
-       vertical squash/stretch only. */
     ind.style.transformOrigin = '50% 50%';
+    ind.style.scale = '1';
     bar.insertBefore(ind, bar.firstChild);
   }
   return ind;
 }
 
 function _bnClearIndicatorMotionClasses(ind){
-  ind.classList.remove('is-traveling', 'is-settling');
+  ind.classList.remove('is-traveling', 'is-settling', 'is-lifted');
   if(ind._bnSettleTimer){
     clearTimeout(ind._bnSettleTimer);
     ind._bnSettleTimer = null;
@@ -313,10 +311,17 @@ function _bnReduceMotion(){
   catch(_e){ return false; }
 }
 
-/* Damped-spring position curve at normalized time t in [0,1].
-   zeta < 1 gives one controlled overshoot before settling; zeta >= 1 is
-   a fast, monotonic approach. `delay` (0..~0.3) lets the trailing edge
-   start later than the leading edge. */
+/* Fast spring used for the press-lift and the final settle. */
+function _bnPressSpring(t){
+  t = Math.max(0, Math.min(1, t));
+  var c = 1.70158;
+  var x = t - 1;
+  return 1 + (c + 1) * x * x * x + c * x * x;
+}
+
+/* Damped spring used for the actual travel. The position is sampled into
+   WAAPI frames so the animation stays on the compositor and can be
+   interrupted without losing the exact current geometry. */
 function _bnSpring(t, zeta, delay){
   var tt = delay > 0 ? (t - delay) / (1 - delay) : t;
   if(tt <= 0) return 0;
@@ -330,239 +335,280 @@ function _bnSpring(t, zeta, delay){
   return 1 - Math.exp(-zeta*tau) * (Math.cos(wd*tau) + (zeta/wd)*Math.sin(wd*tau));
 }
 
-/* Smooth 0→1 ramp used for the explicit deformation phases. */
 function _bnSmoothStep(t){
   t = Math.max(0, Math.min(1, t));
   return t * t * (3 - 2 * t);
 }
 
-/* Explicit jelly phase, expressed as signed deformation amplitude.
-   Positive = stretch; negative = arrival/anticipation pinch.
-   The curve is intentionally visible on adjacent-tab hops, while the
-   absolute pixel amplitude is capped so far hops do not become absurd. */
-function _bnJellyShape(t){
+/* The visible jelly is deliberately explicit: lift → stretch → travel →
+   pinch → rebound → rest. Unlike the old edge-difference model, the
+   deformation is applied with real scaleX/scaleY so even a one-tab hop has
+   an obvious material change. */
+function _bnJellyEnvelope(t){
   if(t <= 0.10){
-    return -0.12 * _bnSmoothStep(t / 0.10);          /* anticipation */
+    var a = _bnSmoothStep(t / 0.10);
+    return { x: 1.00 + 0.20*a, y: 1.00 - 0.10*a };
   }
-  if(t <= 0.25){
-    return -0.12 + 1.12 * _bnSmoothStep((t - 0.10) / 0.15); /* launch */
+  if(t <= 0.48){
+    var b = _bnSmoothStep((t - 0.10) / 0.38);
+    return { x: 1.20 - 0.15*b, y: 0.90 + 0.07*b };
   }
-  if(t <= 0.55){
-    return 1.00 - 0.12 * _bnSmoothStep((t - 0.25) / 0.30); /* travel */
+  if(t <= 0.68){
+    var c = _bnSmoothStep((t - 0.48) / 0.20);
+    return { x: 1.05 - 0.18*c, y: 0.97 + 0.06*c };
   }
-  if(t <= 0.75){
-    return 0.88 - 1.00 * _bnSmoothStep((t - 0.55) / 0.20); /* recovery */
+  if(t <= 0.84){
+    var d = _bnSmoothStep((t - 0.68) / 0.16);
+    return { x: 0.87 + 0.17*d, y: 1.03 - 0.03*d };
   }
-  if(t <= 0.87){
-    return -0.12 * _bnSmoothStep((t - 0.75) / 0.12); /* arrival pinch */
+  if(t <= 0.93){
+    var e = _bnSmoothStep((t - 0.84) / 0.09);
+    return { x: 1.04 - 0.04*e, y: 1.00 + 0.015*e };
   }
-  if(t <= 0.94){
-    return -0.12 + 0.15 * _bnSmoothStep((t - 0.87) / 0.07); /* rebound */
-  }
-  return 0.03 * (1 - _bnSmoothStep((t - 0.94) / 0.06)); /* settle */
+  var f = _bnSmoothStep((t - 0.93) / 0.07);
+  return { x: 1.00, y: 1.00 };
 }
 
-/* Builds one indicator move from the indicator's exact current edges to
-   the destination tab. The CENTER still follows a small underdamped
-   spring, but the jelly itself is produced by independent leading and
-   trailing edge deformation. Width is animated directly — no scaleX
-   overlay — so the sampled left/right geometry is the geometry the user
-   actually sees.
-
-   Continuity rule: frame 0 is exactly (left0,right0), even when a new tap
-   interrupts an earlier move. The first few frames then normalize the old
-   shape into the new move instead of snapping back to a stale width. */
-function _bnBuildMove(left0, right0, top0, left1, right1, top1, barWidth){
-  var movingRight = (left1 + right1) >= (left0 + right0);
-  var centerDist = Math.abs(((left1+right1)/2) - ((left0+right0)/2));
-  var distanceRatio = Math.max(0, Math.min(1, centerDist / Math.max(1, barWidth * 0.82)));
-
-  /* Keep deformation visibly elastic on the common adjacent hop, but cap
-     it in pixels so a long hop does not become a giant rubber band. */
-  var deformationPx = Math.min(20, 14 + centerDist * 0.05);
-  var durationMs = Math.round(300 + 160 * distanceRatio); /* ~300ms adjacent → ~460ms far */
-  var centerZeta = 0.68; /* enough positional overshoot to be visible, still restrained */
-
-  var cx0 = (left0 + right0) / 2, cx1 = (left1 + right1) / 2;
-  var w1 = Math.max(1, right1 - left1);
-  /* Height remains controlled by positionBnIndicator; only a subtle
-     scaleY cue is animated here. */
-  var N = 30;
-  var frames = [];
-
-  for(var i = 0; i <= N; i++){
-    var t = i / N;
-    var first = (i === 0);
-    var last = (i === N);
-
-    var cp = last ? 1 : _bnSpring(t, centerZeta, 0);
-    var cx = cx0 + (cx1 - cx0) * cp;
-    var baseLeft = cx - w1 / 2;
-    var baseRight = cx + w1 / 2;
-
-    /* Leading edge gets most of the stretch; trailing edge visibly lags.
-       This asymmetry is the key difference from the old width-pulse model. */
-    var shape = last ? 0 : _bnJellyShape(t);
-    var deform = deformationPx * shape;
-    var leftT, rightT;
-    if(movingRight){
-      leftT = baseLeft - deform * 0.28;
-      rightT = baseRight + deform * 0.72;
-    } else {
-      leftT = baseLeft - deform * 0.72;
-      rightT = baseRight + deform * 0.28;
-    }
-
-    /* On the first frame preserve the real interrupted geometry exactly. */
-    if(first){
-      leftT = left0;
-      rightT = right0;
-    }
-    if(last){
-      leftT = left1;
-      rightT = right1;
-    }
-
-    var topProgress = last ? 1 : _bnSpring(t, 0.90, 0);
-    var topT = first ? top0 : (last ? top1 : top0 + (top1 - top0) * topProgress);
-
-    /* A very small vertical squash/stretch reinforces the material cue
-       without introducing a second horizontal geometry transform. */
-    var scaleY = last ? 1 : (1 - 0.12 * shape);
-
-    frames.push({
-      left: leftT.toFixed(2) + 'px',
-      width: Math.max(1, rightT - leftT).toFixed(2) + 'px',
-      top: topT.toFixed(2) + 'px',
-      transform: 'translate3d(0,0,0) scaleY(' + scaleY.toFixed(4) + ')',
-      offset: t
-    });
-  }
-  return { frames: frames, durationMs: durationMs };
+function _bnTargetKey(item){
+  if(!item) return '';
+  if(item.hasAttribute('data-bottom-more')) return 'more';
+  return item.getAttribute('data-spa-path') || item.getAttribute('href') || '';
 }
 
-function positionBnIndicator(bar, animate){
-  if(!bar) return;
+/* Press feedback is intentionally separate from travel. It gives the
+   current indicator a physical "lift" immediately on touch-down, then lets
+   the route travel animation take over. CSS individual `scale` composes with
+   the translate/scaleX/scaleY transform used by the travel animation. */
+function _bnLiftIndicator(ind){
+  if(!ind || _bnReduceMotion() || typeof ind.animate !== 'function') return;
+  if(ind._bnLiftAnim){ try{ ind._bnLiftAnim.cancel(); }catch(_e){} }
+  ind.classList.add('is-lifted');
+  ind.style.scale = '1';
+  ind._bnLiftAnim = ind.animate(
+    [{scale:'1'}, {scale:'1.10'}],
+    {duration:110, easing:'cubic-bezier(.34,1.56,.64,1)', fill:'forwards'}
+  );
+}
+
+function _bnReleaseLift(ind){
+  if(!ind || _bnReduceMotion() || typeof ind.animate !== 'function') return;
+  if(ind._bnLiftAnim){ try{ ind._bnLiftAnim.cancel(); }catch(_e){} }
+  ind.classList.remove('is-lifted');
+  ind._bnLiftAnim = ind.animate(
+    [{scale:'1.10'}, {scale:'1'}],
+    {duration:150, easing:'cubic-bezier(.34,1.56,.64,1)', fill:'forwards'}
+  );
+  ind._bnLiftAnim.onfinish = function(){
+    if(ind._bnLiftAnim === this){
+      try{ this.commitStyles(); }catch(_e){}
+      try{ this.cancel(); }catch(_e2){}
+      ind.style.scale = '1';
+      ind._bnLiftAnim = null;
+    }
+  };
+}
+
+/* Animate immediately toward the tab under the finger. This is the key
+   behavioral difference from the old implementation: the indicator starts
+   moving on touch-down, rather than waiting for the route render after tap. */
+function _bnAnimateIndicatorToItem(bar, item){
   var ind = ensureBnIndicator(bar);
-
-  /* A non-animated reposition request — which comes from the scroll /
-     resize / visualViewport listeners in bindBottomNavMinimizeOnScroll
-     and ensureBottomNavPinned, including the window.scrollTo(0, saved)
-     that router.resolve() runs on every route change — must NOT
-     interrupt an in-flight tab-tap animation. The tab tap is the user's
-     current intent; those incidental events would otherwise commitStyles
-     + cancel the running WAAPI animation on its first or second frame,
-     then snap the indicator to its destination, which reads on iPhone
-     as a plain slide instead of the intended spring/morph travel.
-     A real tab tap still comes through here with animate === true, and
-     that path keeps the existing commitStyles + cancel interruption so
-     rapid repeated taps start from the true current mid-flight geometry. */
-  if(!animate && ind._bnAnim){
-    return;
-  }
-
-  var active = bar.querySelector('.bottom-nav-item.active');
-  if(!active){
-    ind.style.opacity = '0';
-    return;
-  }
+  if(!item || _bnReduceMotion() || typeof ind.animate !== 'function') return;
 
   var barRect = bar.getBoundingClientRect();
-  var itemRect = active.getBoundingClientRect();
-  /* iOS 26 selection reads as a compact Liquid Glass surface around the
-     selected tab group — not a full-width pill and not a decorative blob. */
-  /* The iOS 26 selected control nearly fills its tab item; the glass is
-     the selected item surface, not a small decorative badge inside it. */
-  var w = Math.max(50, Math.round(itemRect.width - 2));
-  /* Indicator is intentionally a little shorter than the tab item itself,
-     so it reads as a short, wide capsule inset within the tab rather than
-     filling it edge to edge; border-radius:999px in CSS auto-clamps to
-     h/2, so the ends are always a true semicircle at whatever height this
-     computes. The floor of 44 prevents the shape from collapsing once the
-     tab item itself has shrunk to its minimized size. Width calculation is
-     unchanged, so the indicator stays aligned with the tab's horizontal
-     center in every state. */
-  var h = Math.max(44, Math.round(itemRect.height - 8));
-  var left = itemRect.left - barRect.left + (itemRect.width - w) / 2;
-  var top = itemRect.top - barRect.top + (itemRect.height - h) / 2;
-  var reduceMotion = _bnReduceMotion();
+  var targetRect = item.getBoundingClientRect();
+  var targetW = Math.max(44, Math.round(targetRect.width - 2));
+  var targetH = Math.max(44, Math.round(targetRect.height - 8));
+  var targetLeft = targetRect.left - barRect.left + (targetRect.width - targetW)/2;
+  var targetTop = targetRect.top - barRect.top + (targetRect.height - targetH)/2;
 
-  /* Any in-flight move is interrupted here, every time this runs — a tab
-     tap, a scroll-driven reposition, a resize. Committing the animation's
-     current mid-flight computed style into the inline style before
-     cancelling means whatever runs next starts from exactly where the
-     shape visually is, never from a stale remembered target. */
   if(ind._bnAnim){
-    try{
-      var st = ind._bnAnim.playState;
-      if(st === 'running' || st === 'paused') ind._bnAnim.commitStyles();
-    }catch(_e){}
+    try{ ind._bnAnim.commitStyles(); }catch(_e){}
     try{ ind._bnAnim.cancel(); }catch(_e2){}
     ind._bnAnim = null;
-    _bnClearIndicatorMotionClasses(ind);
   }
 
-  var canAnimate = animate && _bnIndicatorState.ready && !reduceMotion && typeof ind.animate === 'function';
+  var currentRect = ind.getBoundingClientRect();
+  var left0 = currentRect.left - barRect.left;
+  var top0 = currentRect.top - barRect.top;
+  var width0 = Math.max(1, currentRect.width);
+  var center0 = left0 + width0/2;
+  var center1 = targetLeft + targetW/2;
+  var centerDist = Math.abs(center1 - center0);
+  var distanceRatio = Math.max(0, Math.min(1, centerDist / Math.max(1, barRect.width * .82)));
+  var durationMs = Math.round(320 + 150 * distanceRatio);
 
-  if(!canAnimate){
-    ind.style.width = w + 'px';
-    ind.style.height = h + 'px';
-    ind.style.opacity = '1';
-    ind.style.transform = 'translate3d(' + left + 'px,' + top + 'px,0) scaleY(1)';
-    _bnIndicatorState.ready = true;
-    return;
+  /* Normalize the current visual rect into a clean transform origin before
+     starting the new compositor animation. */
+  ind.style.left = left0 + 'px';
+  ind.style.top = top0 + 'px';
+  ind.style.width = width0 + 'px';
+  ind.style.height = targetH + 'px';
+  ind.style.transform = 'translate3d(0,0,0) scaleX(1) scaleY(1)';
+
+  var deltaX = center1 - (left0 + width0/2);
+  var widthRatio = targetW / width0;
+  var N = 36;
+  var frames = [];
+
+  for(var i=0;i<=N;i++){
+    var t = i/N;
+    var first = i===0, last = i===N;
+    var p = last ? 1 : _bnSpring(t, .72, 0);
+    var env = last ? {x:1,y:1} : _bnJellyEnvelope(t);
+    var translateX = deltaX * p;
+    var widthAt = width0 + (targetW - width0) * p;
+    if(first){ translateX = 0; widthAt = width0; }
+    if(last){ translateX = deltaX; widthAt = targetW; }
+
+    frames.push({
+      transform:'translate3d(' + translateX.toFixed(2) + 'px,0,0) scaleX(' + env.x.toFixed(4) + ') scaleY(' + env.y.toFixed(4) + ')',
+      width:Math.max(1,widthAt).toFixed(2)+'px',
+      top:(top0 + (targetTop-top0)*p).toFixed(2)+'px',
+      offset:t
+    });
   }
 
-  /* True current geometry (post-commit above), not a remembered "last
-     settled" position — this is what makes interruption seamless even if
-     the shape was still mid-stretch. */
-  var curRect = ind.getBoundingClientRect();
-  var left0 = curRect.left - barRect.left;
-  var top0 = curRect.top - barRect.top;
-  var right0 = left0 + curRect.width;
-
-  if(Math.abs(left0 - left) < 1 && Math.abs(top0 - top) < 1){
-    /* Already there — repeated tap on the current tab, or a no-op
-       reposition. No motion needed. */
-    ind.style.width = w + 'px';
-    ind.style.height = h + 'px';
-    _bnClearIndicatorMotionClasses(ind);
-    return;
-  }
-
-  ind.style.width = Math.max(1, right0 - left0) + 'px';
-  ind.style.height = h + 'px';
-  ind.style.opacity = '1';
-
-  var move = _bnBuildMove(left0, right0, top0, left, left + w, top, barRect.width);
-  var anim = ind.animate(move.frames, {
-    duration: move.durationMs,
-    easing: 'linear', /* the spring shape is already baked into the sampled keyframes */
-    fill: 'forwards'
+  var anim = ind.animate(frames, {
+    duration:durationMs,
+    easing:'linear',
+    fill:'forwards'
   });
   ind._bnAnim = anim;
+  ind._bnTargetKey = _bnTargetKey(item);
   _bnClearIndicatorMotionClasses(ind);
   ind.classList.add('is-traveling');
   anim.onfinish = function(){
     try{ anim.commitStyles(); }catch(_e){}
     try{ anim.cancel(); }catch(_e2){}
     if(ind._bnAnim === anim) ind._bnAnim = null;
-    /* Very soft settle beat after arrival, then back to rest. Short enough
-       to read as a rebound, not a lingering highlight. */
+    ind.style.left = targetLeft + 'px';
+    ind.style.top = targetTop + 'px';
+    ind.style.width = targetW + 'px';
+    ind.style.height = targetH + 'px';
+    ind.style.transform = 'translate3d(0,0,0) scaleX(1) scaleY(1)';
+    ind.style.scale = '1';
     ind.classList.remove('is-traveling');
     ind.classList.add('is-settling');
     if(ind._bnSettleTimer) clearTimeout(ind._bnSettleTimer);
     ind._bnSettleTimer = setTimeout(function(){
       ind.classList.remove('is-settling');
       ind._bnSettleTimer = null;
-    }, 150);
+      ind._bnTargetKey = '';
+    }, 120);
   };
   anim.oncancel = function(){
     if(ind._bnAnim === anim) ind._bnAnim = null;
     ind.classList.remove('is-traveling');
   };
+}
+
+function bindBottomNavIndicatorGestures(bar){
+  if(!bar || bar._bnGestureBound) return;
+  bar._bnGestureBound = true;
+
+  bar.addEventListener('pointerdown', function(e){
+    var item = e.target && e.target.closest ? e.target.closest('.bottom-nav-item') : null;
+    if(!item || !bar.contains(item)) return;
+    if(e.pointerType === 'mouse' && e.button !== 0) return;
+
+    var ind = ensureBnIndicator(bar);
+    var active = bar.querySelector('.bottom-nav-item.active');
+    var activeKey = _bnTargetKey(active);
+    var targetKey = _bnTargetKey(item);
+    _bnIndicatorState.pointer = { id:e.pointerId, activeKey:activeKey, targetKey:targetKey };
+
+    _bnLiftIndicator(ind);
+    if(targetKey && targetKey !== activeKey) _bnAnimateIndicatorToItem(bar, item);
+  }, {passive:true});
+
+  function release(e){
+    var state = _bnIndicatorState.pointer;
+    if(!state || (e && e.pointerId != null && state.id !== e.pointerId)) return;
+    var ind = ensureBnIndicator(bar);
+    _bnReleaseLift(ind);
+    _bnIndicatorState.pointer = null;
+  }
+
+  bar.addEventListener('pointerup', release, {passive:true});
+  bar.addEventListener('pointercancel', release, {passive:true});
+  bar.addEventListener('lostpointercapture', release, {passive:true});
+}
+
+function positionBnIndicator(bar, animate){
+  if(!bar) return;
+  var ind = ensureBnIndicator(bar);
+  bindBottomNavIndicatorGestures(bar);
+
+  /* Incidental scroll/resize/viewport callbacks must never interrupt a
+     user-initiated travel animation. Only a real route/tap reposition may
+     replace the current move. */
+  if(!animate && ind._bnAnim) return;
+
+  /* If touch-down already launched the indicator toward the exact active
+     destination, do not kill that animation when the router re-renders. */
+  var active = bar.querySelector('.bottom-nav-item.active');
+  if(!active){
+    ind.style.opacity = '0';
+    return;
+  }
+  var activeKey = _bnTargetKey(active);
+  if(ind._bnAnim && ind._bnTargetKey === activeKey){
+    return;
+  }
+
+  var barRect = bar.getBoundingClientRect();
+  var itemRect = active.getBoundingClientRect();
+  var w = Math.max(50, Math.round(itemRect.width - 2));
+  var h = Math.max(44, Math.round(itemRect.height - 8));
+  var left = itemRect.left - barRect.left + (itemRect.width - w)/2;
+  var top = itemRect.top - barRect.top + (itemRect.height - h)/2;
+  var reduceMotion = _bnReduceMotion();
+
+  if(!animate || reduceMotion || typeof ind.animate !== 'function'){
+    if(ind._bnAnim){
+      try{ ind._bnAnim.commitStyles(); }catch(_e){}
+      try{ ind._bnAnim.cancel(); }catch(_e2){}
+      ind._bnAnim = null;
+    }
+    ind.style.left = left + 'px';
+    ind.style.top = top + 'px';
+    ind.style.width = w + 'px';
+    ind.style.height = h + 'px';
+    ind.style.opacity = '1';
+    ind.style.transform = 'translate3d(0,0,0) scaleX(1) scaleY(1)';
+    ind.style.scale = '1';
+    _bnClearIndicatorMotionClasses(ind);
+    _bnIndicatorState.ready = true;
+    return;
+  }
+
+  if(ind._bnAnim){
+    try{ ind._bnAnim.commitStyles(); }catch(_e){}
+    try{ ind._bnAnim.cancel(); }catch(_e2){}
+    ind._bnAnim = null;
+  }
+
+  var cur = ind.getBoundingClientRect();
+  var left0 = cur.left - barRect.left;
+  var top0 = cur.top - barRect.top;
+  var right0 = left0 + cur.width;
+  if(Math.abs(left0-left)<1 && Math.abs(top0-top)<1 && Math.abs(cur.width-w)<1){
+    ind.style.left = left+'px'; ind.style.top=top+'px'; ind.style.width=w+'px'; ind.style.height=h+'px';
+    ind.style.transform='translate3d(0,0,0) scaleX(1) scaleY(1)';
+    ind.style.scale='1';
+    _bnIndicatorState.ready=true;
+    return;
+  }
+
+  /* Route changes that happen without a pointer-down still get the same
+     material travel model. */
+  var pseudoItem = active;
+  ind.style.scale = '1';
+  _bnAnimateIndicatorToItem(bar, pseudoItem);
   _bnIndicatorState.ready = true;
 }
+
 function renderBottomNav(activeId){
   ensureBottomNavDOM();
   const bar = document.getElementById('bottom-nav');
@@ -596,6 +642,7 @@ function renderBottomNav(activeId){
   } else {
     ensureBnIndicator(bar);
   }
+  bindBottomNavIndicatorGestures(bar);
 
   if (spa) {
     bar.querySelectorAll('a[data-spa-path]').forEach(function (a) {
