@@ -4,6 +4,12 @@
 'use strict';
 
 (function (global) {
+  // Display-only quantity formatter; keeps report values readable without changing calculations.
+  function fmtQtyDisplay(n) {
+    var num = Number(n) || 0;
+    return String(Math.round(num * 100) / 100);
+  }
+
   let reportPeriod = 'all';
   let reportAccordionState = { customers: false, suppliers: false, inventory: false, invoices: false };
   let bodyClickHandler = null;
@@ -254,7 +260,7 @@
                 '</span><span class="name"><span class="tx-row-title">' +
                 esc(p.name) +
                 '</span><span class="sub">تعداد: ' +
-                enToFaDigits(String(p.qty)) +
+                enToFaDigits(fmtQtyDisplay(p.qty)) +
                 (p.qtyUnit === 'kg' ? ' کیلوگرم' : '') +
                 '</span></span><span class="filler"></span><span class="amount tx-row-amount"><span class="tx-row-total">' +
                 toman(p.revenue) +
@@ -277,7 +283,7 @@
                 '</span><span class="name"><span class="tx-row-title">' +
                 esc(p.name) +
                 '</span><span class="sub">تعداد: ' +
-                enToFaDigits(String(p.qty)) +
+                enToFaDigits(fmtQtyDisplay(p.qty)) +
                 (p.qtyUnit === 'kg' ? ' کیلوگرم' : '') +
                 '</span></span><span class="filler"></span><span class="amount tx-row-amount"><span class="tx-row-total">' +
                 toman(p.revenue) +

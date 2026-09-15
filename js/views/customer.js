@@ -22,6 +22,12 @@
     };
   }
 
+  // Display-only quantity formatter shared with Products/Inventory convention.
+  function fmtQtyDisplay(n) {
+    var num = Number(n) || 0;
+    return String(Math.round(num * 100) / 100);
+  }
+
   let currentCustomerId = null;
   let rootEl = null;
   function customersHref() {
@@ -713,7 +719,7 @@
                   '<div class="ledger-row" style="cursor:default;"><span class="name">' +
                   esc(p.name) +
                   '<span class="sub">تعداد: ' +
-                  p.qty +
+                  fmtQtyDisplay(p.qty) +
                   '</span></span><span class="filler"></span><span class="amount">' +
                   toman(p.revenue) +
                   ' ت</span></div>'
