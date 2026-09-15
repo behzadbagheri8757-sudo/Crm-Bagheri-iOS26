@@ -882,6 +882,9 @@ a.tx-row:active{
   font-weight:700;
   color:#1F2937;
 }
+.tx-identity{
+  margin-bottom:12px;
+}
 .tx-identity-meta{
   font-size:.85rem;
   color:#667085;
@@ -1753,6 +1756,50 @@ button.inv-header-save.btn{
 .inv-items-section{
   margin-bottom:18px;
 }
+/* Customer identity block at the top of the New Invoice sheet. These
+   classes existed in the markup with no rules at all, so the avatar
+   rendered as a bare unstyled initial letter and the name/meta had no
+   grouping — this is the "unexplained standalone A" and the weak
+   customer-identity issue in the same pass. */
+.inv-customer-context{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 2px 14px;
+  margin-bottom:4px;
+}
+.inv-customer-avatar{
+  flex:0 0 auto;
+  width:38px;
+  height:38px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:var(--vg-color-primary-soft);
+  color:var(--vg-color-primary);
+  font-size:.95rem;
+  font-weight:700;
+}
+.inv-customer-info{
+  min-width:0;
+  flex:1 1 auto;
+}
+.inv-customer-name{
+  font-size:1rem;
+  font-weight:700;
+  color:#1F2937;
+  line-height:1.35;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.inv-customer-meta{
+  font-size:.78rem;
+  color:#667085;
+  margin-top:2px;
+  line-height:1.3;
+}
 .inv-date-field label{
   font-size:.72rem;
   font-weight:600;
@@ -1770,8 +1817,11 @@ button.inv-header-save.btn{
   overflow:hidden;
   padding:0 0 4px;
 }
+/* Title now sits above the card surface (More-page pattern) — see markup
+   in js/app.js renderSheet(), where .inv-items-card-head was moved out of
+   .inv-items-card. */
 .inv-items-card-head{
-  padding:12px 16px 8px;
+  padding:0 4px 8px;
 }
 .inv-items-card-label{
   font-size:.72rem;
@@ -2010,7 +2060,7 @@ button.inv-header-save.btn{
 }
 .inv-price-info-panel{
   margin-top:8px;
-  padding:10px 12px;
+  padding:4px 12px 6px;
   border-radius:14px;
   background:#F8FAFC;
   border:1px solid rgba(15,23,42,.05);
@@ -2018,15 +2068,24 @@ button.inv-header-save.btn{
 .inv-price-info-row{
   display:flex;
   justify-content:space-between;
+  align-items:baseline;
+  gap:10px;
   font-size:.76rem;
-  margin-bottom:4px;
+  padding:7px 0;
+  border-bottom:1px solid rgba(15,23,42,.05);
+}
+.inv-price-info-row:last-child{
+  border-bottom:0;
 }
 .inv-price-info-row .k{
   color:#667085;
+  font-weight:500;
 }
 .inv-price-info-row .v{
-  font-weight:600;
+  font-weight:700;
   color:#1F2937;
+  font-variant-numeric:tabular-nums;
+  white-space:nowrap;
 }
 .inv-add-line{
   display:flex;
@@ -2322,7 +2381,7 @@ button.inv-header-save.btn{
   box-shadow:var(--vg-shadow-group);
 }
 .report-summary-card{
-  padding:14px;
+  padding:12px 13px;
   position:relative;
   overflow:hidden;
   background:transparent;
@@ -2456,7 +2515,7 @@ button.inv-header-save.btn{
   padding:12px;
 }
 .settings-section{
-  margin-bottom:var(--vg-space-section);
+  margin-bottom:0;
   background:var(--vg-color-surface);
   border:1px solid var(--vg-color-border);
   border-radius:var(--vg-radius-raised);
@@ -2472,12 +2531,6 @@ button.inv-header-save.btn{
   box-shadow:none;
   padding:0;
 }
-.settings-section h3{
-  font-size:.95rem;
-  margin:0 0 10px;
-  font-weight:600;
-  color:#1F2937;
-}
 .settings-warn{
   margin:0 0 12px;
   padding:10px 12px;
@@ -2492,11 +2545,19 @@ button.inv-header-save.btn{
 .mgmt-section{
   margin-bottom:22px;
 }
+/* Quiet title sitting above the card surface — same convention as the
+   More page (.more-group-title / .more-group-card), applied consistently
+   across every settings section instead of putting the title inside the
+   card. */
 .mgmt-section-title{
-  font-size:.95rem;
-  margin:0 0 10px;
-  font-weight:600;
-  color:#1F2937;
+  margin:0 4px 8px;
+  padding:0;
+  font-size:.78rem;
+  font-weight:var(--vg-weight-label);
+  color:var(--vg-color-text-muted);
+  line-height:1.35;
+  letter-spacing:.01em;
+  text-align:start;
 }
 .auto-backup-row{
   display:flex;
@@ -2515,6 +2576,30 @@ button.inv-header-save.btn{
 }
 .tech-chevron{
   color:#667085;
+}
+
+/* Settings secondary actions that read as plain text before this pass:
+   add a quiet chevron, using the existing .btn.secondary surface already
+   in place — no new button style. */
+.settings-action-link{
+  position:relative;
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+}
+.settings-action-link::after{
+  content:'';
+  width:11px;
+  height:11px;
+  flex:none;
+  opacity:.5;
+  background-color:currentColor;
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m15 18-6-6 6-6'/%3E%3C/svg%3E");
+  mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m15 18-6-6 6-6'/%3E%3C/svg%3E");
+  -webkit-mask-size:contain;
+  mask-size:contain;
+  -webkit-mask-repeat:no-repeat;
+  mask-repeat:no-repeat;
 }
 
 /* --------------------------------------------------------------------------

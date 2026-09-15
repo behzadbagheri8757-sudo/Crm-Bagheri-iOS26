@@ -169,6 +169,7 @@ main .empty{margin:14px 0;}
   grid-column:3;
   grid-row:1;
   justify-self:end;
+  align-self:center;
   margin-inline-start:0;
 }
 @media (max-width:380px){
@@ -211,6 +212,19 @@ main .empty{margin:14px 0;}
 
 .vg-route-customer .cust-recommended-action-label{
   margin-bottom:7px;
+}
+
+.vg-route-customer .cust-recommended-action{
+  background:var(--vg-color-primary-soft);
+  border-color:transparent;
+  border-inline-start:3px solid var(--vg-color-primary);
+}
+
+.vg-route-customer .cust-recommended-action-btn{
+  text-align:start;
+  font-size:.95rem;
+  font-weight:700;
+  line-height:1.55;
 }
 
 .vg-route-customer .customer-identity-card{
@@ -272,6 +286,40 @@ main .empty{margin:14px 0;}
 .vg-route-customer .watch-confirmed-card,
 .vg-route-customer .watch-lifecycle-card{
   margin-bottom:var(--vg-space-related);
+}
+
+/* Two Business Intelligence cards get a quiet accent so they read as
+   distinct from each other (confirmed finding vs. early warning), not
+   just two identical white boxes stacked together. */
+.vg-route-customer .watch-confirmed-card{
+  border-inline-start:3px solid var(--vg-color-primary);
+}
+.vg-route-customer .watch-lifecycle-card{
+  border-inline-start:3px solid var(--vg-color-warning);
+}
+.vg-route-customer .watch-confirmed-card > .label,
+.vg-route-customer .watch-lifecycle-card > .label{
+  font-size:.72rem;
+  font-weight:var(--vg-weight-title);
+  color:var(--vg-color-text);
+}
+
+/* Severity labels (بحرانی/زیاد/متوسط/کم) had no color coding at all —
+   this is the "WHY IT MATTERS" signal these rows need. Text-only, no
+   background chips, matching the restrained dashboard priority palette. */
+.vg-route-customer .watch-level-critical{
+  color:var(--vg-color-danger);
+  font-weight:700;
+}
+.vg-route-customer .watch-level-high{
+  color:#C2410C;
+  font-weight:700;
+}
+.vg-route-customer .watch-level-medium{
+  color:var(--vg-color-warning);
+}
+.vg-route-customer .watch-level-low{
+  color:var(--vg-color-text-muted);
 }
 
 .vg-route-customer .watch-confirmed-list,
@@ -467,6 +515,9 @@ main .empty{margin:14px 0;}
   min-width:96px;
 }
 
+.vg-route-suppliers .tx-list .tx-row-total{
+  font-weight:800;
+}
 .vg-route-suppliers .tx-list .tx-row-title,
 .vg-route-products .tx-list .tx-row-title,
 .vg-route-invoices .tx-list .tx-row-title{
@@ -594,6 +645,46 @@ main .empty{margin:14px 0;}
   height:16px;
 }
 
+/* ---------- Shared repeated-row divider ----------
+   A very subtle, inset (not edge-to-edge) 1px line between consecutive
+   plain rows so consecutive entries don't visually merge, without turning
+   any of them into cards. Same technique as the More-page row divider
+   (.more-row + .more-row::before). Scoped only to the specific lists
+   named in the visual-polish pass — pages marked "no known issue"
+   (Invoices List, Invoice Detail, Customer Visits, Store Evaluation,
+   Sales Game Center) are intentionally left untouched. */
+.dash-activity .ledger-row,
+.vg-route-customer .customer-tx-list .ledger-row,
+.vg-route-reports .rtp-list .ledger-row,
+.vg-route-inventory main .ledger-row{
+  position:relative;
+}
+.dash-activity .ledger-row + .ledger-row::before,
+.vg-route-customer .customer-tx-list .ledger-row + .ledger-row::before,
+.vg-route-reports .rtp-list .ledger-row + .ledger-row::before,
+.vg-route-inventory main .ledger-row + .ledger-row::before{
+  content:'';
+  position:absolute;
+  top:0;
+  inset-inline-start:6px;
+  inset-inline-end:6px;
+  height:1px;
+  background:var(--vg-color-divider);
+  pointer-events:none;
+}
+
+/* Visit/evaluation rows (item I): the supporting detail lines (reason,
+   opportunity, threat, next action, tags) were the same visual weight as
+   the date line. Keep the date as the immediate secondary line, and make
+   the additional detail lines quieter and more tightly set so the row
+   reads as one primary fact + supporting detail, not a wall of equal
+   facts. */
+.vg-route-customer .customer-visit-row-detail{
+  font-size:.72rem;
+  line-height:1.5;
+  opacity:.85;
+}
+
 /* ---------- Mobile responsiveness ---------- */
 @media (max-width:419px){
   :root{
@@ -640,6 +731,33 @@ main .empty{margin:14px 0;}
   letter-spacing:-.1px;
 }
 #product-list .product-row-qty-value{
-  font-weight:700;
+  font-weight:600;
   letter-spacing:.1px;
+  color:var(--vg-color-text-secondary);
+}
+#product-list .product-row-value .tx-row-total{
+  color:var(--vg-color-text);
+}
+
+/* مشاهده انبار: a real navigation control that was reading as passive
+   text. Add a quiet chevron (same disclosure glyph used elsewhere) so its
+   tap affordance is obvious without turning it into a heavier button. */
+.vg-route-products .btn-row > a.btn.secondary.small[href="#/inventory"]{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+}
+.vg-route-products .btn-row > a.btn.secondary.small[href="#/inventory"]::after{
+  content:'';
+  width:12px;
+  height:12px;
+  flex:none;
+  opacity:.55;
+  background-color:currentColor;
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m15 18-6-6 6-6'/%3E%3C/svg%3E");
+  mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m15 18-6-6 6-6'/%3E%3C/svg%3E");
+  -webkit-mask-size:contain;
+  mask-size:contain;
+  -webkit-mask-repeat:no-repeat;
+  mask-repeat:no-repeat;
 }
