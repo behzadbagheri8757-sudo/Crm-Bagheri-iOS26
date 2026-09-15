@@ -2292,10 +2292,10 @@ function openInvoiceForm(cid, editInv){
           <div class="field inv-date-field"><label>تاریخ فاکتور</label>${shamsiDateInputHTML('f-date', editInv?editInv.date:todayISO())}</div>
 
           <div class="inv-section inv-items-section">
+            <div class="inv-items-card-head">
+              <span class="inv-items-card-label">اقلام فاکتور</span>
+            </div>
             <div class="inv-items-card">
-              <div class="inv-items-card-head">
-                <span class="inv-items-card-label">اقلام فاکتور</span>
-              </div>
               <div id="items-wrap" class="inv-items">${itemsHtml()}</div>
               <button type="button" class="inv-add-line" id="add-row"><span class="inv-add-line-icon" aria-hidden="true">+</span> افزودن قلم جدید</button>
             </div>
