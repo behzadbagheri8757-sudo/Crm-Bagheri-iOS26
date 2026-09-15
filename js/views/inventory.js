@@ -14,6 +14,14 @@
     return { label: 'کافی', cls: 'accent-olive' };
   }
 
+  // Display-only: cap quantity to 2 decimal places (e.g. 3.176470588 -> 3.18).
+  // Does not touch stored values or any calculation — formatting only.
+  function fmtQty(n) {
+    var num = Number(n) || 0;
+    var rounded = Math.round(num * 100) / 100;
+    return String(rounded);
+  }
+
   function stockTypeLabel(type) {
     const map = {
       in: 'ورود',
@@ -105,7 +113,7 @@
             '<span class="amount ' +
             qtyCls +
             '">' +
-            (p.stockQty || 0) +
+            fmtQty(p.stockQty) +
             '<span class="sub" style="display:block;">' +
             toman(val) +
             ' ت</span></span></div>'
@@ -128,7 +136,7 @@
         '<span class="amount ' +
         signCls +
         '">' +
-        (qty > 0 ? '+' + qty : qty) +
+        (qty > 0 ? '+' + fmtQty(qty) : fmtQty(qty)) +
         '</span></div>'
       );
     }

@@ -69,53 +69,61 @@
     root.innerHTML = `
       <p class="tx-hint">مدیریت داده‌ها، پشتیبان‌گیری و امنیت برنامه.</p>
 
-      <div class="settings-section mgmt-section">
+      <div class="mgmt-section">
         <h3 class="mgmt-section-title">داده و بکاپ</h3>
-        <div class="settings-warn">
-          فایل JSON را در جایی امن نگه دارید (Files / ابر). روی iPhone معمولاً Share → Save to Files.
-        </div>
-        <div class="btn-row tx-actions-primary">
-          <button type="button" class="btn" id="export-json">دریافت Backup (JSON)</button>
-          <button type="button" class="btn secondary" id="export-excel">خروجی اکسل</button>
+        <div class="settings-section">
+          <div class="settings-warn">
+            فایل JSON را در جایی امن نگه دارید (Files / ابر). روی iPhone معمولاً Share → Save to Files.
+          </div>
+          <div class="btn-row tx-actions-primary">
+            <button type="button" class="btn" id="export-json">دریافت Backup (JSON)</button>
+            <button type="button" class="btn secondary settings-action-link" id="export-excel">خروجی اکسل</button>
+          </div>
         </div>
       </div>
 
-      <div class="settings-section mgmt-section">
+      <div class="mgmt-section">
         <h3 class="mgmt-section-title">بازیابی از فایل</h3>
-        <div class="settings-warn">
-          بازیابی اطلاعات فعلی را <b>جایگزین</b> می‌کند؛ قبلش نسخهٔ برگشت ذخیره می‌شود.
-        </div>
-        <div class="field"><label>انتخاب فایل بکاپ JSON</label>
-          <input type="file" id="import-file" accept="application/json,.json">
-        </div>
-        <div class="btn-row">
-          <button type="button" class="btn danger" id="do-import">بازیابی و جایگزینی</button>
-          <button type="button" class="btn secondary" id="undo-import" ${canUndo ? '' : 'disabled'}>
-            بازگشت به نسخه قبل از آخرین بازیابی
-          </button>
-        </div>
-        <div class="sub settings-restore-note">
-          ${canUndo
-            ? 'نسخهٔ قبل از آخرین Restore در دسترس است و می‌توانید برگردید.'
-            : 'هنوز نسخهٔ قبل از Restore ذخیره نشده (بعد از یک بازیابی موفق فعال می‌شود).'}
+        <div class="settings-section">
+          <div class="settings-warn">
+            بازیابی اطلاعات فعلی را <b>جایگزین</b> می‌کند؛ قبلش نسخهٔ برگشت ذخیره می‌شود.
+          </div>
+          <div class="field"><label>انتخاب فایل بکاپ JSON</label>
+            <input type="file" id="import-file" accept="application/json,.json">
+          </div>
+          <div class="btn-row">
+            <button type="button" class="btn danger" id="do-import">بازیابی و جایگزینی</button>
+            <button type="button" class="btn secondary settings-action-link" id="undo-import" ${canUndo ? '' : 'disabled'}>
+              بازگشت به نسخه قبل از آخرین بازیابی
+            </button>
+          </div>
+          <div class="sub settings-restore-note">
+            ${canUndo
+              ? 'نسخهٔ قبل از آخرین Restore در دسترس است و می‌توانید برگردید.'
+              : 'هنوز نسخهٔ قبل از Restore ذخیره نشده (بعد از یک بازیابی موفق فعال می‌شود).'}
+          </div>
         </div>
       </div>
 
-      <div class="settings-section mgmt-section">
+      <div class="mgmt-section">
         <h3 class="mgmt-section-title">بکاپ خودکار داخلی</h3>
-        <div class="sub settings-description">
-          برنامه در صورت استفاده، حداکثر هر ۱۲ ساعت یک نسخه از داده‌های CRM، FIFO، هدف فروش، ProspectScout و Intelligence داخل IndexedDB نگه می‌دارد (تا ۵ نسخه). این جایگزین Backup فایل JSON نیست.
+        <div class="settings-section">
+          <div class="sub settings-description">
+            برنامه در صورت استفاده، حداکثر هر ۱۲ ساعت یک نسخه از داده‌های CRM، FIFO، هدف فروش، ProspectScout و Intelligence داخل IndexedDB نگه می‌دارد (تا ۵ نسخه). این جایگزین Backup فایل JSON نیست.
+          </div>
+          <div class="card">${autoHtml}</div>
         </div>
-        <div class="card">${autoHtml}</div>
       </div>
 
-      <div class="settings-section mgmt-section">
+      <div class="mgmt-section">
         <h3 class="mgmt-section-title">موقعیت مکانی</h3>
-        <div class="sub settings-description">
-          مدیریت ساختار منطقه › مسیر › محله، مشترک بین مشتریان و مغازه‌های بالقوه.
-        </div>
-        <div class="btn-row">
-          <a class="btn small secondary" href="#/locations">مدیریت موقعیت مکانی</a>
+        <div class="settings-section">
+          <div class="sub settings-description">
+            مدیریت ساختار منطقه › مسیر › محله، مشترک بین مشتریان و مغازه‌های بالقوه.
+          </div>
+          <div class="btn-row">
+            <a class="btn small secondary settings-action-link" href="#/locations">مدیریت موقعیت مکانی</a>
+          </div>
         </div>
       </div>
 
@@ -132,17 +140,19 @@
         </div>
       </details>
 
-      <div class="settings-section mgmt-section">
+      <div class="mgmt-section">
         <h3 class="mgmt-section-title">امنیت — قفل PIN</h3>
-        <div class="sub settings-description">
-          با فعال‌سازی PIN، بعد از خروج از برنامه یا رفتن به پس‌زمینه، برای ورود دوباره باید کد شش‌رقمی را وارد کنید. PIN روی همین دستگاه در localStorage ذخیره می‌شود (هش‌شده) و داخل Backup نیست.
-        </div>
-        <div id="pin-settings-status" class="card pin-status"></div>
-        <div class="btn-row">
-          <button type="button" class="btn small" id="pin-set-btn">تنظیم PIN</button>
-          <button type="button" class="btn small secondary" id="pin-change-btn">تغییر PIN</button>
-          <button type="button" class="btn small secondary" id="pin-clear-btn">حذف PIN</button>
-          <button type="button" class="btn small secondary" id="pin-lock-now-btn">قفل اکنون</button>
+        <div class="settings-section">
+          <div class="sub settings-description">
+            با فعال‌سازی PIN، بعد از خروج از برنامه یا رفتن به پس‌زمینه، برای ورود دوباره باید کد شش‌رقمی را وارد کنید. PIN روی همین دستگاه در localStorage ذخیره می‌شود (هش‌شده) و داخل Backup نیست.
+          </div>
+          <div id="pin-settings-status" class="card pin-status"></div>
+          <div class="btn-row">
+            <button type="button" class="btn small" id="pin-set-btn">تنظیم PIN</button>
+            <button type="button" class="btn small secondary" id="pin-change-btn">تغییر PIN</button>
+            <button type="button" class="btn small secondary" id="pin-clear-btn">حذف PIN</button>
+            <button type="button" class="btn small secondary" id="pin-lock-now-btn">قفل اکنون</button>
+          </div>
         </div>
       </div>
 

@@ -323,7 +323,7 @@
           '</div>';
       }).join('');
       confirmedHtml = '<div class="card wide watch-confirmed-card">' +
-        '<div class="label">هوش تجاری — تأییدشده (CONFIRMED)</div>' +
+        '<div class="label">هوش تجاری — تأییدشده</div>' +
         '<div class="watch-confirmed-list">' + crows + '</div></div>';
     }
 
@@ -613,7 +613,7 @@
             if (v.note) extraBits.push(v.note);
             const extraHtml = extraBits
               .map(function (x) {
-                return '<span class="sub">' + esc(x) + '</span>';
+                return '<span class="sub customer-visit-row-detail">' + esc(x) + '</span>';
               })
               .join('');
             const ordered = v.ordered || v.result === (typeof VISIT_RESULTS !== 'undefined' && VISIT_RESULTS[0]);
@@ -811,8 +811,8 @@
         '</div></div>' +
         '</div>' +
         '<div class="sub-title customer-detail-subtitle">کالاهای اصلی مشتری</div>' +
-        topProdHtml +
-        (decliningHtml ? '<div class="sub-title customer-detail-subtitle customer-detail-subtitle-secondary">کالاهای با کاهش خرید (نسبت به نیمه اول سابقه)</div>' + decliningHtml : '') +
+        '<div class="customer-tx-list customer-top-products">' + topProdHtml + '</div>' +
+        (decliningHtml ? '<div class="sub-title customer-detail-subtitle customer-detail-subtitle-secondary">کالاهای با کاهش خرید (نسبت به نیمه اول سابقه)</div><div class="customer-tx-list customer-declining-products">' + decliningHtml + '</div>' : '') +
         (lv
           ? '<div class="card customer-last-visit-card">' +
             '<div class="label">آخرین ویزیت — ' +
@@ -898,15 +898,15 @@
       '<h3 class="sub-title">فاکتورها (' +
       invs.length +
       ')</h3>' +
-      invRows +
+      '<div class="customer-tx-list customer-invoice-list">' + invRows + '</div>' +
       '<h3 class="sub-title">پرداخت‌ها (' +
       pays.length +
       ')</h3>' +
-      payRows +
+      '<div class="customer-tx-list customer-payment-list">' + payRows + '</div>' +
       '<h3 class="sub-title">چک‌ها (' +
       chks.length +
       ')</h3>' +
-      chkRows +
+      '<div class="customer-tx-list customer-check-list">' + chkRows + '</div>' +
       '<h3 class="sub-title">ویزیت‌ها و ارزیابی‌ها (' +
       visits.length +
       ')</h3>' +
@@ -914,7 +914,7 @@
       '<button type="button" class="btn small" id="act-visit-section">ثبت ویزیت برای این مشتری</button>' +
       '<a class="btn small secondary" href="#/visits">همه ویزیت‌ها</a>' +
       '</div>' +
-      visitRows;
+      '<div class="customer-tx-list customer-visit-list">' + visitRows + '</div>';
 
     document.getElementById('act-invoice').onclick = function () {
       openAddInvoice(c.id);
