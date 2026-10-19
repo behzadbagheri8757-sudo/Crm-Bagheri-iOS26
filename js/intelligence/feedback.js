@@ -29,7 +29,7 @@
     lsKey: 'bagheri_intelligence_seller_feedback',
     idbName: 'bagheri_intelligence_db',
     idbStore: 'seller_feedback',
-    idbVersion: 3
+    idbVersion: 4
   };
 
   var REASON_MODIFIERS = {
@@ -87,7 +87,7 @@
       var req = indexedDB.open(FEEDBACK_PARAMS.idbName, FEEDBACK_PARAMS.idbVersion);
       req.onupgradeneeded = function (ev) {
         var db = ev.target.result;
-        // Shared bagheri_intelligence_db schema (v3): ensure all Intelligence stores.
+        // Shared bagheri_intelligence_db schema (v4): ensure all Intelligence stores.
         if (!db.objectStoreNames.contains('occurrences')) {
           db.createObjectStore('occurrences', { keyPath: 'key' });
         }
@@ -96,6 +96,13 @@
         }
         if (!db.objectStoreNames.contains('baseline_cache')) {
           db.createObjectStore('baseline_cache', { keyPath: 'key' });
+        }
+        if (!db.objectStoreNames.contains('seller_acks')) {
+          var _ackSt = db.createObjectStore('seller_acks', { keyPath: 'id' });
+          try {
+            _ackSt.createIndex('by_customer_status', ['customerId', 'status'], { unique: false });
+            _ackSt.createIndex('by_expiry', 'expiresAt', { unique: false });
+          } catch (_ackIdxErr) { /* ignore */ }
         }
       };
       req.onsuccess = function (ev) {
@@ -166,6 +173,23 @@
     _mem.push(rec);
     _saveLS();
     _idbPut(rec);
+    // ACK: mirror into the unified SellerAck AFTER the legacy write. Legacy write is never
+    // rolled back and a failure here never reaches the caller (fail-open).
+    try {
+      if (typeof createAck === 'function' && typeof ackNormalizeDecision === 'function' && ackNormalizeDecision(reasonCode)) {
+        createAck({
+          customerId: customerId,
+          productId: rec.productId,
+          scope: rec.productId ? 'product' : 'account',
+          decision: reasonCode,
+          source: (source === 'visit' || source === 'invoice') ? source : 'invoice',
+          sourceId: null,
+          sourceContext: { signalCategory: signalCategory },
+          note: rec.comment,
+          legacyKey: 'fb:' + rec.id
+        });
+      }
+    } catch (eAck) { console.warn('ACK mirror failed (feedback kept)', eAck); }
     return rec;
   }
 
@@ -227,6 +251,17 @@
     return age <= _persistenceWindowDays();
   }
 
+  function _sameFamily(feedbackPid, signalPid, signal) {
+    if (typeof resolveFamilyId !== 'function') return false;
+    try {
+      var sf = (signal && signal.familyId != null && signal.familyId !== '')
+        ? signal.familyId
+        : resolveFamilyId(signalPid);
+      var ff = resolveFamilyId(feedbackPid);
+      return sf != null && ff != null && sf === ff;
+    } catch (e) { return false; }
+  }
+
   function getFeedbackForSignal(signal) {
     if (!signal || !signal.customerId || !signal.category) return null;
     var cid = signal.customerId;
@@ -240,7 +275,14 @@
       // productId: if signal has productId, require match; if signal has none, match null/empty feedback
       var fPid = f.productId != null ? f.productId : null;
       if (pid != null && pid !== '') {
-        if (fPid !== pid) continue;
+        // Exact SKU match (legacy behaviour) is always kept. In addition,
+        // Feedback and Signal that resolve — at runtime, from CURRENT
+        // product data — to the same Family (analysisGroupId||productId)
+        // match, because the Signal's episode identity (persistence) is
+        // Family-level. Nothing is written to the stored feedback record.
+        if (fPid !== pid) {
+          if (fPid == null || fPid === '' || !_sameFamily(fPid, pid, signal)) continue;
+        }
       } else {
         if (fPid != null && fPid !== '') continue;
       }
