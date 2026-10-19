@@ -1081,9 +1081,19 @@ function _behaviorDaysDiff(isoFrom, isoTo){
 /* PHASE 1 — Product Offered + Customer Reaction + Rejection Reason.
  * Pure derived read from data.customers[].visits[].offeredProducts[]. Never mutates data,
  * never counts accepted/deferred as a sale/order. */
-function _behaviorOfferedProductStats(visits){
+function _behaviorOfferedProductStats(visits, invs){
   const map = {}; // productId -> stat entry
   const order = [];
+  const lastPurchaseByProduct = {};
+  (invs || []).forEach(function(inv){
+    if(!inv || !inv.date || !Array.isArray(inv.items)) return;
+    inv.items.forEach(function(item){
+      if(!item || !item.productId || !(Number(item.qty) > 0)) return;
+      if(!lastPurchaseByProduct[item.productId] || String(inv.date) > String(lastPurchaseByProduct[item.productId])) {
+        lastPurchaseByProduct[item.productId] = String(inv.date);
+      }
+    });
+  });
   (visits || []).forEach(v=>{
     if(!Array.isArray(v.offeredProducts)) return;
     v.offeredProducts.forEach(op=>{
@@ -1101,6 +1111,7 @@ function _behaviorOfferedProductStats(visits){
           rejectionReasons: {},
           stillStockSources: { ours: 0, competitor: 0, unknown: 0 },
           lastOfferedDate: null,
+          lastPurchaseDate: lastPurchaseByProduct[pid] || null,
         };
         order.push(pid);
       }
@@ -1401,7 +1412,7 @@ function customerBehavior(cid, ctx, skipMemo){
   }
 
   // PHASE 1 + PHASE 2 — additive, derived-only metadata (see functions above).
-  const offeredProductStats = _behaviorOfferedProductStats(visits);
+  const offeredProductStats = _behaviorOfferedProductStats(visits, invs);
   const visitInvoiceStats = _behaviorVisitInvoiceStats(invs, visits);
 
   return {

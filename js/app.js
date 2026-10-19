@@ -1681,7 +1681,7 @@ function openAddVisit(cid){
       '</div>';
   }
   const followUpReminderHtml = visitFollowUps.length
-    ? '<div class="visit-watch-followups"><div class="bp-pre-label">پیگیری‌های منتظر</div>' +
+    ? '<div class="visit-watch-followups"><div class="bp-pre-label">پیگیری‌های باز</div>' +
       visitFollowUps.slice(0, 2).map(function (o) {
         const sentence = BP ? BP.watchSentence(o) : (o.generatedReason || '');
         return '<div class="visit-watch-followup-item">' +
