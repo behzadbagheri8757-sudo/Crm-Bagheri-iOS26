@@ -134,7 +134,7 @@
       if (s.ackActionEffect === 'suppress') continue; // ACK: seller decision suppresses this signal
       if (s.seasonallySuppressed) continue; // P-06: do not narrate false seasonal declines
       if (s.type === 'risk') risks.push(s);
-      else if (s.type === 'opportunity') opportunities.push(s);
+      else if (s.type === 'opportunity' && s.ackActionEffect !== 'suppress' && !s.ackReviewed) opportunities.push(s);
       else observations.push(s);
     }
 

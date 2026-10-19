@@ -776,6 +776,7 @@
   _loadLS();
   _openIdb(function (db) { if (db) _idbHydrate(function () {}); });
 
+  global.DECISION_LABELS = DECISION_LABELS;
   global.ACK_PARAMS = ACK_PARAMS;
   global.AFFECT_TABLE = AFFECT_TABLE;
   global.ACK_IMMEDIATE_CATEGORIES = ACK_IMMEDIATE_CATEGORIES;
