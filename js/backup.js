@@ -177,12 +177,13 @@ async function restoreProspectScoutBundle(bundle){
    Runtime DBs stay separate; one user-facing backup file.
    ============================================================ */
 const INTELLIGENCE_DB_NAME = 'bagheri_intelligence_db';
-const INTELLIGENCE_DB_VERSION = 3;
-const INTELLIGENCE_STORES = ['occurrences', 'seller_feedback', 'baseline_cache'];
+const INTELLIGENCE_DB_VERSION = 4;
+const INTELLIGENCE_STORES = ['occurrences', 'seller_feedback', 'baseline_cache', 'seller_acks'];
 const INTELLIGENCE_LS_KEYS = {
   occurrences: 'bagheri_intelligence_occurrences',
   seller_feedback: 'bagheri_intelligence_seller_feedback',
-  baseline_cache: 'bagheri_intelligence_baseline_cache'
+  baseline_cache: 'bagheri_intelligence_baseline_cache',
+  seller_acks: 'bagheri_seller_acks_v1'
 };
 
 function openIntelligenceDbForBackup(){
@@ -199,6 +200,10 @@ function openIntelligenceDbForBackup(){
         }
         if(!db.objectStoreNames.contains('baseline_cache')){
           db.createObjectStore('baseline_cache', { keyPath: 'key' });
+        }
+        if(!db.objectStoreNames.contains('seller_acks')){
+          const ackSt = db.createObjectStore('seller_acks', { keyPath: 'id' });
+          try{ ackSt.createIndex('by_customer_status', ['customerId','status'], { unique:false }); ackSt.createIndex('by_expiry','expiresAt',{ unique:false }); }catch(e){}
         }
       };
       req.onsuccess = (e)=> resolve(e.target.result);
@@ -228,6 +233,7 @@ async function exportIntelligenceBundle(){
     let occurrences = await intelligenceBackupGetAll(db, 'occurrences');
     let seller_feedback = await intelligenceBackupGetAll(db, 'seller_feedback');
     let baseline_cache = await intelligenceBackupGetAll(db, 'baseline_cache');
+    let seller_acks = await intelligenceBackupGetAll(db, 'seller_acks');
     // localStorage is the synchronous mirror used by the Intelligence modules
     // for immediate state. Prefer it when present so a backup taken immediately
     // after a write cannot capture a stale async IDB mirror.
@@ -236,10 +242,12 @@ async function exportIntelligenceBundle(){
       if(occRaw){ const map=JSON.parse(occRaw); if(map && typeof map==='object' && !Array.isArray(map)) occurrences=Object.keys(map).map(k=>({key:k,dates:Array.isArray(map[k])?map[k]:[]})); }
       const fbRaw=localStorage.getItem(INTELLIGENCE_LS_KEYS.seller_feedback);
       if(fbRaw){ const arr=JSON.parse(fbRaw); if(Array.isArray(arr)) seller_feedback=arr; }
+      const ackRaw=localStorage.getItem(INTELLIGENCE_LS_KEYS.seller_acks);
+      if(ackRaw){ const arr=JSON.parse(ackRaw); if(Array.isArray(arr)) seller_acks=arr; }
       const baseRaw=localStorage.getItem(INTELLIGENCE_LS_KEYS.baseline_cache);
       if(baseRaw){ const map=JSON.parse(baseRaw); if(map && typeof map==='object' && !Array.isArray(map)) baseline_cache=Object.keys(map).map(k=>map[k]).filter(Boolean); }
     }catch(lsErr){ console.warn('exportIntelligenceBundle localStorage mirror read failed',lsErr); }
-    return { dbVersion: INTELLIGENCE_DB_VERSION, occurrences: occurrences || [], seller_feedback: seller_feedback || [], baseline_cache: baseline_cache || [] };
+    return { dbVersion: INTELLIGENCE_DB_VERSION, occurrences: occurrences || [], seller_feedback: seller_feedback || [], baseline_cache: baseline_cache || [], seller_acks: seller_acks || [] };
   }catch(e){
     console.error('exportIntelligenceBundle failed', e);
     return null;
@@ -294,7 +302,8 @@ async function restoreIntelligenceBundle(bundle){
     await runIntelligenceRestoreTx(db, {
       occurrences: Array.isArray(bundle.occurrences) ? bundle.occurrences : [],
       seller_feedback: Array.isArray(bundle.seller_feedback) ? bundle.seller_feedback : [],
-      baseline_cache: Array.isArray(bundle.baseline_cache) ? bundle.baseline_cache : []
+      baseline_cache: Array.isArray(bundle.baseline_cache) ? bundle.baseline_cache : [],
+      seller_acks: Array.isArray(bundle.seller_acks) ? bundle.seller_acks : []
     });
 
     try{
@@ -317,6 +326,8 @@ async function restoreIntelligenceBundle(bundle){
           if(row && row.key != null) baseMap[row.key] = row;
         });
         localStorage.setItem(INTELLIGENCE_LS_KEYS.baseline_cache, JSON.stringify(baseMap));
+        localStorage.setItem(INTELLIGENCE_LS_KEYS.seller_acks, JSON.stringify(Array.isArray(bundle.seller_acks) ? bundle.seller_acks : []));
+        if(typeof replaceAllAcks==='function') replaceAllAcks(Array.isArray(bundle.seller_acks) ? bundle.seller_acks : []);
       }
     }catch(lsErr){
       console.warn('intelligence localStorage mirror refresh failed', lsErr);
@@ -360,7 +371,7 @@ async function restoreWatchLifecycleBundleForBackup(bundle){
 
 function _validateWatchLifecycleBundle(bundle){
   if(!_isPlainObject(bundle)) return false;
-  if(bundle.version != null && Number(bundle.version) !== 1) return false;
+  if(bundle.version != null && ![1,2].includes(Number(bundle.version))) return false;
   if(!Array.isArray(bundle.occurrences)) return false;
   for(const row of bundle.occurrences){
     if(!_isPlainObject(row) || row.id == null || row.customerId == null || !row.watchCategory) return false;
@@ -461,6 +472,15 @@ function _normalizeBackupEnvelope(parsed){
     if(Object.prototype.hasOwnProperty.call(intel, 'version')){
       delete intel.version;
     }
+    // Pre-ACK backups (dbVersion 3, no seller_acks): align to the v4 export shape WITHOUT erasing
+    // the ACKs that exist now (owner rule: a v3 restore never wipes seller_acks). The current ACK
+    // rows are carried into the restored state; legacy rows from the backup are then merged in by
+    // the idempotent migrateLegacyAcknowledgments() after the verified commit.
+    if(intel.seller_acks == null){
+      try{ intel.seller_acks = (typeof exportAcks==='function') ? JSON.parse(JSON.stringify(exportAcks())) : []; }
+      catch(_e){ intel.seller_acks = []; }
+    }
+    if(intel.dbVersion == null || Number(intel.dbVersion) === 3) intel.dbVersion = 4;
   }
   return parsed;
 }
@@ -557,9 +577,14 @@ const _INTEL_CONFIRMED_CATEGORIES = new Set([
 const _INTEL_FEEDBACK_REASONS = new Set(['competitor_bought','still_stock','no_need','price_issue','liquidity']);
 const _INTEL_FEEDBACK_SOURCES = new Set(['visit','invoice']);
 const _INTEL_BASELINE_REASONS = new Set(['establish','shift']);
-function _validateIntelligenceBundle(bundle, customerIds, productIds){
+function _validateIntelligenceBundle(bundle, customerIds, productIds, products, analysisGroups){
   if(!_isPlainObject(bundle)) return false;
-  if(bundle.dbVersion != null && Number(bundle.dbVersion) !== 3) return false;
+  // Family identity (runtime: familyId = product.analysisGroupId || product.id) is derived
+  // from the backup's own products/analysisGroups — never hard-coded.
+  const groupIds=new Set((Array.isArray(analysisGroups)?analysisGroups:[]).map(g=>String(g&&g.id)));
+  const familyOf=new Map();
+  (Array.isArray(products)?products:[]).forEach(p=>{ if(p&&p.id!=null) familyOf.set(String(p.id),(p.analysisGroupId!=null&&p.analysisGroupId!=='')?String(p.analysisGroupId):String(p.id)); });
+  if(bundle.dbVersion != null && Number(bundle.dbVersion) !== 3 && Number(bundle.dbVersion) !== 4) return false;
   for(const k of ['occurrences','seller_feedback','baseline_cache']) if(!Array.isArray(bundle[k])) return false;
   const occKeys=new Set();
   for(const row of bundle.occurrences){
@@ -570,7 +595,7 @@ function _validateIntelligenceBundle(bundle, customerIds, productIds){
     if(!customerIds.has(String(parts[0]))) return false;
     if(!_INTEL_CONFIRMED_CATEGORIES.has(parts[1])) return false;
     const pid=parts.slice(2).join('|');
-    if(pid && pid!=='multi' && !productIds.has(String(pid))) return false;
+    if(pid && pid!=='multi' && !productIds.has(String(pid)) && !groupIds.has(String(pid))) return false;
     const dates=new Set();
     for(const d of row.dates){ if(!_isIsoDateOnly(d) || dates.has(d)) return false; dates.add(d); }
   }
@@ -586,6 +611,21 @@ function _validateIntelligenceBundle(bundle, customerIds, productIds){
     if(!_isIsoTimestamp(f.createdAt)) return false;
     if(f.source != null && !_INTEL_FEEDBACK_SOURCES.has(String(f.source))) return false;
   }
+  // seller_acks (v4): optional for older backups; structural validation only
+  // (orphan references are harmless — an ACK only ever matches live signals).
+  if(bundle.seller_acks != null){
+    if(!Array.isArray(bundle.seller_acks)) return false;
+    const ackIds=new Set();
+    const ackDecisions=new Set(['still_stock','no_need','not_wanted','follow_up_later','price','competitor','quality','other','dismiss','unavailable','visit_reviewed']);
+    const ackStatuses=new Set(['active','expired','reversed','superseded']);
+    for(const a of bundle.seller_acks){
+      if(!_isPlainObject(a) || typeof a.id!=='string' || !a.id) return false;
+      if(ackIds.has(a.id)) return false; ackIds.add(a.id);
+      if(typeof a.customerId!=='string' || !a.customerId) return false;
+      if(!ackDecisions.has(String(a.decision)) || !ackStatuses.has(String(a.status))) return false;
+      if(a.scope!=='product' && a.scope!=='account') return false;
+    }
+  }
   const baseKeys=new Set();
   for(const b of bundle.baseline_cache){
     if(!_isPlainObject(b) || typeof b.key!=='string' || !b.key) return false;
@@ -596,7 +636,74 @@ function _validateIntelligenceBundle(bundle, customerIds, productIds){
     if(!Number.isInteger(Number(b.purchaseCount)) || Number(b.purchaseCount)<0) return false;
     if(!_isIsoTimestamp(b.updatedAt)) return false;
     if(b.reason != null && !_INTEL_BASELINE_REASONS.has(String(b.reason))) return false;
-    if(b.key !== String(b.customerId)+'|'+String(b.productId)) return false;
+    const bPid=String(b.productId), bFam=familyOf.get(bPid)||bPid, bPrefix=String(b.customerId)+'|';
+    // Runtime key = customerId|familyId; legacy customerId|productId (pre-Family records the runtime leaves untouched) stays valid.
+    if(b.key !== bPrefix+bFam && b.key !== bPrefix+bPid) return false;
+  }
+  return true;
+}
+
+/**
+ * Content validation for data.suppliers[] (purchases / payments / returns).
+ * Mirrors the existing invoice-item numeric + productId-FK checks: only
+ * finite/non-negative amounts and productId references that resolve within
+ * the same backup's products[] are required — both are true for every
+ * schema version this app has ever written (products are never hard-deleted,
+ * only soft-deleted via active:false), so this cannot reject a legitimate
+ * legacy backup. date/method/desc fields are left unvalidated, same as the
+ * top-level invoices/payments already do, for the same backward-compat
+ * reason. Missing purchases/payments arrays are fine (older suppliers may
+ * have neither).
+ */
+function _validateSupplierBundle(suppliers, productIds){
+  for(const s of suppliers){
+    if(!_isPlainObject(s)) return false;
+    if(s.openingBalance != null && !Number.isFinite(Number(s.openingBalance))) return false;
+    if(s.purchases != null){
+      if(!Array.isArray(s.purchases) || !_uniqueIds(s.purchases)) return false;
+      for(const p of s.purchases){
+        if(!_isPlainObject(p) || !_isFiniteNonNegative(p.amount)) return false;
+        if(p.productId != null && p.productId !== '' && !productIds.has(String(p.productId))) return false;
+        if(p.qty != null && !_isFiniteNonNegative(p.qty)) return false;
+        if(p.items != null){
+          if(!Array.isArray(p.items)) return false;
+          for(const it of p.items){
+            if(!_isPlainObject(it) || it.productId==null || !productIds.has(String(it.productId))) return false;
+            if(!_isFiniteNonNegative(it.qty) || !_isFiniteNonNegative(it.unitCost)) return false;
+            if(it.lineAmount != null && !_isFiniteNonNegative(it.lineAmount)) return false;
+          }
+        }
+        if(p.returns != null){
+          if(!Array.isArray(p.returns)) return false;
+          for(const r of p.returns){
+            if(!_isPlainObject(r)) return false;
+            if(r.amount != null && !_isFiniteNonNegative(r.amount)) return false;
+            if(r.qty != null && !_isFiniteNonNegative(r.qty)) return false;
+          }
+        }
+      }
+    }
+    if(s.payments != null){
+      if(!Array.isArray(s.payments)) return false;
+      // supplier.payments[].id is OPTIONAL, not an invariant: js/models.js
+      // documents the legacy {date, amount} shape (no id) as valid, no
+      // runtime code (supplier.js delete/edit, calc.js totals) looks payments
+      // up by id — all lookups are index/reference based — and normalizeData()
+      // (js/db.js) never backfills an id for this array. Requiring id here
+      // rejected self-produced backups containing legacy records (backup
+      // self-compatibility bug). Still enforce uniqueness among ids that ARE
+      // present, to catch actual corruption/duplication.
+      const seenPayIds = new Set();
+      for(const p of s.payments){
+        if(!_isPlainObject(p) || !_isFiniteNonNegative(p.amount)) return false;
+        if(p.faceAmount != null && !_isFiniteNonNegative(p.faceAmount)) return false;
+        if(p.id != null && String(p.id) !== ''){
+          const key = String(p.id);
+          if(seenPayIds.has(key)) return false;
+          seenPayIds.add(key);
+        }
+      }
+    }
   }
   return true;
 }
@@ -619,10 +726,25 @@ function validateBackupShape(parsed){
     if(!_isPlainObject(parsed.settings)) return false;
     if(parsed.settings.monthlySalesTarget != null && !_isFiniteNonNegative(parsed.settings.monthlySalesTarget)) return false;
   }
+  // Product Analysis Group — presence-triggered: absent on older backups (valid,
+  // normalizeData() defaults to []); when present, validated but never version-gated.
+  if(parsed.analysisGroups != null){
+    if(!Array.isArray(parsed.analysisGroups)) return false;
+    if(!_uniqueIds(parsed.analysisGroups)) return false;
+    for(const g of parsed.analysisGroups){
+      if(!_isPlainObject(g) || typeof g.name !== 'string') return false;
+      if(g.status != null && !['active','archived'].includes(String(g.status))) return false;
+    }
+  }
   if(!_uniqueIds(parsed.products) || !_uniqueIds(parsed.customers) || !_uniqueIds(parsed.invoices) || !_uniqueIds(parsed.payments) || !_uniqueIds(parsed.checks) || !_uniqueIds(parsed.suppliers)) return false;
   const productIds=new Set(parsed.products.map(x=>String(x.id)));
   const customerIds=new Set(parsed.customers.map(x=>String(x.id)));
   const invoiceIds=new Set(parsed.invoices.map(x=>String(x.id)));
+  // Supplier purchases/payments/returns previously had no content validation
+  // beyond top-level id uniqueness — a corrupt amount or dangling productId
+  // would silently pass through to normalizeData(), which coerces bad
+  // numbers to 0 instead of rejecting the backup (see js/db.js normalizeData).
+  if(!_validateSupplierBundle(parsed.suppliers, productIds)) return false;
   const invoiceNumbers=new Set();
   for(const inv of parsed.invoices){
     if(!customerIds.has(String(inv.customerId)) || !Array.isArray(inv.items)) return false;
@@ -696,13 +818,13 @@ function validateBackupShape(parsed){
     // whitelist) must not reject the whole backup — CRM data (customers,
     // invoices, payments, etc.) is authoritative and independent of this
     // read-only, best-effort analytics layer. Drop just the bundle.
-    if(parsed.intelligence != null && !_validateIntelligenceBundle(parsed.intelligence, customerIds, productIds)){
+    if(parsed.intelligence != null && !_validateIntelligenceBundle(parsed.intelligence, customerIds, productIds, parsed.products, parsed.analysisGroups)){
       try{ console.warn('backup intelligence bundle invalid — ignoring (CRM data unaffected)'); }catch(_e){}
       delete parsed.intelligence;
     }
   } else {
     if(parsed.prospectScout!=null && !_validateProspectBundle(parsed.prospectScout, customerIds, new Set(), schema)) return false;
-    if(parsed.intelligence!=null && !_validateIntelligenceBundle(parsed.intelligence, customerIds, productIds)){
+    if(parsed.intelligence!=null && !_validateIntelligenceBundle(parsed.intelligence, customerIds, productIds, parsed.products, parsed.analysisGroups)){
       try{ console.warn('backup intelligence bundle invalid — ignoring (CRM data unaffected)'); }catch(_e){}
       delete parsed.intelligence;
     }
@@ -721,6 +843,7 @@ function validateBackupShape(parsed){
 }
 
 const RESTORE_JOURNAL_KEY = 'restoreJournal_v2';
+const RESTORE_JOURNAL_FAILED_KEY = 'restoreJournal_failed';
 
 function _deepClone(v){ return JSON.parse(JSON.stringify(v)); }
 function _stableValue(v){
@@ -760,7 +883,7 @@ async function restoreProspectScoutBundleStrict(bundle){
   return true;
 }
 async function restoreIntelligenceBundleStrict(bundle){
-  if(!_validateIntelligenceBundle(bundle,new Set((data.customers||[]).map(x=>String(x.id))),new Set((data.products||[]).map(x=>String(x.id))))) throw new Error('Intelligence bundle validation failed');
+  if(!_validateIntelligenceBundle(bundle,new Set((data.customers||[]).map(x=>String(x.id))),new Set((data.products||[]).map(x=>String(x.id))),data.products,data.analysisGroups)) throw new Error('Intelligence bundle validation failed');
   const db=await openIntelligenceDbForBackup();
   try{
     await runIntelligenceRestoreTx(db,bundle);
@@ -771,6 +894,8 @@ async function restoreIntelligenceBundleStrict(bundle){
   localStorage.setItem(INTELLIGENCE_LS_KEYS.occurrences,JSON.stringify(occMap));
   localStorage.setItem(INTELLIGENCE_LS_KEYS.seller_feedback,JSON.stringify(bundle.seller_feedback||[]));
   localStorage.setItem(INTELLIGENCE_LS_KEYS.baseline_cache,JSON.stringify(baseMap));
+  localStorage.setItem(INTELLIGENCE_LS_KEYS.seller_acks,JSON.stringify(bundle.seller_acks||[]));
+  if(typeof replaceAllAcks==='function') replaceAllAcks(bundle.seller_acks||[]);
   return true;
 }
 
@@ -793,7 +918,7 @@ async function _applyCrmSnapshot(snapshotData){
   const next=normalizeData(_deepClone(snapshotData));
   await dbPut(RECORD_KEY, JSON.stringify(next));
   data=next;
-  if(typeof _lastPersistedData!=='undefined') _lastPersistedData=_deepClone(next);
+  if(typeof _lastPersistedData!=='undefined') _lastPersistedData=JSON.stringify(next);
 }
 async function _restoreSnapshot(snapshot){
   await _applyCrmSnapshot(snapshot.data);
@@ -818,8 +943,27 @@ async function _recoverPendingRestoreJournal(){
   const rec=await dbGet(RESTORE_JOURNAL_KEY);
   if(!rec || !rec.value) return {ok:true, recovered:false};
   let journal;
-  try{ journal=JSON.parse(rec.value); }catch(e){ throw new Error('restore journal is corrupted'); }
-  if(!journal || ![2,3].includes(journal.version) || !journal.snapshot) throw new Error('restore journal is invalid');
+  try{ journal=JSON.parse(rec.value); }catch(e){
+    // BUGFIX (Audit #9): an unparseable journal can never be recovered by
+    // retrying — retaining it made loadData() throw the same error on
+    // every future boot (bootSpaShell's waitForCrmDataLoad retry, and
+    // bootPage's "reopen the page" message, both just call loadData()
+    // again), permanently blocking the app. Discard it and let boot
+    // proceed with whatever is already committed; this does not touch
+    // the "recovery attempt genuinely failed" path below, which still
+    // retains a structurally valid journal for retry.
+    console.error('Pending restore journal is corrupted (unparseable JSON); discarding to allow boot', e);
+    try{ await dbDelete(RESTORE_JOURNAL_KEY); }catch(_de){}
+    return {ok:true, recovered:false, discarded:true};
+  }
+  if(!journal || ![2,3].includes(journal.version) || !journal.snapshot){
+    // Same reasoning as above: a structurally invalid journal (bad/missing
+    // version, missing snapshot) has nothing usable to roll back to, so
+    // retaining it only guarantees the next boot fails identically.
+    console.error('Pending restore journal is structurally invalid; discarding to allow boot');
+    try{ await dbDelete(RESTORE_JOURNAL_KEY); }catch(_de){}
+    return {ok:true, recovered:false, discarded:true};
+  }
   try{
     if(!journal.snapshot.watchLifecycle){
       const wSnap=await dbGet(PRERESTORE_WATCH_KEY);
@@ -837,8 +981,18 @@ async function _recoverPendingRestoreJournal(){
     await dbDelete(RESTORE_JOURNAL_KEY);
     return {ok:true,recovered:true};
   }catch(e){
-    console.error('Pending restore recovery failed; journal retained for retry',e);
-    throw new Error('بازیابی ایمن اطلاعات ناقص است؛ برنامه بدون ادامه‌ی کار متوقف شد. دوباره برنامه را باز کنید.');
+    console.warn('Pending restore recovery failed; preserving journal under restoreJournal_failed and allowing boot',e);
+    try{
+      await dbPut(RESTORE_JOURNAL_FAILED_KEY, JSON.stringify({
+        failedAt:new Date().toISOString(),
+        error:String(e && e.message || e),
+        journal:journal
+      }));
+      await dbDelete(RESTORE_JOURNAL_KEY);
+    }catch(moveErr){
+      console.error('Failed to archive restore journal failure; allowing boot anyway',moveErr);
+    }
+    return {ok:true, recovered:false, failed:true};
   }
 }
 
@@ -863,10 +1017,20 @@ async function _restoreParsedBackup(parsed){
     const nextData=normalizeData(_deepClone(parsed));
     await dbPut(RECORD_KEY, JSON.stringify(nextData));
     data=nextData;
-    if(typeof _lastPersistedData!=='undefined') _lastPersistedData=_deepClone(nextData);
+    if(typeof _lastPersistedData!=='undefined') _lastPersistedData=JSON.stringify(nextData);
     if(parsed.prospectScout){ if(!await restoreProspectScoutBundleStrict(parsed.prospectScout)) throw new Error('Prospect restore failed'); }
-    const restoredIntelligence = parsed.intelligence || {dbVersion:INTELLIGENCE_DB_VERSION, occurrences:[], seller_feedback:[], baseline_cache:[]};
-    if(!await restoreIntelligenceBundleStrict(restoredIntelligence)) throw new Error('Intelligence restore failed');
+    // BUGFIX (Audit #8): intelligence/watchLifecycle are optional/additive
+    // bundles (see validateBackupShape comments above) — an older or
+    // incomplete backup that omits them must leave the current, valid
+    // Intelligence/Watch data untouched, exactly like prospectScout and
+    // gameMeta/gameLedger already do below. The previous code substituted
+    // an EMPTY bundle and force-restored it whenever the field was absent,
+    // which clears the IndexedDB store (runIntelligenceRestoreTx / 
+    // restoreWatchLifecycleBundle both do store.clear()) — silently wiping
+    // real Intelligence/Watch history on a routine restore from any backup
+    // that simply predates these fields, or whose bundle was dropped by
+    // validateBackupShape for failing validation.
+    if(parsed.intelligence){ if(!await restoreIntelligenceBundleStrict(parsed.intelligence)) throw new Error('Intelligence restore failed'); }
     await _writeTargetValue(targetValue);
     if(parsed.gameMeta != null || parsed.gameLedger != null){
       if(!_validateGameState(parsed.gameMeta, parsed.gameLedger)) throw new Error('Game Center backup validation failed');
@@ -875,12 +1039,18 @@ async function _restoreParsedBackup(parsed){
     const expectedGame = (parsed.gameMeta != null || parsed.gameLedger != null)
       ? {gameMeta:_deepClone(parsed.gameMeta), gameLedger:_deepClone(parsed.gameLedger)}
       : previous.game;
-    const restoredWatchLifecycle = parsed.watchLifecycle || {version:1, dbVersion:1, occurrences:[]};
-    const expected={data:_deepClone(nextData),prospect:parsed.prospectScout ? _deepClone(parsed.prospectScout) : previous.prospect,intelligence:_deepClone(restoredIntelligence),target:{value:targetValue,localRaw:String(targetValue),dbRaw:targetValue},game:expectedGame,watchLifecycle:_deepClone(restoredWatchLifecycle)};
-    if(!await restoreWatchLifecycleBundleForBackup(restoredWatchLifecycle)) throw new Error('Watch Lifecycle restore failed');
+    if(parsed.watchLifecycle){ if(!await restoreWatchLifecycleBundleForBackup(parsed.watchLifecycle)) throw new Error('Watch Lifecycle restore failed'); }
+    const expected={data:_deepClone(nextData),prospect:parsed.prospectScout ? _deepClone(parsed.prospectScout) : previous.prospect,intelligence:parsed.intelligence ? _deepClone(parsed.intelligence) : previous.intelligence,target:{value:targetValue,localRaw:String(targetValue),dbRaw:targetValue},game:expectedGame,watchLifecycle:parsed.watchLifecycle ? _deepClone(parsed.watchLifecycle) : previous.watchLifecycle};
     const actual=await _readCurrentSemanticState();
     if(!_semanticStateEqual(actual,expected)) throw new Error('post-commit verification failed');
     await dbDelete(RESTORE_JOURNAL_KEY);
+    // ACK: a backup without ACKs (pre-ACK) is migrated from its legacy feedback/watch/visit
+    // records AFTER the verified commit. Idempotent (legacyKey), additive, never throws.
+    try{
+      if(typeof migrateLegacyAcknowledgments==='function'){
+        migrateLegacyAcknowledgments({force:true});   // idempotent (legacyKey); existing ACKs untouched
+      }
+    }catch(ackErr){ console.warn('post-restore ACK migration failed', ackErr); }
     return true;
   }catch(e){
     console.error('restore commit failed; attempting journaled rollback',e);
@@ -909,8 +1079,7 @@ async function importBackupJSON(file){
     _normalizeBackupEnvelope(parsed);
     if(!validateBackupShape(parsed)){ showToast(validateBackupShape.lastError || 'این فایل، فایل بکاپ معتبر یا کامل نیست'); return; }
     const ok=await _restoreParsedBackup(parsed);
-    if(ok==='warn'){ render(); showToast('اطلاعات بازیابی شد؛ اما تاریخچهٔ Watch بازیابی نشد'); }
-    else if(ok){ render(); showToast('اطلاعات با موفقیت بازیابی شد'); }
+    if(ok){ render(); showToast('اطلاعات با موفقیت بازیابی شد'); }
     else { render(); showToast('بازیابی انجام نشد؛ اطلاعات قبلی حفظ شد'); }
   }catch(e){
     console.error('importBackupJSON failed',e);
@@ -955,7 +1124,25 @@ async function getAutoBackupList(){
   return (rec && rec.value) ? JSON.parse(rec.value) : [];
 }
 
-async function autoBackupTick(){
+// FIX (Auto Backup Race): autoBackupTick() is fire-and-forget from every
+// saveData() call (see js/db.js), with no lock. Two overlapping calls near
+// the AUTO_BACKUP_INTERVAL_MS boundary would both read the same
+// AUTO_BACKUP_LIST_KEY list, both push their own {key, ts} onto their own
+// local copy, and whichever dbPut(AUTO_BACKUP_LIST_KEY, ...) lands last wins
+// — silently dropping the other call's metadata entry (its backup blob is
+// still written to IDB, just never tracked/shown or subject to retention).
+// Serializing invocations through a chained promise makes the read-modify
+// -write of the list atomic per tick; retention/restore behavior is
+// unchanged, this only prevents two ticks from running their list
+// read-modify-write concurrently.
+let _autoBackupChain = Promise.resolve();
+function autoBackupTick(){
+  const run = _autoBackupChain.then(_autoBackupTickImpl, _autoBackupTickImpl);
+  _autoBackupChain = run.then(()=>{}, ()=>{});
+  return run;
+}
+
+async function _autoBackupTickImpl(){
   const list = await getAutoBackupList();
   const last = list.length ? list[list.length-1].ts : 0;
   if(Date.now() - last < AUTO_BACKUP_INTERVAL_MS) return;
@@ -1000,10 +1187,22 @@ async function restoreFromAutoBackup(key){
   }
 }
 
-function exportExcel(){
+async function exportExcel(){
   if(typeof XLSX === 'undefined'){
-    showToast('کتابخانه اکسل لود نشد؛ برای این خروجی به اینترنت نیاز است');
-    return;
+    if(!window.__baqeriXlsxPromise){
+      window.__baqeriXlsxPromise = new Promise(function(resolve){
+        var s = document.createElement('script');
+        s.src = './vendor/xlsx.full.min.js';
+        s.async = false;
+        s.onload = function(){ resolve(typeof XLSX !== 'undefined'); };
+        s.onerror = function(){ resolve(false); };
+        document.head.appendChild(s);
+      });
+    }
+    if(!await window.__baqeriXlsxPromise){
+      showToast('کتابخانه اکسل لود نشد؛ برای این خروجی به اینترنت نیاز است');
+      return;
+    }
   }
   const wb = XLSX.utils.book_new();
 
