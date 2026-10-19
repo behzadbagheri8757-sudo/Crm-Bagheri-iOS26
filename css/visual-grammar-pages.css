@@ -2145,3 +2145,10 @@ html .sheet.inv-sheet-host .inv-mini-input:focus{
   border-color:var(--vg-color-primary);
   box-shadow:0 0 0 3px var(--vg-color-primary-soft);
 }
+/* Addendum V6: explicit red Quick View warning for an active bounced check. */
+.bp-qv-urgent{margin-top:12px;padding:8px 10px;border-radius:10px;background:color-mix(in srgb,var(--vg-color-danger) 12%,transparent);color:var(--vg-color-danger);font-size:.74rem;font-weight:800;}
+.bp-qv-attention{margin-top:12px;padding:8px 10px;border-radius:10px;background:var(--vg-color-warning-soft);border:1px solid var(--vg-color-warning);color:var(--vg-color-text);font-size:.74rem;line-height:1.8;font-weight:650;}
+.bp-qv-acks,.bp-qv-recommended{margin-top:14px;padding-top:12px;border-top:1px solid var(--vg-color-divider);}
+.bp-qv-ack-row{font-size:.73rem;line-height:1.8;color:var(--vg-color-text);}
+.bp-qv-action-description{margin-bottom:8px;font-size:.73rem;line-height:1.7;color:var(--vg-color-text);}
+.bp-qv-recommended .btn{width:100%;}
