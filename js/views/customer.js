@@ -170,6 +170,27 @@
    * Only products with rejectedCount >= threshold are returned.
    * Pure / read-only — does not write DB or mutate CRM.
    */
+  function isValidISODateOnly(value) {
+    return typeof value === 'string' && /^(?:\d{4})-(?:\d{2})-(?:\d{2})$/.test(value) && !isNaN(new Date(value + 'T00:00:00').getTime());
+  }
+
+  // A pure ours-stock response is not a product rejection.  Require positive,
+  // consistent evidence; zero-valued keys and missing fields must not hide data.
+  function isPureOursStillStock(st) {
+    var sources = st && st.stillStockSources && typeof st.stillStockSources === 'object'
+      ? st.stillStockSources : {};
+    var reasons = st && st.rejectionReasons && typeof st.rejectionReasons === 'object'
+      ? st.rejectionReasons : {};
+    var still = Number(reasons.still_stock) || 0;
+    var ours = Number(sources.ours) || 0;
+    var competitor = Number(sources.competitor) || 0;
+    var unknown = Number(sources.unknown) || 0;
+    if (!(still > 0 && ours === still && competitor === 0 && unknown === 0)) return false;
+    return Object.keys(reasons).every(function (code) {
+      return code === 'still_stock' || !(Number(reasons[code]) > 0);
+    });
+  }
+
   function buildProductRejectionInsights(customerId, threshold, ctx) {
     var out = [];
     if (!customerId || typeof customerBehavior !== 'function') return out;
@@ -189,6 +210,7 @@
       var offered = Number(st.offeredCount) || 0;
       if (rejected < thr) continue; // 1st and 2nd never shown
       if (offered < 1) continue;
+      if (isPureOursStillStock(st)) continue;
 
       var ratio = rejected / offered;
       // Contract from calc.js: use st.rejectionReasons only (not topRejectionReason/reasonCounts)
@@ -211,6 +233,13 @@
         if (p) name = p.name;
       }
 
+      var lastPurchaseDate = st.lastPurchaseDate || null;
+      var lastOfferedDate = st.lastOfferedDate || null;
+      // V1: any date comparison is guarded; malformed/empty dates never remove the item.
+      var purchasedAfterOffer = isValidISODateOnly(lastPurchaseDate) && isValidISODateOnly(lastOfferedDate)
+        ? lastPurchaseDate > lastOfferedDate
+        : null;
+      if (purchasedAfterOffer === true) continue;
       out.push({
         productId: st.productId,
         productName: name || String(st.productId),
@@ -218,7 +247,9 @@
         rejectedCount: rejected,
         rejectionRatio: ratio,
         topRejectionReason: topReason,
-        lastOfferedDate: st.lastOfferedDate || null,
+        lastPurchaseDate: lastPurchaseDate,
+        lastOfferedDate: lastOfferedDate,
+        purchasedAfterOffer: purchasedAfterOffer,
         stillStockSources: st.stillStockSources || null
       });
     }
@@ -428,7 +459,7 @@
         '<div class="watch-followup-actions"><button type="button" class="btn secondary small" data-followup-complete="' + esc(o.id) + '">ثبت نتیجه</button>' +
         '<button type="button" class="btn secondary small" data-followup-cancel="' + esc(o.id) + '">لغو پیگیری</button></div></div>';
     }).join('');
-    return '<div class="card wide watch-followup-card"><div class="label">پیگیری‌های منتظر</div>' + html + '</div>';
+    return '<div class="card wide watch-followup-card"><div class="label">پیگیری‌های باز</div>' + html + '</div>';
   }
 
   /* ---- P0: a few genuinely different, important topics. Hidden when there are none. ---- */
@@ -445,7 +476,7 @@
       var key = sg.productId ? 'p:' + sg.productId : 'c:' + (grp || sg.category);
       var label = CONFIRMED_TITLES[sg.category] || 'نیاز به بررسی';
       cands.push({
-        key: key, group: grp || null, order: order++, src: 2,
+        key: key, group: grp || null, kind: 'risk', bucket: 0, order: order++, src: 2,
         rank: P.lvRank(sg.severity), level: sg.severity,
         title: sg.productName ? (sg.productName + ' · ' + label) : label,
         text: sg.reason || '', occId: null,
@@ -456,16 +487,38 @@
       var grp = TOPIC_GROUPS[o.watchCategory];
       var key = o.productId ? 'p:' + o.productId : 'c:' + (grp || o.watchCategory);
       cands.push({
-        key: key, group: grp || null, order: order++, src: 1,
+        key: key, group: grp || null, kind: 'watch', bucket: 0, order: order++, src: 1,
         rank: P.lvRank(o.level), level: o.level,
         title: watchTitleText(o), text: P.watchSentence(o), occId: o.id || null, lowConf: false
+      });
+    });
+    // V7: eligible Opportunities are a real Focus group, after Risk/Watch and before Rejection.
+    // Use the same priority signal set/ACK application as Story and Action; do not let one Risk
+    // remove unrelated Opportunity products.
+    var opportunitySignals = [];
+    try {
+      var focusPriority = typeof calculateCustomerPriority === 'function'
+        ? calculateCustomerPriority(cid, { ctx: ctx })
+        : null;
+      opportunitySignals = focusPriority && Array.isArray(focusPriority.signals) ? focusPriority.signals : [];
+    } catch (eOpp) { opportunitySignals = []; }
+    opportunitySignals.forEach(function (sg) {
+      if (!sg || sg.type !== 'opportunity' || sg.ackActionEffect === 'suppress' || sg.ackReviewed) return;
+      var grp = TOPIC_GROUPS[sg.category];
+      var key = sg.productId ? 'p:' + sg.productId : 'o:' + (grp || sg.category);
+      var label = sg.productName ? (sg.productName + ' · ') : '';
+      cands.push({
+        key: key, group: grp || null, kind: 'opportunity', bucket: 1, order: order++, src: 0,
+        rank: P.lvRank(sg.severity), level: sg.severity || 'low',
+        title: label + (sg.title || 'فرصت فروش'),
+        text: sg.reason || '', occId: null, lowConf: false
       });
     });
     var rejItems = [];
     try { rejItems = buildProductRejectionInsights(cid, undefined, ctx) || []; } catch (eR) { rejItems = []; }
     rejItems.forEach(function (it) {
       cands.push({
-        key: 'rej:' + it.productId, group: null, order: order++, src: 0,
+        key: 'rej:' + it.productId, group: null, kind: 'rejection', bucket: 2, order: order++, src: 0,
         rank: 1, level: 'low',
         title: it.productName + ' · چند بار رد شده',
         text: rejectionSentence(it, true), occId: null, lowConf: false
@@ -486,7 +539,9 @@
       if (src) stockByPid[it.productId] = P.stockSentence(src);
     });
     var topics = Object.keys(best).map(function (k) { return best[k]; })
-      .sort(function (a, b) { return (b.score - a.score) || (a.c.order - b.c.order); })
+      .sort(function (a, b) {
+        return ((a.c.bucket || 0) - (b.c.bucket || 0)) || (b.score - a.score) || (a.c.order - b.c.order);
+      })
       .slice(0, 3)
       .map(function (x) { return x.c; })
       .filter(function (t) { return t.text || t.title; });
@@ -1224,16 +1279,7 @@
       (attRow
         ? '<div class="bp-customer-attention">' +
             '<span class="bp-attention-icon" aria-hidden="true"></span>' +
-            '<span>نیازمند پیگیری — ' +
-              toman(attRow.balance) + ' ت' +
-              (attRow.refKind === 'invoice_due'
-                ? (attRow.daysSince > 0 ? '، ' + toman(attRow.daysSince) + ' روز از سررسید آخرین فاکتور' : '، سررسید آخرین فاکتور امروز است')
-                : attRow.refKind === 'invoice_date'
-                ? '، ' + toman(attRow.daysSince) + ' روز از تاریخ آخرین فاکتور'
-                : attRow.refKind === 'no_payment_history'
-                ? '، ' + toman(attRow.daysSince) + ' روز از آخرین فاکتور، بدون پرداخت'
-                : '، ' + toman(attRow.daysSince) + ' روز از آخرین پرداخت') +
-            '</span>' +
+            '<span>' + esc(receivableAttentionSummary(attRow)) + '</span>' +
           '</div>'
         : '') +
       (legacyDebtRow && legacyDebtRow.amount > 0
@@ -1391,7 +1437,22 @@
     bindWatchLifecycleRows(root);
     bindWatchFollowUps(root, id);
   }
-
+  function receivableAttentionSummary(attRow) {
+    if (!attRow) return '';
+    var prefix = 'نیازمند پیگیری — ' + toman(attRow.balance) + ' ت';
+    if (attRow.refKind === 'invoice_due') {
+      return prefix + (attRow.daysSince > 0
+        ? '، ' + toman(attRow.daysSince) + ' روز از سررسید آخرین فاکتور'
+        : '، سررسید آخرین فاکتور امروز است');
+    }
+    if (attRow.refKind === 'invoice_date') {
+      return prefix + '، ' + toman(attRow.daysSince) + ' روز از تاریخ آخرین فاکتور';
+    }
+    if (attRow.refKind === 'no_payment_history') {
+      return prefix + '، ' + toman(attRow.daysSince) + ' روز از فاکتور آخر · پرداختی ثبت نشده';
+    }
+    return prefix + '، ' + toman(attRow.daysSince) + ' روز از آخرین پرداخت';
+  }
 
   /* Central quick view for the Customers list. Presentation-only: it reuses
      the frozen Priority/Watch/Balance outputs and existing action APIs. */
@@ -1404,11 +1465,43 @@
     var totals = customerTotals(cid, ctx) || { balance: 0 };
     var priority = null;
     try { priority = typeof calculateCustomerPriority === 'function' ? calculateCustomerPriority(cid, { ctx: ctx }) : null; } catch (e) { priority = null; }
+    // V2: use the real calculateCustomerAction(cid, precomputedPriority, opts) signature.
+    var recommendedAction = null;
+    try { recommendedAction = typeof calculateCustomerAction === 'function' ? calculateCustomerAction(cid, priority, { ctx: ctx }) : null; } catch (eA) { recommendedAction = null; }
     var story = priority && priority.customerStory && priority.customerStory.summary ? priority.customerStory.summary : '';
     var riskLevel = priority ? priority.riskLevel : null;
     var health = riskLevel === 'critical' ? 'نیاز به رسیدگی فوری' : riskLevel === 'high' ? 'نیاز به توجه' : riskLevel === 'medium' ? 'قابل بررسی' : 'وضعیت عادی';
     var watchData = loadWatchData(cid, ctx);
     var focus = customerFocusHtml(cid, ctx, watchData).html || '';
+    var attentionRow = null;
+    try {
+      if (ctx && typeof ctx.receivableAttention === 'function') {
+        var attentionData = ctx.receivableAttention();
+        attentionRow = attentionData && attentionData.byCustomerId ? attentionData.byCustomerId[cid] || null : null;
+      }
+    } catch (eAttention) { attentionRow = null; }
+    var activeChecks = [];
+    try { activeChecks = (typeof customerChecks === 'function' ? customerChecks(cid, ctx) : []) || []; } catch (eChk) { activeChecks = []; }
+    var hasBouncedCheck = activeChecks.some(function (ch) { return ch && ch.status === 'bounced'; });
+    var qvAcks = [];
+    try { qvAcks = typeof getActiveAcksForCustomer === 'function' ? (getActiveAcksForCustomer(cid) || []) : []; } catch (eAck) { qvAcks = []; }
+    var ackLabels = (typeof DECISION_LABELS !== 'undefined' && DECISION_LABELS) ? DECISION_LABELS : ((typeof window !== 'undefined' && window.DECISION_LABELS) || {});
+    var ackHtml = qvAcks.length ? '<div class="bp-qv-acks"><div class="bp-qv-section-label">تصمیم‌های ثبت‌شده فروشنده</div>' + qvAcks.map(function (a) {
+      var d = a.createdAt ? String(a.createdAt).slice(0, 10) : '';
+      var dateText = d ? (typeof faDate === 'function' ? faDate(d) : d) : '—';
+      return '<div class="bp-qv-ack-row">' + esc(ackLabels[a.decision] || a.decision || '—') + ' · ' + esc(dateText) + '</div>';
+    }).join('') + '</div>' : '';
+    var actionType = recommendedAction && recommendedAction.actionType && recommendedAction.actionType !== 'no_action' ? recommendedAction.actionType : null;
+    var actionLabel = recommendedAction && recommendedAction.action ? recommendedAction.action : '';
+    var actionButtonLabel = actionType === 'visit' || actionType === 'follow_up'
+      ? 'ثبت ویزیت'
+      : actionType === 'payment_followup'
+      ? 'ثبت پرداخت'
+      : actionType === 'check_followup'
+      ? 'ثبت چک'
+      : actionType
+      ? 'مشاهده جزئیات'
+      : '';
     // Quick View is deliberately non-destructive: no occurrence opens from here.
     focus = focus
       .replace(/\sdata-watch-occ="[^"]*"/g, '')
@@ -1431,8 +1524,14 @@
           '<div class="bp-qv-balance ' + (totals.balance > 0 ? 'is-debt' : '') + '">' + esc(balanceStatusWord(totals.balance)) + (totals.balance !== 0 ? ': ' + toman(Math.abs(totals.balance)) + ' ت' : '') + '</div>' +
           '<div class="bp-qv-health radar-risk-' + esc(riskLevel || 'normal') + '">' + esc(health) + '</div>' +
         '</div>' +
+        (attentionRow ? '<div class="bp-qv-attention" role="status">' + esc(receivableAttentionSummary(attentionRow)) + '</div>' : '') +
         (story ? '<div class="bp-qv-story"><div class="bp-qv-section-label">خلاصه وضعیت</div><div>' + esc(story) + '</div></div>' : '') +
+        (hasBouncedCheck ? '<div class="bp-qv-urgent" role="alert">⚠ اقدام فوری · چک برگشتی فعال</div>' : '') +
+        ackHtml +
         (focus ? '<div class="bp-qv-focus">' + focus + '</div>' : '') +
+        (actionButtonLabel ? '<div class="bp-qv-recommended"><div class="bp-qv-section-label">اقدام پیشنهادی</div>' +
+          (actionLabel ? '<div class="bp-qv-action-description">' + esc(actionLabel) + '</div>' : '') +
+          '<button type="button" class="btn primary" data-action="recommended">' + esc(actionButtonLabel) + '</button></div>' : '') +
         '<div class="bp-qv-actions">' +
           '<button type="button" class="btn primary" data-action="visit">ثبت ویزیت</button>' +
           '<button type="button" class="btn secondary" data-action="invoice">ثبت فاکتور</button>' +
@@ -1472,6 +1571,19 @@
           if (type === 'visit' && typeof openAddVisit === 'function') openAddVisit(cid);
           else if (type === 'invoice' && typeof openAddInvoice === 'function') openAddInvoice(cid);
           else if (type === 'payment' && typeof openAddTransaction === 'function') openAddTransaction(cid);
+          else if (type === 'recommended' && recommendedAction) {
+            var rt = recommendedAction.actionType;
+            if (rt === 'visit' || rt === 'follow_up') {
+              if (typeof openAddVisit === 'function') openAddVisit(cid);
+            } else if (rt === 'payment_followup') {
+              if (typeof openAddTransaction === 'function') openAddTransaction(cid);
+            } else if (rt === 'check_followup') {
+              if (typeof openAddCheck === 'function') openAddCheck(cid);
+              else if (typeof AppRouter !== 'undefined' && AppRouter.navigate) AppRouter.navigate('/customer', { id: cid });
+            } else if (typeof AppRouter !== 'undefined' && AppRouter.navigate) {
+              AppRouter.navigate('/customer', { id: cid });
+            }
+          }
         }, 185);
         return;
       }
@@ -1542,5 +1654,7 @@
   global.getProductRejectionThreshold = getProductRejectionThreshold;
   global.setProductRejectionThreshold = setProductRejectionThreshold;
   global.buildProductRejectionInsights = buildProductRejectionInsights;
+  global.formatReceivableAttentionSummary = receivableAttentionSummary;
+  global.buildCustomerFocusForTests = customerFocusHtml;
 
 })(typeof window !== 'undefined' ? window : this);

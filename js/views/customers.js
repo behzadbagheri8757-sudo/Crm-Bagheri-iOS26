@@ -175,13 +175,10 @@
 
         let badgeLabel = '';
         let badgeTone = 'neutral';
-        if (c.active === false) { badgeLabel = 'غیرفعال شده'; badgeTone = 'muted'; }
-        else if (riskLevel === 'critical') { badgeLabel = 'فوری'; badgeTone = 'danger'; }
+        // V8 intentional contract: List badges only critical/high. Medium/low and
+        // lifecycle statuses have no badge here; Detail and Quick View show full labels.
+        if (riskLevel === 'critical') { badgeLabel = 'فوری'; badgeTone = 'danger'; }
         else if (riskLevel === 'high') { badgeLabel = 'پیگیری'; badgeTone = 'warning'; }
-        else if (behavior.behindPattern === true) { badgeLabel = 'عقب‌افتاده'; badgeTone = 'warning'; }
-        else if (status === 'lost') { badgeLabel = 'از دست رفته'; badgeTone = 'muted'; }
-        else if (status === 'inactive') { badgeLabel = 'سرد شده'; badgeTone = 'muted'; }
-        else if (status === 'new') { badgeLabel = 'جدید'; badgeTone = 'neutral'; }
 
         const days = (typeof customerStats === 'function')
         ? (function(){ try { return customerStats(c.id, custCtx).daysSinceLast; } catch(e){ return Infinity; } })()

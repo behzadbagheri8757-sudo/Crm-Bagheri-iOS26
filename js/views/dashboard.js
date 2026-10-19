@@ -319,7 +319,7 @@
     if (att.count > 0) bits.push(row('#', att.count, 'مشتری نیازمند پیگیری', money(att.totalBalance), ' data-attention="1"'));
     if (overdueChecks.length > 0) bits.push(row('#/checks?filter=overdue', overdueChecks.length, 'چک سررسیدگذشته'));
     if (dueSoonChecks.length > 0) bits.push(row('#/checks?filter=dueSoon', dueSoonChecks.length, 'چک نزدیک سررسید'));
-    if (followups) bits.push(row('#/watches?filter=followup', followups, 'پیگیری باز'));
+    if (followups) bits.push(row('#/watches?filter=followup', followups, 'پیگیری‌های باز'));
     if (lowStock) bits.push(row('#/inventory', lowStock, 'کالای کم‌موجودی'));
 
     return '<div class="bp-dashboard-alert" role="status">' +

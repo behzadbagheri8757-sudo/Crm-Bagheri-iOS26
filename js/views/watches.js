@@ -149,7 +149,7 @@
     { id: 'attention', label: 'نیازمند توجه' },
     { id: 'unvisited', label: 'ندیده‌شده' },
     { id: 'check_due', label: 'چک سررسید' },
-    { id: 'followup',  label: 'پیگیری باز' }
+    { id: 'followup',  label: 'پیگیری‌های باز' }
   ];
   var WATCH_FILTER_HINTS = {
     all: 'هر مورد یک نشانه است، نه لزوماً یک مشکل قطعی',
