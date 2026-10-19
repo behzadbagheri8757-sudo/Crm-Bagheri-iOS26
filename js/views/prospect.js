@@ -22,19 +22,11 @@
   function rankPill(rank) { return prospectRankBadgeHTML(rank); }
 
   function navigateToProspects() {
-    if (typeof isSpaShell === 'function' && isSpaShell() && typeof AppRouter !== 'undefined' && AppRouter.navigate) {
-      AppRouter.navigate('/prospects');
-    } else {
-      location.href = '#/prospects';
-    }
+    AppRouter.navigate('/prospects');
   }
 
   function navigateToCustomer(cid) {
-    if (typeof isSpaShell === 'function' && isSpaShell() && typeof AppRouter !== 'undefined' && AppRouter.navigate) {
-      AppRouter.navigate('/customer', { id: cid });
-    } else {
-      location.href = '#/customer?id=' + encodeURIComponent(cid);
-    }
+    AppRouter.navigate('/customer', { id: cid });
   }
 
   // Presentation-only helpers for the legacy (V1) evaluation detail screen.
@@ -132,7 +124,7 @@
       <div class="tx-identity card field-prospect-head">
         <div class="tx-identity-title">${esc(shop.name)}</div>
         <div class="tx-identity-meta">
-          <span>📍 ${esc(getLocationDisplayString(shop.locationId))}</span>
+          <span>${(typeof AppIcons !== 'undefined' && AppIcons.render) ? AppIcons.render('mapPin', { size: 16 }) : ''} ${esc(getLocationDisplayString(shop.locationId))}</span>
         </div>
         <div class="snapshot-meta-row">
           <span class="badge tone-neutral">${esc(profileLabel)}</span>
@@ -166,7 +158,7 @@
       <div class="tx-identity card field-prospect-head">
         <div class="tx-identity-title">${esc(shop.name)}</div>
         <div class="tx-identity-meta">
-          <span>📍 ${esc(getLocationDisplayString(shop.locationId))}</span>
+          <span>${(typeof AppIcons !== 'undefined' && AppIcons.render) ? AppIcons.render('mapPin', { size: 16 }) : ''} ${esc(getLocationDisplayString(shop.locationId))}</span>
         </div>
         <div class="field-score-row">
           <span class="field-score-value">${shop.latestScore}</span>

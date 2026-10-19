@@ -86,7 +86,7 @@
           const isOff = p.active === false;
           // Visual-only: dim row + compact OFF badge. No behavior change.
           const inactiveBadge = isOff
-            ? ' <span class="badge pending" style="display:inline-block;vertical-align:middle;font-size:.72em;padding:1px 7px;margin-right:4px;opacity:1;">غیرفعال</span>'
+            ? ' <span class="badge tone-muted" style="display:inline-block;vertical-align:middle;font-size:.72em;padding:1px 7px;margin-right:4px;opacity:1;">غیرفعال</span>'
             : '';
           const offStyle = isOff
             ? 'cursor:pointer;opacity:.42;filter:grayscale(.35);'
@@ -175,9 +175,9 @@
       '</div>' +
       '<h3 class="sub-title">موجودی کالاها</h3>' +
       '<div class="empty" style="padding:0 0 8px;text-align:right;font-size:.78rem;">برای اصلاح موجودی روی هر کالا بزنید (همان فرم فعلی ورود/خروج/ویرایش).</div>' +
-      '<div class="inventory-stock-list">' + stockList + '</div>' +
+      '<div class="tx-list inventory-list">' + stockList + '</div>' +
       '<h3 class="sub-title">گردش اخیر انبار</h3>' +
-      logHtml;
+      '<div class="tx-list inventory-log-list">' + logHtml + '</div>';
 
     listClickHandler = function (e) {
       const showAll = e.target.closest('#inv-stock-log-show-all');

@@ -4,45 +4,14 @@
 'use strict';
 
 (function (global) {
-  const ICO = {
-    invoice: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z"/><path d="M9 7l1 0"/><path d="M9 13l6 0"/><path d="M13 17l2 0"/></svg>',
-    users: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"/><path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0 -3 -3.85"/></svg>',
-    box: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4.5l0 9l-8 4.5l-8 -4.5l0 -9l8 -4.5"/><path d="M12 12l8 -4.5"/><path d="M12 12l0 9"/><path d="M12 12l-8 -4.5"/><path d="M16 5.25l-8 4.5"/></svg>',
-    card: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5m0 3a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v8a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z"/><path d="M3 10l18 0"/><path d="M7 15l.01 0"/><path d="M11 15l2 0"/></svg>',
-    truck: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M17 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M5 17h-2v-11a1 1 0 0 1 1 -1h9v12m-4 0h6m4 0h2v-6h-8m0 -5h5l3 5"/></svg>',
-    bank: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21l18 0"/><path d="M3 10l18 0"/><path d="M5 6l7 -3l7 3"/><path d="M4 10l0 11"/><path d="M20 10l0 11"/><path d="M8 14l0 3"/><path d="M12 14l0 3"/><path d="M16 14l0 3"/></svg>',
-    map: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z"/></svg>',
-    chart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z"/><path d="M15 9a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v10a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z"/><path d="M9 5a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z"/><path d="M4 20h14"/></svg>',
-    gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"><path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z"/><path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/></svg>',
-    warehouse: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21v-13l9 -4l9 4v13"/><path d="M13 13h4v8h-10v-6h6"/><path d="M13 21v-9a1 1 0 0 0 -1 -1h-2a1 1 0 0 0 -1 1v3"/></svg>',
-    shop: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21l18 0"/><path d="M3 7v1a3 3 0 0 0 6 0v-1m0 1a3 3 0 0 0 6 0v-1m0 1a3 3 0 0 0 6 0v-1h-18l2 -4h14l2 4"/><path d="M5 21l0 -10.15"/><path d="M19 21l0 -10.15"/><path d="M9 21v-4a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v4"/></svg>',
-    /* Monthly sales target FAB — Tabler target-arrow; button stays 42px via CSS */
-    target: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/><path d="M12 7a5 5 0 1 0 5 5"/><path d="M13 3.055a9 9 0 1 0 7.941 7.945"/><path d="M15 6v3h3l3 -3h-3v-3z"/><path d="M15 9l-3 3"/></svg>',
-    /* Sales growth in monthly-target box — Tabler trending-up; gold via CSS */
-    growth: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6 -6l4 4l8 -8"/><path d="M14 7l7 0l0 7"/></svg>',
-    /* NEW: Sales Game / Game Center entry */
-    game: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21l8 0"/><path d="M12 17l0 4"/><path d="M7 4l10 0"/><path d="M17 4v8a5 5 0 0 1 -10 0v-8"/><path d="M5 9m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M19 9m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/></svg>'
-  };
-
-  // Tabler-style semantic section icons; all dashboard icons share the same stroke language.
-  ICO.actions = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5h-2a2 2 0 0 0 -2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-10a2 2 0 0 0 -2 -2h-2"/><path d="M9 5a3 3 0 0 1 6 0"/><path d="M9 12l2 2l4 -4"/></svg>';
-  ICO.summary = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19v-8a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v8"/><path d="M10 19v-13a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v13"/><path d="M16 19v-5a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v5"/><path d="M3 19h18"/></svg>';
-  ICO.quick = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M3 12h18"/></svg>';
-  ICO.invoiceSection = ICO.invoice;
-  ICO.visitSection = ICO.map;
+  const ICON_MAP = { invoice:'invoice', users:'users', box:'cube', card:'creditcard', truck:'truck', bank:'bank', visit:'visit', chart:'chartBar', gear:'cog', warehouse:'warehouse', shop:'buildingStorefront', target:'target', growth:'growth', game:'trophy', actions:'checklist', summary:'chartDoc', quick:'plusCircle', invoiceSection:'invoice', visitSection:'visit' };
+  const URGENCY_ICON_MAP = { critical:'urgencyCritical', high:'urgencyHigh', medium:'urgencyMedium', low:'urgencyLow' };
+  function dashboardIcon(key, size) { var name=ICON_MAP[key]||key; return (typeof AppIcons!=='undefined' && AppIcons.render) ? AppIcons.render(name,{size:size||20}) : ''; }
+  function urgencyIcon(level) { return dashboardIcon(URGENCY_ICON_MAP[level]||URGENCY_ICON_MAP.low,20); }
 
   function dashSectionHead(ico, title, href, action, badge) {
     return '<div class="dashboard-block-head"><div class="dash-section-label"><span class="dash-section-ico" aria-hidden="true">' + ico + '</span><span>' + title + '</span>' + (badge || '') + '</div>' + (href ? '<a class="section-action" href="' + href + '">' + action + '</a>' : '') + '</div>';
   }
-
-  /* Urgency icons: Tabler-style, priority semantics only (not growth/decline).
-     stroke ~1.7 matches existing ICO.* set on this page. */
-  const ACTION_URGENCY_ICON = {
-    critical: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z"/></svg>',
-    high: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12c2 -2.96 0 -7 -1 -8c0 3.038 -1.773 4.741 -3 6c-1.226 1.26 -2 3.24 -2 5a6 6 0 1 0 12 0c0 -1.532 -1.075 -3.826 -1.5 -4.5c.25 1.53.25 2.5 -1 3.5"/></svg>',
-    medium: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"/><path d="M12 7v5l3 3"/></svg>',
-    low: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"/><path d="M12 9h.01"/><path d="M11 12h1v4h1"/></svg>'
-  };
 
   function normalizeDigits(v) {
     return String(v || '').replace(/[۰-۹]/g, function (d) { return String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)); }).replace(/[٠-٩]/g, function (d) { return String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)); });
@@ -89,27 +58,16 @@
   }
 
   function quickActionsHtml() {
-    const gameShortcut = '<a class="section-action" href="#/game">Sales Game ←</a>';
-  // Quick Actions bar icons now come from the central AppIcons registry
-  // (js/icons.js) instead of this file's own Tabler-style ICO set, so the
-  // four most-used entry points on the app's most-visited screen match the
-  // same icon language as the tab bar / More sheet. Falls back to the old
-  // local glyph if icons.js somehow isn't loaded, so this can never blank
-  // out a button.
-  function qaIco(name, fallback){
-    try {
-      if (typeof AppIcons !== 'undefined' && AppIcons.render) return AppIcons.render(name, { size: 20 });
-    } catch(e) {}
-    return fallback;
-  }
+    const gameShortcut = '<a class="section-action" href="#/game">بازی فروش ←</a>';
+  function qaIco(name) { return dashboardIcon(name, 20); }
 
   return '<div class="dashboard-block dash-quick-actions-block">' +
-      '<div class="dashboard-block-head"><div class="dash-section-label"><span class="dash-section-ico" aria-hidden="true">' + ICO.quick + '</span><span>اقدام سریع</span></div>' + gameShortcut + '</div>' +
+      '<div class="dashboard-block-head"><div class="dash-section-label"><span class="dash-section-ico" aria-hidden="true">' + dashboardIcon('quick',20) + '</span><span>اقدام سریع</span></div>' + gameShortcut + '</div>' +
       '<div class="dash-quick-actions dash-qa-bar">' +
-        '<button type="button" class="dash-qa-btn" data-qa="invoice"><span class="dash-qa-ico" aria-hidden="true">' + qaIco('documentText', ICO.invoice) + '</span><span class="dash-qa-label">فاکتور جدید</span></button>' +
-        '<button type="button" class="dash-qa-btn" data-qa="payment"><span class="dash-qa-ico" aria-hidden="true">' + qaIco('banknotes', ICO.card) + '</span><span class="dash-qa-label">ثبت دریافت</span></button>' +
-        '<button type="button" class="dash-qa-btn" data-qa="visit"><span class="dash-qa-ico" aria-hidden="true">' + qaIco('mapPin', ICO.map) + '</span><span class="dash-qa-label">ثبت ویزیت</span></button>' +
-        '<a class="dash-qa-btn" href="#/evaluation"><span class="dash-qa-ico" aria-hidden="true">' + qaIco('buildingStorefront', ICO.shop) + '</span><span class="dash-qa-label">ارزیابی مغازه</span></a>' +
+        '<button type="button" class="dash-qa-btn" data-qa="invoice"><span class="dash-qa-ico" aria-hidden="true">' + qaIco('invoice') + '</span><span class="dash-qa-label">فاکتور جدید</span></button>' +
+        '<button type="button" class="dash-qa-btn" data-qa="payment"><span class="dash-qa-ico" aria-hidden="true">' + qaIco('card') + '</span><span class="dash-qa-label">ثبت دریافت</span></button>' +
+        '<button type="button" class="dash-qa-btn" data-qa="visit"><span class="dash-qa-ico" aria-hidden="true">' + qaIco('visit') + '</span><span class="dash-qa-label">ثبت ویزیت</span></button>' +
+        '<a class="dash-qa-btn" href="#/evaluation"><span class="dash-qa-ico" aria-hidden="true">' + qaIco('shop') + '</span><span class="dash-qa-label">ارزیابی مغازه</span></a>' +
       '</div>' +
     '</div>';
   }
@@ -133,26 +91,26 @@
      come from calculateAllCustomerActions() as-is. This function only
      looks up the customer's name (read-only) and renders the existing
      dashboard-block/ledger-row markup used elsewhere on this page. */
-  function todaysActionsHtml() {
+  function todaysActionsHtml(ctx) {
     // Prefer unified queue; fall back to legacy customer-only actions.
     let items = [];
     try {
       if (typeof calculateAllActions === 'function') {
-        items = (calculateAllActions() || []).filter(function (a) {
+        items = (calculateAllActions(ctx) || []).filter(function (a) {
           return a && a.actionType !== 'no_action';
         });
       } else if (typeof calculateAllCustomerActions === 'function') {
-        items = (calculateAllCustomerActions() || []).filter(function (a) {
+        items = (calculateAllCustomerActions(ctx) || []).filter(function (a) {
           return a && a.actionType !== 'no_action';
         });
       }
     } catch (e) { return ''; }
     if (!items.length) {
       return '<div class="dashboard-block">' +
-        dashSectionHead(ICO.actions, 'کارهای پیشنهادی امروز', '', '') +
+        dashSectionHead(dashboardIcon('actions',20), 'کارهای پیشنهادی امروز', '', '') +
         '<div class="dash-activity">' +
           '<div class="empty" style="padding:18px 8px;text-align:center;">' +
-            '<div style="font-weight:600;color:#1F2937;margin-bottom:4px;">امروز کار ضروری نداری</div>' +
+            '<div style="font-weight:600;color:var(--vg-color-text);margin-bottom:4px;">امروز کار ضروری نداری</div>' +
             '<div class="sub" style="opacity:.85;">وضعیت مشتری‌ها و پتانسیل‌ها تحت کنترل است.</div>' +
           '</div>' +
         '</div></div>';
@@ -161,8 +119,8 @@
     // Max Top 5 by unifiedScore (already sorted by calculateAllActions)
     items = items.slice(0, 5);
 
-    const visibleItems = items.slice(0, 2);
-    const hiddenItems = items.slice(2);
+    const visibleItems = items.slice(0, 3);
+    const hiddenItems = items.slice(3);
 
     function renderRow(a) {
       const isProspect = a.type === 'prospect';
@@ -175,7 +133,7 @@
       })();
       const badge = isProspect ? 'پتانسیل' : 'مشتری';
       const urgency = a.urgency || 'low';
-      const icon = ACTION_URGENCY_ICON[urgency] || ACTION_URGENCY_ICON.low;
+      const icon = urgencyIcon(urgency);
       const actionText = a.action || '';
       const why = a.reason || '';
       const whyNow = a.whyNow || '';
@@ -220,7 +178,7 @@
       ? '<span class="dash-risk-badge" title="تعداد موارد بحرانی/پراهمیت در همین لیست">' + riskCount + ' مورد مهم</span>'
       : '';
 
-    return '<div class="dashboard-block">' + dashSectionHead(ICO.actions, 'کارهای پیشنهادی امروز', '', '', riskBadge) + '<div class="dash-activity dash-action-queue">' + visibleRows + hiddenBlock + '</div></div>';
+    return '<div class="dashboard-block">' + dashSectionHead(dashboardIcon('actions',20), 'کارهای پیشنهادی امروز', '', '', riskBadge) + '<div class="dash-activity dash-action-queue">' + visibleRows + hiddenBlock + '</div></div>';
   }
 
   /* Toggles the collapsed remainder of the Action Queue (items 3-5).
@@ -258,54 +216,210 @@
     return String(n).replace(/[0-9]/g, function (d) { return '۰۱۲۳۴۵۶۷۸۹'[d]; });
   }
 
-  function watchSummaryHtml() {
-    var count = 0;
-    var haveCount = false;
-
-    if (typeof getWatchLifecycleSummary === 'function') {
-      try {
-        var summary = getWatchLifecycleSummary();
-        if (summary && typeof summary.active === 'number') {
-          count = summary.active;
-          haveCount = true;
-        }
-      } catch (eS) { /* fall through to fallback below */ }
-    }
-
-    if (!haveCount && typeof extractWatchObservations === 'function' && typeof data !== 'undefined' && Array.isArray(data.customers)) {
-      // Fallback when lifecycle module not loaded (mirrors prior behavior)
-      var customers = data.customers.filter(function (c) { return c && c.active !== false; });
-      for (var ci = 0; ci < customers.length; ci++) {
-        try { count += (extractWatchObservations(customers[ci].id) || []).length; } catch (e) { /* skip */ }
+  function watchSummaryHtml(ctx) {
+    var rows = [];
+    try { rows = typeof getActiveWatchOccurrences === 'function' ? (getActiveWatchOccurrences() || []) : []; } catch (e) { rows = []; }
+    if (!rows.length) return '';
+    rows = rows.slice().sort(function (a, b) {
+      var rank = { critical: 4, high: 3, medium: 2, low: 1 };
+      return (rank[b.level || b.severity] || 0) - (rank[a.level || a.severity] || 0) || String(b.lastEvaluatedAt || '').localeCompare(String(a.lastEvaluatedAt || ''));
+    }).slice(0, 2);
+    var total = 0;
+    try { var sum = typeof getWatchLifecycleSummary === 'function' ? getWatchLifecycleSummary() : null; total = sum && Number.isFinite(sum.active) ? sum.active : rows.length; } catch (e2) { total = rows.length; }
+    function label(o) {
+      var product = o && o.productName;
+      if (!product && o && o.productId && Array.isArray(data.products)) {
+        var p = data.products.find(function (x) { return x && x.id === o.productId; });
+        product = p && p.name;
       }
-      haveCount = true;
+      if (product) return product;
+      if (o && o.watchCategory && global.BagheriPresent && global.BagheriPresent.watchLabel) {
+        try { return global.BagheriPresent.watchLabel(o.watchCategory); } catch (e) {}
+      }
+      return 'هشدار نیازمند بررسی';
     }
-
-    if (!count) return '';
-
-    return '<div class="dashboard-block">' + dashSectionHead(ICO.actions, 'هشدارهای زودهنگام', '', '') +
-      '<a class="dash-watch-compact" href="#/watches">' +
-        '<span class="dash-watch-compact-ico" aria-hidden="true">' + ICO.actions + '</span>' +
-        '<span class="dash-watch-compact-body">' +
-          '<span class="dash-watch-compact-count">' + faDigits(count) + ' مورد</span>' +
-          '<span class="dash-watch-compact-label">هشدارهای فعال</span>' +
-        '</span>' +
-        '<span class="dash-watch-compact-chevron" aria-hidden="true">‹</span>' +
-      '</a>' +
+    function body(o) {
+      if (global.BagheriPresent && global.BagheriPresent.watchSentence) {
+        try { return global.BagheriPresent.watchSentence(o) || ''; } catch (e) {}
+      }
+      return (o && o.generatedReason) || 'یک نشانه در رفتار خرید این مشتری دیده شده است.';
+    }
+    var cards = rows.map(function (o) {
+      var cid = o.customerId || '';
+      var customer = (data.customers || []).find(function (c) { return c.id === cid; });
+      var sev = o.severity || o.level || 'medium';
+      var sevLabel = sev === 'critical' ? 'فوری' : sev === 'high' ? 'زیاد' : sev === 'medium' ? 'متوسط' : 'کم';
+      return '<a class="bp-dashboard-watch-card" href="#/watch?id=' + encodeURIComponent(o.id || '') + '">' +
+        '<span class="bp-dashboard-watch-main"><span class="bp-dashboard-watch-title">' +
+          (customer ? '<strong class="bp-watch-customer-name">' + esc(customer.name) + '</strong><span class="bp-watch-sep"> · </span>' : '') +
+          esc(label(o)) + '</span>' +
+        '<span class="bp-dashboard-watch-reason">' + esc(body(o)) + '</span>' +
+        '</span><span class="bp-dashboard-watch-severity">' + esc(sevLabel) + '</span></a>';
+    }).join('');
+    return '<div class="dashboard-block bp-dashboard-watch-block">' +
+      dashSectionHead(dashboardIcon('actions',20), 'هشدارهای زودهنگام', '#/watches', 'همه ' + faDigits(total) + ' مورد') +
+      '<div class="bp-dashboard-watch-list">' + cards + '</div>' +
       '</div>';
   }
 
-  function recentInvoicesHtml() {
+  function dashboardAlertBar(ctx) {
+    var att = { count: 0, totalBalance: 0, rows: [] };
+    var overdueChecks = [];
+    var dueSoonChecks = [];
+    var followups = 0, lowStock = 0;
+
+    try {
+      if (ctx && typeof ctx.receivableAttention === 'function') {
+        att = ctx.receivableAttention();
+      }
+    } catch (e1) {}
+
+    try {
+      var todayMs = new Date(todayISO() + 'T00:00:00').getTime();
+      var allChecks = (typeof data !== 'undefined' && Array.isArray(data.checks)) ? data.checks : [];
+      allChecks.forEach(function (c) {
+        if (!c || !c.dueDate) return;
+        // همان تعریف checkStatusLabel در checks.js: فقط 'cleared' نادیده گرفته می‌شود
+        if (c.status === 'cleared') return;
+
+        var dueMs = new Date(c.dueDate + 'T00:00:00').getTime();
+        if (!isFinite(dueMs)) return;
+
+        var diffDays = Math.round((dueMs - todayMs) / 86400000);
+
+        if (diffDays < 0) overdueChecks.push(c);
+        else if (diffDays <= 3) dueSoonChecks.push(c);
+      });
+    } catch (e2) {}
+
+    // موارد قبلی نوار (حفظ شده تا رگرسیون ایجاد نشود)
+    try {
+      followups = typeof getPendingWatchFollowUps === 'function'
+        ? (getPendingWatchFollowUps() || []).filter(function (o) {
+            // همان قاعده‌ی صفحه‌ی هشدارها: مشتری غیرفعال شمرده نمی‌شود
+            var cu = (data.customers || []).find(function (x) { return x && x.id === o.customerId; });
+            return !!cu && cu.active !== false;
+          }).length
+        : 0;
+    } catch (e3) {}
+    try { lowStock = typeof lowStockProducts === 'function' ? (lowStockProducts() || []).length : 0; } catch (e4) {}
+
+    if (!(att.count || overdueChecks.length || dueSoonChecks.length || followups || lowStock)) return '';
+
+    /* هر مورد یک ردیف کامل (iOS list row): متن راست، مقدار/توضیح کنار آن، فلش در انتها. */
+    function row(href, count, label, meta, extraAttr) {
+      return '<a class="bp-alert-row" href="' + href + '"' + (extraAttr || '') + '>' +
+        '<span class="bp-alert-row-text"><strong>' + faDigits(count) + '</strong> ' + label + '</span>' +
+        (meta ? '<span class="bp-alert-row-meta">' + meta + '</span>' : '') +
+        '<span class="bp-alert-row-chev" aria-hidden="true"></span>' +
+      '</a>';
+    }
+
+    var bits = [];
+    if (att.count > 0) bits.push(row('#', att.count, 'مشتری نیازمند پیگیری', money(att.totalBalance), ' data-attention="1"'));
+    if (overdueChecks.length > 0) bits.push(row('#/checks?filter=overdue', overdueChecks.length, 'چک سررسیدگذشته'));
+    if (dueSoonChecks.length > 0) bits.push(row('#/checks?filter=dueSoon', dueSoonChecks.length, 'چک نزدیک سررسید'));
+    if (followups) bits.push(row('#/watches?filter=followup', followups, 'پیگیری باز'));
+    if (lowStock) bits.push(row('#/inventory', lowStock, 'کالای کم‌موجودی'));
+
+    return '<div class="bp-dashboard-alert" role="status">' +
+      '<div class="bp-dashboard-alert-head">' +
+        '<span class="bp-dashboard-alert-dot" aria-hidden="true"></span>' +
+        '<span class="bp-dashboard-alert-label">نیازمند رسیدگی</span>' +
+      '</div>' +
+      '<div class="bp-dashboard-alert-items">' + bits.join('') + '</div>' +
+    '</div>';
+  }
+
+  function openAttentionSheet(ctx) {
+    var att = { count: 0, rows: [] };
+    try {
+      if (ctx && typeof ctx.receivableAttention === 'function') {
+        att = ctx.receivableAttention();
+      }
+    } catch (e) {}
+    if (!att.rows.length) return;
+
+    var rowsHtml = att.rows.map(function (r) {
+      var line = r.refKind === 'invoice_due'
+        ? (r.daysSince > 0 ? faDigits(r.daysSince) + ' روز از سررسید آخرین فاکتور' : 'سررسید آخرین فاکتور امروز است')
+        : r.refKind === 'invoice_date'
+        ? faDigits(r.daysSince) + ' روز از تاریخ آخرین فاکتور'
+        : (r.refKind === 'no_payment_history'
+          ? faDigits(r.daysSince) + ' روز از آخرین فاکتور، بدون پرداخت'
+          : faDigits(r.daysSince) + ' روز از آخرین پرداخت');
+      if (r.legacyBalance > 0) line += ' · بدهی قدیمی جدا: ' + money(r.legacyBalance);
+      return '<button type="button" class="bp-attention-row" data-attention-cid="' + esc(r.customerId) + '">' +
+        '<span class="bp-attention-row-name">' + esc(r.name) + '</span>' +
+        '<span class="bp-attention-row-meta">' + money(r.balance) + ' · ' + line + '</span>' +
+      '</button>';
+    }).join('');
+
+    openSheet(
+      '<h3>مشتریان نیازمند پیگیری</h3>' +
+      '<div class="empty" style="padding:0 0 10px;text-align:right;font-size:.78rem;">' +
+        faDigits(att.count) + ' مشتری با مانده حداقل ۱۰ میلیون تومان و نیازمند بررسی پرداخت' +
+      '</div>' +
+      '<div class="bp-attention-list">' + rowsHtml + '</div>'
+    );
+
+    var root = document.getElementById('modalRoot');
+    if (!root) return;
+    root.querySelectorAll('[data-attention-cid]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var cid = btn.getAttribute('data-attention-cid');
+        try {
+          if (typeof closeModal === 'function') closeModal();
+        } catch (e) {}
+        setTimeout(function () {
+          if (typeof openCustomerQuickView === 'function') {
+            openCustomerQuickView(cid);
+          }
+        }, 330);
+      });
+    });
+  }
+
+  function bindAttentionLink(root, ctx) {
+    var attLink = root.querySelector('[data-attention]');
+    if (!attLink) return;
+    attLink.addEventListener('click', function (e) {
+      e.preventDefault();
+      if (typeof openAttentionSheet === 'function') openAttentionSheet(ctx);
+    });
+  }
+
+  function todaySnapshotHtml(ctx) {
+    var now = new Date();
+    var sales = 0, invoices = 0, received = 0, visits = 0;
+    try {
+      var invs = data.invoices || [];
+      invs.forEach(function (i) { if (typeof isSameDay === 'function' && isSameDay(i.date, now)) { sales += Number(i.total) || 0; invoices++; } });
+      (data.payments || []).forEach(function (p) { if (typeof isSameDay === 'function' && isSameDay(p.date, now) && ['cash','card','transfer'].indexOf(p.method) !== -1) received += Number(p.amount) || 0; });
+      (data.customers || []).forEach(function (c) { (c.visits || []).forEach(function (v) { if (typeof isSameDay === 'function' && isSameDay(v.date, now)) visits++; }); });
+    } catch (e) {}
+    return '<div class="dashboard-block bp-dashboard-snapshot"><div class="dashboard-block-head"><div class="dash-section-label"><span class="dash-section-ico" aria-hidden="true">' + dashboardIcon('summary',20) + '</span><span>خلاصه امروز</span></div></div>' +
+      '<div class="bp-dashboard-snapshot-grid">' +
+      '<div class="bp-dashboard-snapshot-item"><span>فروش</span><strong>' + money(sales) + '</strong><small>' + faDigits(invoices) + ' فاکتور</small></div>' +
+      '<div class="bp-dashboard-snapshot-item"><span>ویزیت</span><strong>' + faDigits(visits) + '</strong><small>امروز</small></div>' +
+      '<div class="bp-dashboard-snapshot-item"><span>دریافتی</span><strong>' + money(received) + '</strong><small>امروز</small></div>' +
+      '</div></div>';
+  }
+
+
+  function recentInvoicesHtml(ctx) {
     const invs = (data.invoices || []).slice().sort(function (a, b) {
       return (b.date || '').localeCompare(a.date || '') || String(b.number || '').localeCompare(String(a.number || ''));
     }).slice(0, 5);
     if (!invs.length) return '';
     const rows = invs.map(function (inv) {
-      const cust = (data.customers || []).find(function (c) { return c.id === inv.customerId; });
+      const cust = ctx && typeof ctx.customerById === 'function'
+        ? ctx.customerById(inv.customerId)
+        : (data.customers || []).find(function (c) { return c.id === inv.customerId; });
       return '<a class="ledger-row" href="#/invoice?id=' + encodeURIComponent(inv.id) + '"><span class="name">فاکتور #' + esc(String(inv.number || '')) + '<span class="sub">' + esc(cust ? cust.name : '—') + ' — ' + faDate(inv.date) + '</span></span><span class="filler"></span><span class="amount">' + money(inv.total) + '</span></a>';
     }).join('');
     /* Inner section only — parent .dash-activity-group provides the surface */
-    return '<div class="dash-activity-section">' + dashSectionHead(ICO.invoiceSection, 'آخرین فاکتورها', '#/invoices', 'همه ←') + '<div class="dash-activity">' + rows + '</div></div>';
+    return '<div class="dash-activity-section">' + dashSectionHead(dashboardIcon('invoiceSection',20), 'آخرین فاکتورها', '#/invoices', 'همه ←') + '<div class="dash-activity">' + rows + '</div></div>';
   }
 
   function recentVisitsHtml() {
@@ -320,83 +434,85 @@
       return '<a class="ledger-row" href="#/customer?id=' + encodeURIComponent(v.customerId) + '"><span class="name">' + esc(v.name) + '<span class="sub">' + faDate(v.date) + (v.time ? ' ' + esc(v.time) : '') + (v.result ? ' — ' + esc(v.result) : '') + '</span></span><span class="filler"></span><span class="amount">ویزیت</span></a>';
     }).join('');
     /* Inner section only — parent .dash-activity-group provides the surface */
-    return '<div class="dash-activity-section">' + dashSectionHead(ICO.visitSection, 'آخرین ویزیت‌ها', '#/visits', 'همه ←') + '<div class="dash-activity">' + rows + '</div></div>';
+    return '<div class="dash-activity-section">' + dashSectionHead(dashboardIcon('visitSection',20), 'آخرین ویزیت‌ها', '#/visits', 'همه ←') + '<div class="dash-activity">' + rows + '</div></div>';
   }
 
   function targetHtml(metrics) {
     const target = typeof getMonthlySalesTarget === 'function' ? getMonthlySalesTarget() : 0;
     const sales = Number(metrics.mtdSales) || 0;
-    const pct = target > 0 ? Math.round((sales / target) * 100) : 0;
-    const capped = Math.min(100, Math.max(0, pct));
+    const rawPct = target > 0 ? Math.round((sales / target) * 100) : 0;
+    const pct = Math.min(100, Math.max(0, rawPct));
+    const capped = pct;
     const done = target > 0 && sales >= target;
 
-    // Figures + pace/status line: derived only from existing commandCenterMetrics
-    // (jy/jm/jd) and the existing jalaliMonthLength() helper. No new data source.
-    let figuresHtml = '';
-    let statusRowHtml = '';
-    if (target > 0) {
-      figuresHtml = '<div class="dmt-figures"><span class="dmt-figures-num">' + toman(sales) + '</span>' +
-        ' <span class="dmt-figures-sep">از</span> ' +
-        '<span class="dmt-figures-num">' + toman(target) + '</span>' +
-        ' <span class="dmt-figures-unit">تومان</span></div>';
+    function compactMoney(value) {
+      const n = Math.abs(Number(value) || 0);
+      if (n >= 1000000) {
+        const m = n / 1000000;
+        const text = Number.isInteger(m) ? String(m) : m.toFixed(1).replace(/\.0$/, '');
+        return enToFaDigits(text) + 'M';
+      }
+      return toman(n);
+    }
 
-      if (!done) {
-        const monthLen = (metrics.jy && metrics.jm && typeof jalaliMonthLength === 'function')
-          ? jalaliMonthLength(metrics.jy, metrics.jm) : null;
-        const remaining = Math.max(0, target - sales);
-        let paceHtml = '';
-        let statusMeta = null;
-        if (monthLen) {
-          const daysLeft = Math.max(0, monthLen - (metrics.jd || 0));
-          const expectedFraction = Math.min(1, (metrics.jd || 0) / monthLen);
-          const expectedSales = target * expectedFraction;
-          if (sales >= expectedSales * 1.05) statusMeta = { cls: 'ahead', icon: '↑', text: 'جلوتر از برنامه' };
-          else if (sales <= expectedSales * 0.95) statusMeta = { cls: 'behind', icon: '⚠', text: 'عقب‌تر از برنامه' };
-          else statusMeta = { cls: 'ontrack', icon: '✓', text: 'روی برنامه' };
-          if (daysLeft > 0) {
-            const requiredDaily = Math.round(remaining / daysLeft);
-            paceHtml = '<span class="dmt-pace">نیاز روزانه ' + toman(requiredDaily) + ' ت' +
-              ' <span class="dmt-pace-days">(' + enToFaDigits(String(daysLeft)) + ' روز مانده)</span></span>';
-          }
-        }
-        if (statusMeta) {
-          statusRowHtml = '<div class="dmt-status-row">' +
-            '<span class="dmt-status-chip dmt-status-' + statusMeta.cls + '">' + statusMeta.icon + ' ' + statusMeta.text + '</span>' +
-            paceHtml +
-            '</div>';
-        }
+    /* فقط دکمهٔ آیکون قابل کلیک است؛ بقیهٔ نوار صرفاً نمایشی است. */
+    function targetTitleHtml() {
+      return '<div class="bp-target-strip-title">' +
+        '<button type="button" class="bp-target-strip-settings-btn" data-monthly-target aria-label="تنظیم هدف فروش این ماه">' +
+          dashboardIcon('target',20) +
+        '</button>' +
+        '<strong>هدف فروش این ماه</strong>' +
+      '</div>';
+    }
+
+    if (!(target > 0)) {
+      return '<div class="bp-target-strip is-empty">' +
+        '<div class="bp-target-strip-head">' +
+          targetTitleHtml() +
+          '<button type="button" class="bp-target-strip-settings" data-monthly-target>تنظیم ›</button>' +
+        '</div>' +
+        '<div class="bp-target-strip-empty-text">هنوز هدفی برای این ماه تعیین نشده</div>' +
+      '</div>';
+    }
+
+    let status = { cls: 'ontrack', icon: '✓', text: 'روی برنامه' };
+    let daysLeft = 0;
+    let requiredDaily = 0;
+    if (!done) {
+      const monthLen = (metrics.jy && metrics.jm && typeof jalaliMonthLength === 'function')
+        ? jalaliMonthLength(metrics.jy, metrics.jm) : null;
+      if (monthLen) {
+        daysLeft = Math.max(0, monthLen - (metrics.jd || 0));
+        const expectedFraction = Math.min(1, (metrics.jd || 0) / monthLen);
+        const expectedSales = target * expectedFraction;
+        if (sales >= expectedSales * 1.05) status = { cls: 'ahead', icon: '↑', text: 'جلوتر از برنامه' };
+        else if (sales <= expectedSales * 0.95) status = { cls: 'behind', icon: '⚠', text: 'عقب‌تر از برنامه' };
+        requiredDaily = daysLeft > 0 ? Math.round(Math.max(0, target - sales) / daysLeft) : 0;
       }
     }
 
-    return (
-      '<div class="dash-target-block">' +
-        '<div class="dash-target-fab-row">' +
-          '<button type="button" class="dash-target-fab" data-monthly-target aria-label="تنظیم هدف فروش">' +
-            ICO.target +
-          '</button>' +
-        '</div>' +
-        '<div class="dash-monthly-target ' + (done ? 'is-done' : '') + '">' +
-          '<div class="dmt-top">' +
-            '<div class="dmt-heading">' +
-              '<span class="dmt-growth" aria-hidden="true">' + ICO.growth + '</span>' +
-              '<span class="dmt-title">هدف فروش این ماه</span>' +
-            '</div>' +
-          '</div>' +
-          figuresHtml +
-          '<div class="dmt-row">' +
-            '<div class="dmt-progress"><div class="dmt-bar"><span style="width:' + capped + '%"></span></div></div>' +
-            '<span class="dmt-pct">' + (target > 0 ? pct + '٪' : '—') + '</span>' +
-          '</div>' +
-          statusRowHtml +
-        '</div>' +
-      '</div>'
-    );
+    const progressClass = pct > 0 ? ' has-progress' : '';
+
+    return '<div class="bp-target-strip ' + (done ? 'is-done' : 'is-' + status.cls) + progressClass + '">' +
+      '<div class="bp-target-strip-head">' +
+        targetTitleHtml() +
+        '<span class="bp-target-strip-status">' + (done ? '✓ رسید' : status.icon + ' ' + status.text) + '</span>' +
+      '</div>' +
+      '<div class="bp-target-strip-figures">' +
+        '<span class="bp-target-strip-sales"><strong class="bp-target-strip-current">' + compactMoney(sales) + '</strong><span class="bp-target-strip-target"> / ' + compactMoney(target) + '</span> <small>تومان</small></span>' +
+        '<span class="bp-target-strip-percent"><strong>' + enToFaDigits(String(pct)) + '٪</strong></span>' +
+        (done ? '<span class="bp-target-strip-congrats">آفرین!</span>' : '<span>نیاز روزانه <strong>' + compactMoney(requiredDaily) + '</strong> ت</span>') +
+      '</div>' +
+      '<div class="bp-target-strip-bar"><span style="width:' + capped + '%"></span></div>' +
+      (!done && daysLeft > 0 ? '<div class="bp-target-strip-days">' + enToFaDigits(String(daysLeft)) + ' روز مانده</div>' : '') +
+    '</div>';
   }
 
   function bindMonthlyTarget(root, refresh) {
-    const btn = root.querySelector('[data-monthly-target]');
-    if (!btn) return;
-    btn.addEventListener('click', function (e) {
+    const targetBtns = root.querySelectorAll('[data-monthly-target]');
+    if (!targetBtns.length) return;
+    targetBtns.forEach(function (btn) { btn.addEventListener('click', onMonthlyTargetClick); });
+    function onMonthlyTargetClick(e) {
       e.preventDefault(); e.stopPropagation();
       const current = typeof getMonthlySalesTarget === 'function' ? getMonthlySalesTarget() : 0;
       openSheet(
@@ -424,20 +540,20 @@
         closeModal();
         refresh();
       });
-    });
+    }
   }
 
   function formatAmountForInput(value){
     try { return Number(value).toLocaleString('fa-IR'); } catch(e) { return String(value || ''); }
   }
 
-  async function renderInto(root, isStale) {
+  async function renderInto(root, isStale, ctx) {
     // Lifecycle reconcile before painting Watch summary (additive; fail-open)
     if (typeof reconcileWatchLifecycle === 'function') {
-      try { await reconcileWatchLifecycle(); } catch (eRec) { console.warn('watch lifecycle reconcile failed', eRec); }
+      try { await reconcileWatchLifecycle(null, ctx); } catch (eRec) { console.warn('watch lifecycle reconcile failed', eRec); }
     }
-    const metrics = typeof commandCenterMetrics === 'function' ? commandCenterMetrics(new Date()) : { mtdSales: globalTotals().monthSales, mtdProfit: 0, salesDeltaPct: null, profitDeltaPct: null };
-    const g = globalTotals();
+    const metrics = typeof commandCenterMetrics === 'function' ? commandCenterMetrics(new Date(), ctx) : { mtdSales: globalTotals(ctx).monthSales, mtdProfit: 0, salesDeltaPct: null, profitDeltaPct: null };
+    const g = globalTotals(ctx);
     const invVal = inventoryValue();
     if (typeof isStale === 'function' && isStale()) return;
 
@@ -447,13 +563,16 @@
          C. Quick Actions — tools (de-emphasized)
          D. Recent Activity — invoices + visits (one activity surface)
          Data sources, helpers, IDs, and event bindings are unchanged. */
-    const focusActions = todaysActionsHtml();
-    const activityInvoices = recentInvoicesHtml();
+     const alertBar = dashboardAlertBar(ctx);
+    const todaySnapshot = todaySnapshotHtml(ctx);
+    const focusActions = todaysActionsHtml(ctx);
+    const watchSummary = watchSummaryHtml(ctx);
+    const activityInvoices = recentInvoicesHtml(ctx);
     const activityVisits = recentVisitsHtml();
     const activityBody = activityInvoices + activityVisits;
     const activityBlock = activityBody
       ? ('<div class="dashboard-block dash-activity-group">' +
-          '<div class="dashboard-block-head"><div class="dash-section-label"><span class="dash-section-ico" aria-hidden="true">' + ICO.summary + '</span><span>فعالیت اخیر</span></div></div>' +
+          '<div class="dashboard-block-head"><div class="dash-section-label"><span class="dash-section-ico" aria-hidden="true">' + dashboardIcon('summary',20) + '</span><span>فعالیت اخیر</span></div></div>' +
           activityBody +
         '</div>')
       : '';
@@ -461,16 +580,19 @@
     root.innerHTML =
       '<div class="dashboard-shell">' +
       '<div class="dashboard-eyebrow">مرکز فرماندهی روزانه</div>' +
+      alertBar +
+      todaySnapshot +
+      targetHtml(metrics) +
 
       /* A — Today's Focus */
       '<div class="dash-focus">' +
-        '<div class="dash-focus-target">' + targetHtml(metrics) + '</div>' +
         '<div class="dash-focus-actions">' + focusActions + '</div>' +
       '</div>' +
+      watchSummary +
 
       /* B — Financial Health (same metrics; stacked rows for mobile) */
       '<div class="dashboard-block dash-health">' +
-        '<div class="dashboard-block-head"><div class="dash-section-label"><span class="dash-section-ico" aria-hidden="true">' + ICO.card + '</span><span>وضعیت مالی</span></div></div>' +
+        '<div class="dashboard-block-head"><div class="dash-section-label"><span class="dash-section-ico" aria-hidden="true">' + dashboardIcon('card',20) + '</span><span>وضعیت مالی</span></div></div>' +
         '<div class="dash-health-surface">' +
           '<div class="dash-health-row"><span class="dash-health-label">سود این ماه</span><span class="dash-health-value">' + money(metrics.mtdProfit) + '</span></div>' +
           '<div class="dash-health-row"><span class="dash-health-label">ارزش موجودی</span><span class="dash-health-value">' + money(invVal) + '</span></div>' +
@@ -485,9 +607,10 @@
       activityBlock +
       '</div>';
 
-    bindMonthlyTarget(root, function () { renderInto(root, isStale); });
+     bindMonthlyTarget(root, function () { renderInto(root, isStale, ctx); });
     bindActionQueueToggle(root);
     bindQuickActions(root);
+    bindAttentionLink(root, ctx);
   }
 
   function mount(root, params) {
@@ -498,7 +621,10 @@
     let refreshToken = null;
     const isStale = function () { return cancelled; };
     function refreshDashboard() {
-      renderInto(root, isStale).catch(function (e) { if (!cancelled) console.error('DashboardView refresh failed', e); });
+      var ctx = typeof createComputationContext === 'function'
+        ? createComputationContext({ data: data })
+        : null;
+      renderInto(root, isStale, ctx).catch(function (e) { if (!cancelled) console.error('DashboardView refresh failed', e); });
     }
     refreshDashboard();
     if (typeof ViewHost !== 'undefined' && ViewHost.setRefresh) refreshToken = ViewHost.setRefresh(refreshDashboard);
