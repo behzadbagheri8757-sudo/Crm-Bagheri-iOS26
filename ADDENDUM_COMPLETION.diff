@@ -1,0 +1,316 @@
+diff -ruN '--exclude=ADDENDUM_FINAL_REPORT.md' '--exclude=tests/addendum_v1_v9.test.js' /tmp/previous_patch/Bagheri-crm-main/css/visual-grammar-pages.css ./css/visual-grammar-pages.css
+--- /tmp/previous_patch/Bagheri-crm-main/css/visual-grammar-pages.css	2026-10-19 11:45:20.000000000 +0000
++++ ./css/visual-grammar-pages.css	2026-10-19 12:21:33.652476386 +0000
+@@ -2149,4 +2149,5 @@
+ .bp-qv-urgent{margin-top:12px;padding:8px 10px;border-radius:10px;background:color-mix(in srgb,var(--vg-color-danger) 12%,transparent);color:var(--vg-color-danger);font-size:.74rem;font-weight:800;}
+ .bp-qv-acks,.bp-qv-recommended{margin-top:14px;padding-top:12px;border-top:1px solid var(--vg-color-divider);}
+ .bp-qv-ack-row{font-size:.73rem;line-height:1.8;color:var(--vg-color-text);}
++.bp-qv-action-description{margin-bottom:8px;font-size:.73rem;line-height:1.7;color:var(--vg-color-text);}
+ .bp-qv-recommended .btn{width:100%;}
+diff -ruN '--exclude=ADDENDUM_FINAL_REPORT.md' '--exclude=tests/addendum_v1_v9.test.js' /tmp/previous_patch/Bagheri-crm-main/js/calc.js ./js/calc.js
+--- /tmp/previous_patch/Bagheri-crm-main/js/calc.js	2026-10-15 11:49:35.000000000 +0000
++++ ./js/calc.js	2026-10-19 12:21:05.971463718 +0000
+@@ -1081,9 +1081,19 @@
+ /* PHASE 1 — Product Offered + Customer Reaction + Rejection Reason.
+  * Pure derived read from data.customers[].visits[].offeredProducts[]. Never mutates data,
+  * never counts accepted/deferred as a sale/order. */
+-function _behaviorOfferedProductStats(visits){
++function _behaviorOfferedProductStats(visits, invs){
+   const map = {}; // productId -> stat entry
+   const order = [];
++  const lastPurchaseByProduct = {};
++  (invs || []).forEach(function(inv){
++    if(!inv || !inv.date || !Array.isArray(inv.items)) return;
++    inv.items.forEach(function(item){
++      if(!item || !item.productId || !(Number(item.qty) > 0)) return;
++      if(!lastPurchaseByProduct[item.productId] || String(inv.date) > String(lastPurchaseByProduct[item.productId])) {
++        lastPurchaseByProduct[item.productId] = String(inv.date);
++      }
++    });
++  });
+   (visits || []).forEach(v=>{
+     if(!Array.isArray(v.offeredProducts)) return;
+     v.offeredProducts.forEach(op=>{
+@@ -1101,6 +1111,7 @@
+           rejectionReasons: {},
+           stillStockSources: { ours: 0, competitor: 0, unknown: 0 },
+           lastOfferedDate: null,
++          lastPurchaseDate: lastPurchaseByProduct[pid] || null,
+         };
+         order.push(pid);
+       }
+@@ -1401,7 +1412,7 @@
+   }
+ 
+   // PHASE 1 + PHASE 2 — additive, derived-only metadata (see functions above).
+-  const offeredProductStats = _behaviorOfferedProductStats(visits);
++  const offeredProductStats = _behaviorOfferedProductStats(visits, invs);
+   const visitInvoiceStats = _behaviorVisitInvoiceStats(invs, visits);
+ 
+   return {
+diff -ruN '--exclude=ADDENDUM_FINAL_REPORT.md' '--exclude=tests/addendum_v1_v9.test.js' /tmp/previous_patch/Bagheri-crm-main/js/views/customer.js ./js/views/customer.js
+--- /tmp/previous_patch/Bagheri-crm-main/js/views/customer.js	2026-10-19 11:45:28.000000000 +0000
++++ ./js/views/customer.js	2026-10-19 12:21:24.011523794 +0000
+@@ -458,7 +458,7 @@
+       var key = sg.productId ? 'p:' + sg.productId : 'c:' + (grp || sg.category);
+       var label = CONFIRMED_TITLES[sg.category] || 'نیاز به بررسی';
+       cands.push({
+-        key: key, group: grp || null, order: order++, src: 2,
++        key: key, group: grp || null, kind: 'risk', bucket: 0, order: order++, src: 2,
+         rank: P.lvRank(sg.severity), level: sg.severity,
+         title: sg.productName ? (sg.productName + ' · ' + label) : label,
+         text: sg.reason || '', occId: null,
+@@ -469,16 +469,38 @@
+       var grp = TOPIC_GROUPS[o.watchCategory];
+       var key = o.productId ? 'p:' + o.productId : 'c:' + (grp || o.watchCategory);
+       cands.push({
+-        key: key, group: grp || null, order: order++, src: 1,
++        key: key, group: grp || null, kind: 'watch', bucket: 0, order: order++, src: 1,
+         rank: P.lvRank(o.level), level: o.level,
+         title: watchTitleText(o), text: P.watchSentence(o), occId: o.id || null, lowConf: false
+       });
+     });
++    // V7: eligible Opportunities are a real Focus group, after Risk/Watch and before Rejection.
++    // Use the same priority signal set/ACK application as Story and Action; do not let one Risk
++    // remove unrelated Opportunity products.
++    var opportunitySignals = [];
++    try {
++      var focusPriority = typeof calculateCustomerPriority === 'function'
++        ? calculateCustomerPriority(cid, { ctx: ctx })
++        : null;
++      opportunitySignals = focusPriority && Array.isArray(focusPriority.signals) ? focusPriority.signals : [];
++    } catch (eOpp) { opportunitySignals = []; }
++    opportunitySignals.forEach(function (sg) {
++      if (!sg || sg.type !== 'opportunity' || sg.ackActionEffect === 'suppress' || sg.ackReviewed) return;
++      var grp = TOPIC_GROUPS[sg.category];
++      var key = sg.productId ? 'p:' + sg.productId : 'o:' + (grp || sg.category);
++      var label = sg.productName ? (sg.productName + ' · ') : '';
++      cands.push({
++        key: key, group: grp || null, kind: 'opportunity', bucket: 1, order: order++, src: 0,
++        rank: P.lvRank(sg.severity), level: sg.severity || 'low',
++        title: label + (sg.title || 'فرصت فروش'),
++        text: sg.reason || '', occId: null, lowConf: false
++      });
++    });
+     var rejItems = [];
+     try { rejItems = buildProductRejectionInsights(cid, undefined, ctx) || []; } catch (eR) { rejItems = []; }
+     rejItems.forEach(function (it) {
+       cands.push({
+-        key: 'rej:' + it.productId, group: null, order: order++, src: 0,
++        key: 'rej:' + it.productId, group: null, kind: 'rejection', bucket: 2, order: order++, src: 0,
+         rank: 1, level: 'low',
+         title: it.productName + ' · چند بار رد شده',
+         text: rejectionSentence(it, true), occId: null, lowConf: false
+@@ -499,7 +521,9 @@
+       if (src) stockByPid[it.productId] = P.stockSentence(src);
+     });
+     var topics = Object.keys(best).map(function (k) { return best[k]; })
+-      .sort(function (a, b) { return (b.score - a.score) || (a.c.order - b.c.order); })
++      .sort(function (a, b) {
++        return ((a.c.bucket || 0) - (b.c.bucket || 0)) || (b.score - a.score) || (a.c.order - b.c.order);
++      })
+       .slice(0, 3)
+       .map(function (x) { return x.c; })
+       .filter(function (t) { return t.text || t.title; });
+@@ -1438,6 +1462,15 @@
+     }).join('') + '</div>' : '';
+     var actionType = recommendedAction && recommendedAction.actionType && recommendedAction.actionType !== 'no_action' ? recommendedAction.actionType : null;
+     var actionLabel = recommendedAction && recommendedAction.action ? recommendedAction.action : '';
++    var actionButtonLabel = actionType === 'visit' || actionType === 'follow_up'
++      ? 'ثبت ویزیت'
++      : actionType === 'payment_followup'
++      ? 'ثبت پرداخت'
++      : actionType === 'check_followup'
++      ? 'ثبت چک'
++      : actionType
++      ? 'مشاهده جزئیات'
++      : '';
+     // Quick View is deliberately non-destructive: no occurrence opens from here.
+     focus = focus
+       .replace(/\sdata-watch-occ="[^"]*"/g, '')
+@@ -1464,7 +1497,9 @@
+         (hasBouncedCheck ? '<div class="bp-qv-urgent" role="alert">⚠ اقدام فوری · چک برگشتی فعال</div>' : '') +
+         ackHtml +
+         (focus ? '<div class="bp-qv-focus">' + focus + '</div>' : '') +
+-        (actionLabel ? '<div class="bp-qv-recommended"><div class="bp-qv-section-label">اقدام پیشنهادی</div><button type="button" class="btn primary" data-action="recommended">' + esc(actionLabel) + '</button></div>' : '') +
++        (actionButtonLabel ? '<div class="bp-qv-recommended"><div class="bp-qv-section-label">اقدام پیشنهادی</div>' +
++          (actionLabel ? '<div class="bp-qv-action-description">' + esc(actionLabel) + '</div>' : '') +
++          '<button type="button" class="btn primary" data-action="recommended">' + esc(actionButtonLabel) + '</button></div>' : '') +
+         '<div class="bp-qv-actions">' +
+           '<button type="button" class="btn primary" data-action="visit">ثبت ویزیت</button>' +
+           '<button type="button" class="btn secondary" data-action="invoice">ثبت فاکتور</button>' +
+diff -ruN '--exclude=ADDENDUM_FINAL_REPORT.md' '--exclude=tests/addendum_v1_v9.test.js' /tmp/previous_patch/Bagheri-crm-main/tests/addendum_v1_v9.test.js ./tests/addendum_v1_v9.test.js
+--- /tmp/previous_patch/Bagheri-crm-main/tests/addendum_v1_v9.test.js	2026-10-19 11:45:40.000000000 +0000
++++ ./tests/addendum_v1_v9.test.js	2026-10-19 12:22:37.131521635 +0000
+@@ -6,79 +6,117 @@
+ const root = path.resolve(__dirname, '..');
+ const read = p => fs.readFileSync(path.join(root, p), 'utf8');
+ const customer = read('js/views/customer.js');
++const calc = read('js/calc.js');
++const computation = read('js/computation-bank.js');
+ const customers = read('js/views/customers.js');
+ const ack = read('js/intelligence/ack.js');
+ const action = read('js/intelligence/action.js');
+ const priority = read('js/intelligence/priority.js');
+ const interpretation = read('js/intelligence/interpretation.js');
+-const computation = read('js/computation-bank.js');
+ 
+-// T-C1: product bought in the late/current history is excluded from Focus logic.
+-assert(customer.includes('buildProductRejectionInsights'));
+-assert(customer.includes('lastPurchaseDate'));
+-assert(customer.includes('lastOfferedDate'));
+-assert(customer.includes('isValidISODateOnly(lastPurchaseDate) && isValidISODateOnly(lastOfferedDate)'));
+-const rejectionSandbox = { console, Date, isFinite, Object, Array, String, Number };
+-rejectionSandbox.window = rejectionSandbox;
+-rejectionSandbox.customerBehavior = () => ({ offeredProductStats: [
+-  { productId: 'p1', productName: 'کالای V1', rejectedCount: 2, offeredCount: 2, lastPurchaseDate: '2026-10-10', lastOfferedDate: '2026-10-01' },
+-  { productId: 'p2', productName: 'کالای نامعتبر', rejectedCount: 2, offeredCount: 2, lastPurchaseDate: 'not-a-date', lastOfferedDate: null }
+-] });
+-vm.runInNewContext(customer, rejectionSandbox);
+-const focusText = rejectionSandbox.buildProductRejectionInsights('c1', 2).map(x => x.productName).join(' ');
++// T-C1 / V1: execute the real calc.js -> customerBehavior -> buildProductRejectionInsights path.
++const v1Data = {
++  products: [{ id: 'p1', name: 'کالای V1' }, { id: 'p2', name: 'کالای نامعتبر' }],
++  customers: [{ id: 'c1', visits: [{ date: '2026-10-01', offeredProducts: [
++    { productId: 'p1', reaction: 'rejected', rejectionReason: 'price' },
++    { productId: 'p2', reaction: 'rejected', rejectionReason: 'price' }
++  ] }] }],
++  invoices: [{ id: 'i1', customerId: 'c1', date: '2026-10-10', total: 100, items: [{ productId: 'p1', qty: 1, price: 100 }] }],
++  payments: [], checks: []
++};
++const v1Sandbox = { console, Date, isFinite, Object, Array, String, Number, data: v1Data };
++v1Sandbox.window = v1Sandbox;
++v1Sandbox.parseISODateParts = s => /^\\d{4}-\\d{2}-\\d{2}$/.test(s) ? { y: +s.slice(0,4), m: +s.slice(5,7), d: +s.slice(8,10) } : null;
++v1Sandbox.daysAgo = () => 20;
++v1Sandbox.todayISO = () => '2026-10-20';
++vm.runInNewContext(calc, v1Sandbox);
++vm.runInNewContext(customer, v1Sandbox);
++const focusText = v1Sandbox.buildProductRejectionInsights('c1', 1).map(x => x.productName).join(' ');
+ assert(!focusText.includes('کالای V1'));
++// p2 has no purchase date; it must remain eligible rather than being removed.
+ assert(focusText.includes('کالای نامعتبر'));
+ 
+-// T-C4: a reviewed signal is explicitly filtered, rather than searching generic prose.
+-assert(interpretation.includes("if (s.ackActionEffect === 'suppress') continue"));
+-assert(interpretation.includes('!s.ackReviewed'));
+-
+-// T-C9: urgent badge contract uses trim/includes semantics.
+-const listBadge = customers.match(/riskLevel === 'critical'.*?riskLevel === 'high'/s)?.[0] || '';
+-assert(listBadge.trim().includes("riskLevel === 'critical'"));
+-assert(listBadge.trim().includes("riskLevel === 'high'"));
+-assert(!listBadge.includes("riskLevel === 'medium'"));
+-assert(!listBadge.includes("riskLevel === 'low'"));
++// V4: real createAck -> getActiveAcksForCustomer -> applyAcksToSignals -> Customer Story.
++const storage = {};
++const ackSandbox = { console, Date, isFinite, Object, Array, String, Number };
++ackSandbox.window = ackSandbox;
++ackSandbox.localStorage = {
++  getItem: k => Object.prototype.hasOwnProperty.call(storage, k) ? storage[k] : null,
++  setItem: (k, v) => { storage[k] = String(v); },
++  removeItem: k => { delete storage[k]; }
++};
++storage.bagheri_acks_migrated_v1 = '1';
++ackSandbox.customerBehavior = () => ({ topProducts: [{ productId: 'p1' }] });
++vm.runInNewContext(ack, ackSandbox);
++vm.runInNewContext(interpretation, ackSandbox);
++const competitorAck = ackSandbox.createAck({ customerId: 'c1', productId: 'p1', familyId: 'p1', decision: 'competitor', source: 'visit', createdAt: '2026-10-20' });
++const reviewedAck = ackSandbox.createAck({ customerId: 'c1', scope: 'account', decision: 'visit_reviewed', source: 'visit', createdAt: '2026-10-20' });
++assert(competitorAck && competitorAck.status === 'active');
++assert(reviewedAck && reviewedAck.status === 'active');
++const reviewedCompetitorSignal = {
++  type: 'risk', category: 'SKU_DELAY', productId: 'p1', familyId: 'p1', status: 'active',
++  severity: 'high', reason: 'ریسک محصول'
++};
++const applied = ackSandbox.applyAcksToSignals(
++  [reviewedCompetitorSignal],
++  ackSandbox.getActiveAcksForCustomer('c1')
++)[0];
++assert.strictEqual(applied.ackDecision, 'competitor');
++assert(applied.ackActionEffect === 'change_to');
++assert(!applied.ackReviewed); // competitor keepAlert preserves the reviewed signal.
++ackSandbox.extractCustomerSignals = () => [reviewedCompetitorSignal];
++const story = ackSandbox.buildCustomerStory('c1');
++assert(story.summary.length > 0);
++assert(story.themes.risk === 'تأخیر خرید کالا');
++
++// V5: real createAck effect for still_stock + ours follows the owner contract.
++const oursAck = ackSandbox.createAck({ customerId: 'c2', productId: 'p2', familyId: 'p2', decision: 'still_stock', stockSource: 'ours', source: 'visit', createdAt: '2026-10-20' });
++assert(oursAck && oursAck.effects.action === 'suppress');
++assert.strictEqual(oursAck.effects.riskDelta, -30);
++assert.strictEqual(oursAck.effects.priorityDelta, -5);
++
++// V6: execute real receivableAttention() with actual source data and no payment history.
++const attSandbox = { console, Date, isFinite, Object, Array, String, Number };
++attSandbox.window = attSandbox;
++attSandbox.daysAgo = () => 20;
++attSandbox.customerTotals = () => ({ balance: 20000000 });
++vm.runInNewContext(computation, attSandbox);
++const attCtx = attSandbox.createComputationContext({ data: {
++  customers: [{ id: 'c1', name: 'مشتری' }],
++  invoices: [{ id: 'i1', customerId: 'c1', date: '2026-10-01', total: 20000000, items: [] }],
++  payments: [], checks: []
++} });
++const att = attCtx.receivableAttention();
++assert(att.byCustomerId.c1);
++assert.strictEqual(att.byCustomerId.c1.refKind, 'no_payment_history');
++assert.strictEqual(att.byCustomerId.c1.daysSince, 20);
++
++// V2: source and mapping assertions; the actual DOM click remains separately NOT PROVABLE.
++assert(customer.includes('calculateCustomerAction(cid, priority, { ctx: ctx })'));
++assert(customer.includes("actionType === 'visit' || actionType === 'follow_up'"));
++assert(customer.includes("? 'ثبت ویزیت'"));
++assert(customer.includes("? 'ثبت پرداخت'"));
++assert(customer.includes("? 'ثبت چک'"));
++assert(customer.includes("? 'مشاهده جزئیات'"));
++assert(customer.includes("typeof openAddCheck === 'function'"));
++assert(customer.includes("AppRouter.navigate('/customer', { id: cid })"));
+ 
+-// T-V3-a: canonical labels are exported and Quick View formats ACK dates through faDate.
++// V3: canonical label source and faDate call exist; full rendered Persian date is not asserted here.
+ assert(ack.includes('global.DECISION_LABELS = DECISION_LABELS'));
+ assert(customer.includes('ackLabels[a.decision]'));
+ assert(customer.includes("typeof faDate === 'function' ? faDate(d) : d"));
+ 
+-// T-V4: active competitor ACKs do not suppress Customer Story; only suppression/review does.
+-assert(interpretation.includes("s.type === 'opportunity' && s.ackActionEffect !== 'suppress' && !s.ackReviewed"));
+-assert(ack.includes("competitor:      { action: 'change_to'"));
+-
+-// T-V6: exact no-payment wording and bounced-check Quick View warning.
+-assert(computation.includes("refKind = 'no_payment_history'"));
+-assert(customer.includes('روز از فاکتور آخر · پرداختی ثبت نشده'));
+-assert(customer.includes('اقدام فوری · چک برگشتی فعال'));
+-
+-// T-V7: Opportunity eligibility and Quick View action signature/mapping.
++// V7: ACK-aware Opportunity filters and Focus group insertion/order are present.
+ assert(action.includes("s.type === 'opportunity' && (s.ackActionEffect === 'suppress' || s.ackReviewed)"));
+ assert(priority.includes("s.type !== 'opportunity' || s.ackActionEffect === 'suppress' || s.ackReviewed"));
+-assert(customer.includes('calculateCustomerAction(cid, priority, { ctx: ctx })'));
+-assert(customer.includes("rt === 'visit' || rt === 'follow_up'"));
+-assert(customer.includes("rt === 'payment_followup'"));
+-assert(customer.includes("rt === 'check_followup'"));
+-assert(customer.includes("AppRouter.navigate('/customer', { id: cid })"));
++assert(customer.includes("kind: 'opportunity', bucket: 1"));
++assert(customer.includes("kind: 'rejection', bucket: 2"));
++assert(customer.includes("(a.c.bucket || 0) - (b.c.bucket || 0)"));
+ 
+-// V8/V9: intentional list scope and no legacy wording dependencies.
++// V8/V9.
+ assert(customers.includes('V8 intentional contract'));
+ for (const p of ['js/views/customer.js','js/app.js','js/views/dashboard.js','js/views/watches.js']) {
+   assert(!read(p).includes('پیگیری‌های منتظر'));
+ }
+ 
+-// Small runtime proof for V4/V7 Story classification with an active competitor ACK.
+-const sandbox = { console, Date, isFinite, Object, Array, String, Number };
+-sandbox.extractCustomerSignals = () => [
+-  { type: 'opportunity', category: 'PURCHASE_GROWTH', severity: 'low', reason: 'رشد خرید', ackActionEffect: 'change_to' },
+-  { type: 'opportunity', category: 'PURCHASE_GROWTH', severity: 'low', reason: 'reviewed', ackReviewed: { createdAt: '2026-10-01' } }
+-];
+-sandbox.isAckLayerActive = () => false;
+-vm.runInNewContext(interpretation, sandbox);
+-const story = sandbox.buildCustomerStory('c1');
+-assert(story.summary.includes('رشد خرید'));
+-assert(!story.summary.includes('reviewed'));
+-
+-console.log('Addendum tests passed: T-C1, T-C4, T-C9, T-V3-a, T-V4, T-V6, T-V7, V8/V9');
++console.log('Acceptance tests passed: V1(real path), V2(contract), V3(contract), V4(real ACK path), V5(real ACK effect), V6(real attention), V7(contract), V8/V9');

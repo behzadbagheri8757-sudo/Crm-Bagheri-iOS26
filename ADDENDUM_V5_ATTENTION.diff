@@ -1,0 +1,219 @@
+diff -ruN '--exclude=ADDENDUM_V5_ATTENTION_REPORT.md' '--exclude=ADDENDUM_V5_ATTENTION.diff' /tmp/input_v5_original/Bagheri-crm-main/css/visual-grammar-pages.css ./css/visual-grammar-pages.css
+--- /tmp/input_v5_original/Bagheri-crm-main/css/visual-grammar-pages.css	2026-10-19 12:21:33.000000000 +0000
++++ ./css/visual-grammar-pages.css	2026-10-19 12:45:36.372627511 +0000
+@@ -2147,6 +2147,7 @@
+ }
+ /* Addendum V6: explicit red Quick View warning for an active bounced check. */
+ .bp-qv-urgent{margin-top:12px;padding:8px 10px;border-radius:10px;background:color-mix(in srgb,var(--vg-color-danger) 12%,transparent);color:var(--vg-color-danger);font-size:.74rem;font-weight:800;}
++.bp-qv-attention{margin-top:12px;padding:8px 10px;border-radius:10px;background:var(--vg-color-warning);color:var(--vg-color-text);font-size:.74rem;line-height:1.8;font-weight:650;}
+ .bp-qv-acks,.bp-qv-recommended{margin-top:14px;padding-top:12px;border-top:1px solid var(--vg-color-divider);}
+ .bp-qv-ack-row{font-size:.73rem;line-height:1.8;color:var(--vg-color-text);}
+ .bp-qv-action-description{margin-bottom:8px;font-size:.73rem;line-height:1.7;color:var(--vg-color-text);}
+diff -ruN '--exclude=ADDENDUM_V5_ATTENTION_REPORT.md' '--exclude=ADDENDUM_V5_ATTENTION.diff' /tmp/input_v5_original/Bagheri-crm-main/js/views/customer.js ./js/views/customer.js
+--- /tmp/input_v5_original/Bagheri-crm-main/js/views/customer.js	2026-10-19 12:21:24.000000000 +0000
++++ ./js/views/customer.js	2026-10-19 12:45:58.872181339 +0000
+@@ -174,6 +174,23 @@
+     return typeof value === 'string' && /^(?:\d{4})-(?:\d{2})-(?:\d{2})$/.test(value) && !isNaN(new Date(value + 'T00:00:00').getTime());
+   }
+ 
++  // A pure ours-stock response is not a product rejection.  Require positive,
++  // consistent evidence; zero-valued keys and missing fields must not hide data.
++  function isPureOursStillStock(st) {
++    var sources = st && st.stillStockSources && typeof st.stillStockSources === 'object'
++      ? st.stillStockSources : {};
++    var reasons = st && st.rejectionReasons && typeof st.rejectionReasons === 'object'
++      ? st.rejectionReasons : {};
++    var still = Number(reasons.still_stock) || 0;
++    var ours = Number(sources.ours) || 0;
++    var competitor = Number(sources.competitor) || 0;
++    var unknown = Number(sources.unknown) || 0;
++    if (!(still > 0 && ours === still && competitor === 0 && unknown === 0)) return false;
++    return Object.keys(reasons).every(function (code) {
++      return code === 'still_stock' || !(Number(reasons[code]) > 0);
++    });
++  }
++
+   function buildProductRejectionInsights(customerId, threshold, ctx) {
+     var out = [];
+     if (!customerId || typeof customerBehavior !== 'function') return out;
+@@ -193,6 +210,7 @@
+       var offered = Number(st.offeredCount) || 0;
+       if (rejected < thr) continue; // 1st and 2nd never shown
+       if (offered < 1) continue;
++      if (isPureOursStillStock(st)) continue;
+ 
+       var ratio = rejected / offered;
+       // Contract from calc.js: use st.rejectionReasons only (not topRejectionReason/reasonCounts)
+@@ -1261,16 +1279,7 @@
+       (attRow
+         ? '<div class="bp-customer-attention">' +
+             '<span class="bp-attention-icon" aria-hidden="true"></span>' +
+-            '<span>نیازمند پیگیری — ' +
+-              toman(attRow.balance) + ' ت' +
+-              (attRow.refKind === 'invoice_due'
+-                ? (attRow.daysSince > 0 ? '، ' + toman(attRow.daysSince) + ' روز از سررسید آخرین فاکتور' : '، سررسید آخرین فاکتور امروز است')
+-                : attRow.refKind === 'invoice_date'
+-                ? '، ' + toman(attRow.daysSince) + ' روز از تاریخ آخرین فاکتور'
+-                : attRow.refKind === 'no_payment_history'
+-                ? '، ' + toman(attRow.daysSince) + ' روز از فاکتور آخر · پرداختی ثبت نشده'
+-                : '، ' + toman(attRow.daysSince) + ' روز از آخرین پرداخت') +
+-            '</span>' +
++            '<span>' + esc(receivableAttentionSummary(attRow)) + '</span>' +
+           '</div>'
+         : '') +
+       (legacyDebtRow && legacyDebtRow.amount > 0
+@@ -1428,7 +1437,22 @@
+     bindWatchLifecycleRows(root);
+     bindWatchFollowUps(root, id);
+   }
+-
++  function receivableAttentionSummary(attRow) {
++    if (!attRow) return '';
++    var prefix = 'نیازمند پیگیری — ' + toman(attRow.balance) + ' ت';
++    if (attRow.refKind === 'invoice_due') {
++      return prefix + (attRow.daysSince > 0
++        ? '، ' + toman(attRow.daysSince) + ' روز از سررسید آخرین فاکتور'
++        : '، سررسید آخرین فاکتور امروز است');
++    }
++    if (attRow.refKind === 'invoice_date') {
++      return prefix + '، ' + toman(attRow.daysSince) + ' روز از تاریخ آخرین فاکتور';
++    }
++    if (attRow.refKind === 'no_payment_history') {
++      return prefix + '، ' + toman(attRow.daysSince) + ' روز از فاکتور آخر · پرداختی ثبت نشده';
++    }
++    return prefix + '، ' + toman(attRow.daysSince) + ' روز از آخرین پرداخت';
++  }
+ 
+   /* Central quick view for the Customers list. Presentation-only: it reuses
+      the frozen Priority/Watch/Balance outputs and existing action APIs. */
+@@ -1449,6 +1473,13 @@
+     var health = riskLevel === 'critical' ? 'نیاز به رسیدگی فوری' : riskLevel === 'high' ? 'نیاز به توجه' : riskLevel === 'medium' ? 'قابل بررسی' : 'وضعیت عادی';
+     var watchData = loadWatchData(cid, ctx);
+     var focus = customerFocusHtml(cid, ctx, watchData).html || '';
++    var attentionRow = null;
++    try {
++      if (ctx && typeof ctx.receivableAttention === 'function') {
++        var attentionData = ctx.receivableAttention();
++        attentionRow = attentionData && attentionData.byCustomerId ? attentionData.byCustomerId[cid] || null : null;
++      }
++    } catch (eAttention) { attentionRow = null; }
+     var activeChecks = [];
+     try { activeChecks = (typeof customerChecks === 'function' ? customerChecks(cid, ctx) : []) || []; } catch (eChk) { activeChecks = []; }
+     var hasBouncedCheck = activeChecks.some(function (ch) { return ch && ch.status === 'bounced'; });
+@@ -1493,6 +1524,7 @@
+           '<div class="bp-qv-balance ' + (totals.balance > 0 ? 'is-debt' : '') + '">' + esc(balanceStatusWord(totals.balance)) + (totals.balance !== 0 ? ': ' + toman(Math.abs(totals.balance)) + ' ت' : '') + '</div>' +
+           '<div class="bp-qv-health radar-risk-' + esc(riskLevel || 'normal') + '">' + esc(health) + '</div>' +
+         '</div>' +
++        (attentionRow ? '<div class="bp-qv-attention" role="status">' + esc(receivableAttentionSummary(attentionRow)) + '</div>' : '') +
+         (story ? '<div class="bp-qv-story"><div class="bp-qv-section-label">خلاصه وضعیت</div><div>' + esc(story) + '</div></div>' : '') +
+         (hasBouncedCheck ? '<div class="bp-qv-urgent" role="alert">⚠ اقدام فوری · چک برگشتی فعال</div>' : '') +
+         ackHtml +
+@@ -1622,5 +1654,7 @@
+   global.getProductRejectionThreshold = getProductRejectionThreshold;
+   global.setProductRejectionThreshold = setProductRejectionThreshold;
+   global.buildProductRejectionInsights = buildProductRejectionInsights;
++  global.formatReceivableAttentionSummary = receivableAttentionSummary;
++  global.buildCustomerFocusForTests = customerFocusHtml;
+ 
+ })(typeof window !== 'undefined' ? window : this);
+diff -ruN '--exclude=ADDENDUM_V5_ATTENTION_REPORT.md' '--exclude=ADDENDUM_V5_ATTENTION.diff' /tmp/input_v5_original/Bagheri-crm-main/sw.js ./sw.js
+--- /tmp/input_v5_original/Bagheri-crm-main/sw.js	2026-10-18 10:27:57.000000000 +0000
++++ ./sw.js	2026-10-19 12:45:40.180768240 +0000
+@@ -39,7 +39,9 @@
+    configured, so it is boot-critical, not merely a nice-to-have precache
+    entry. It was already in PRECACHE_URLS; no asset list, route, or business
+    logic otherwise changed.) */
+-const CACHE_NAME = 'baqeri-shell-v85';
++/* CHANGED: v85 -> v86 (limited still_stock+ours rejection filtering and
++   Quick View receivable-attention summary; existing precache paths unchanged.) */
++const CACHE_NAME = 'baqeri-shell-v86';
+ 
+ /** App Shell — paths relative to this SW (same directory as index.html). */
+ const PRECACHE_URLS = [
+diff -ruN '--exclude=ADDENDUM_V5_ATTENTION_REPORT.md' '--exclude=ADDENDUM_V5_ATTENTION.diff' /tmp/input_v5_original/Bagheri-crm-main/tests/addendum_v1_v9.test.js ./tests/addendum_v1_v9.test.js
+--- /tmp/input_v5_original/Bagheri-crm-main/tests/addendum_v1_v9.test.js	2026-10-19 12:23:21.000000000 +0000
++++ ./tests/addendum_v1_v9.test.js	2026-10-19 12:46:32.106070040 +0000
+@@ -26,6 +26,7 @@
+ };
+ const v1Sandbox = { console, Date, isFinite, Object, Array, String, Number, data: v1Data };
+ v1Sandbox.window = v1Sandbox;
++v1Sandbox.toman = value => String(value);
+ v1Sandbox.parseISODateParts = s => /^\d{4}-\d{2}-\d{2}$/.test(s) ? { y: +s.slice(0,4), m: +s.slice(5,7), d: +s.slice(8,10) } : null;
+ v1Sandbox.daysAgo = () => 20;
+ v1Sandbox.todayISO = () => '2026-10-20';
+@@ -36,6 +37,48 @@
+ // p2 has no purchase date; it must remain eligible rather than being removed.
+ assert(focusText.includes('کالای نامعتبر'));
+ 
++// V5 acceptance: execute real calc.js -> rejection insights -> Focus output.
++const stillStockProducts = [
++  { id: 'ours', name: 'کالای ours خالص' },
++  { id: 'competitor', name: 'کالای competitor' },
++  { id: 'price', name: 'کالای price' },
++  { id: 'unknown', name: 'کالای unknown' },
++  { id: 'missing', name: 'کالای بدون منبع' }
++];
++const stillStockVisits = [];
++function addRejected(productId, stockSource, reason) {
++  stillStockVisits.push({ date: '2026-09-' + String(stillStockVisits.length + 1).padStart(2, '0'), offeredProducts: [{
++    productId, reaction: 'rejected', rejectionReason: reason || 'still_stock', ...(stockSource ? { stockSource } : {})
++  }] });
++}
++for (let i = 0; i < 3; i++) addRejected('ours', 'ours');
++for (let i = 0; i < 3; i++) addRejected('competitor', 'competitor');
++addRejected('price', 'ours'); addRejected('price', 'ours'); addRejected('price', 'ours', 'price');
++for (let i = 0; i < 3; i++) addRejected('unknown', 'unknown');
++for (let i = 0; i < 3; i++) addRejected('missing', null);
++const stillStockSandbox = { console, Date, isFinite, Object, Array, String, Number, data: {
++  products: stillStockProducts, customers: [{ id: 'c1', visits: stillStockVisits }], invoices: [], payments: [], checks: []
++} };
++stillStockSandbox.window = stillStockSandbox;
++stillStockSandbox.esc = value => String(value == null ? '' : value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
++stillStockSandbox.parseISODateParts = v1Sandbox.parseISODateParts;
++stillStockSandbox.daysAgo = () => 20;
++stillStockSandbox.todayISO = () => '2026-10-20';
++vm.runInNewContext(calc, stillStockSandbox);
++vm.runInNewContext(customer, stillStockSandbox);
++const rejectionNames = stillStockSandbox.buildProductRejectionInsights('c1').map(x => x.productName).join(' ');
++assert(!rejectionNames.includes('کالای ours خالص'));
++assert(rejectionNames.includes('کالای competitor'));
++assert(rejectionNames.includes('کالای price'));
++assert(rejectionNames.includes('کالای unknown'));
++assert(rejectionNames.includes('کالای بدون منبع'));
++stillStockSandbox.BagheriPresent = {
++  lvRank: level => ({ critical: 4, high: 3, medium: 2, low: 1 }[level] || 1),
++  n0: value => String(value), watchSentence: () => '', stockSentence: source => source
++};
++const focusForOurs = stillStockSandbox.buildCustomerFocusForTests('c1', {}, { activeConfirmed: [], occs: [] }).html;
++assert(!focusForOurs.includes('کالای ours خالص'));
++
+ // V4: real createAck -> getActiveAcksForCustomer -> applyAcksToSignals -> Customer Story.
+ const storage = {};
+ const ackSandbox = { console, Date, isFinite, Object, Array, String, Number };
+@@ -82,7 +125,7 @@
+ attSandbox.customerTotals = () => ({ balance: 20000000 });
+ vm.runInNewContext(computation, attSandbox);
+ const attCtx = attSandbox.createComputationContext({ data: {
+-  customers: [{ id: 'c1', name: 'مشتری' }],
++  customers: [{ id: 'c1', name: 'مشتری' }, { id: 'c2', name: 'بدون توجه' }],
+   invoices: [{ id: 'i1', customerId: 'c1', date: '2026-10-01', total: 20000000, items: [] }],
+   payments: [], checks: []
+ } });
+@@ -90,6 +133,11 @@
+ assert(att.byCustomerId.c1);
+ assert.strictEqual(att.byCustomerId.c1.refKind, 'no_payment_history');
+ assert.strictEqual(att.byCustomerId.c1.daysSince, 20);
++assert(!att.byCustomerId.c2);
++const attentionText = v1Sandbox.formatReceivableAttentionSummary({ balance: 20000000, daysSince: 20, refKind: 'no_payment_history' });
++assert(attentionText.includes('20 روز از فاکتور آخر · پرداختی ثبت نشده'));
++assert(customer.includes('attentionData.byCustomerId[cid]'));
++assert(customer.includes('bp-qv-attention'));
+ 
+ // V2: source and mapping assertions; the actual DOM click remains separately NOT PROVABLE.
+ assert(customer.includes('calculateCustomerAction(cid, priority, { ctx: ctx })'));
+@@ -119,4 +167,4 @@
+   assert(!read(p).includes('پیگیری‌های منتظر'));
+ }
+ 
+-console.log('Acceptance tests passed: V1(real path), V2(contract), V3(contract), V4(real ACK path), V5(real ACK effect), V6(real attention), V7(contract), V8/V9');
++console.log('Acceptance tests passed: V1(real path), V2(contract), V3(contract), V4(real ACK path), V5(real Focus/Rejection path), V6(real attention/formatter), V7(contract), V8/V9');
