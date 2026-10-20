@@ -41,7 +41,7 @@
    logic otherwise changed.) */
 /* CHANGED: v86 -> v87 (limited Quick View attention CSS contrast adjustment;
    existing precache paths unchanged.) */
-const CACHE_NAME = 'baqeri-shell-v87';
+const CACHE_NAME = 'baqeri-shell-v88';
 
 /** App Shell — paths relative to this SW (same directory as index.html). */
 const PRECACHE_URLS = [
