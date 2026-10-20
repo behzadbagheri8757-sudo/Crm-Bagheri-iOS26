@@ -172,8 +172,6 @@
       // active, matching the existing convention in risk.js/priority.js.
       if (s.status === 'pending') return;
       if (s.seasonallySuppressed === true) return;
-      // V7: an Opportunity is eligible only while unsuppressed and unreviewed.
-      if (s.type === 'opportunity' && (s.ackActionEffect === 'suppress' || s.ackReviewed)) return;
       const r = _actionPriorityRank(s.category);
       if (r < bestRank) {
         bestRank = r;

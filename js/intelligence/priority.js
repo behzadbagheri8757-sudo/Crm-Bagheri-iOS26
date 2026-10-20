@@ -178,13 +178,13 @@
   /* ---- Opportunity (0..100) ----
      Max points among type==='opportunity' signals.
      Opportunity is not a risk driver; P-02 active gate applies to Risk
-     only. ACK-suppressed or ACK-reviewed opportunities are not eligible. */
+     only — opportunity component uses any opportunity signal present. */
   function _opportunityScore(signals) {
     if (!signals || !signals.length) return 0;
     var maxPts = 0;
     for (var i = 0; i < signals.length; i++) {
       var s = signals[i];
-      if (!s || s.type !== 'opportunity' || s.ackActionEffect === 'suppress' || s.ackReviewed) continue;
+      if (!s || s.type !== 'opportunity') continue;
       var pts = _signalBasePoints(s);
       if (pts > maxPts) maxPts = pts;
     }
