@@ -2145,10 +2145,33 @@ html .sheet.inv-sheet-host .inv-mini-input:focus{
   border-color:var(--vg-color-primary);
   box-shadow:0 0 0 3px var(--vg-color-primary-soft);
 }
-/* Addendum V6: explicit red Quick View warning for an active bounced check. */
-.bp-qv-urgent{margin-top:12px;padding:8px 10px;border-radius:10px;background:color-mix(in srgb,var(--vg-color-danger) 12%,transparent);color:var(--vg-color-danger);font-size:.74rem;font-weight:800;}
-.bp-qv-attention{margin-top:12px;padding:8px 10px;border-radius:10px;background:var(--vg-color-warning-soft);border:1px solid var(--vg-color-warning);color:var(--vg-color-text);font-size:.74rem;line-height:1.8;font-weight:650;}
-.bp-qv-acks,.bp-qv-recommended{margin-top:14px;padding-top:12px;border-top:1px solid var(--vg-color-divider);}
-.bp-qv-ack-row{font-size:.73rem;line-height:1.8;color:var(--vg-color-text);}
-.bp-qv-action-description{margin-bottom:8px;font-size:.73rem;line-height:1.7;color:var(--vg-color-text);}
-.bp-qv-recommended .btn{width:100%;}
+
+
+/* v5 — Customer hierarchy, progressive disclosure, and follow-up status */
+#main.customer-detail-view .cd-top-alert{display:flex;flex-direction:column;gap:4px;margin:0 0 var(--vg-space-group);padding:12px 14px;border-radius:var(--vg-radius-raised);border:1px solid transparent;font-size:.86rem;line-height:1.65;}
+#main.customer-detail-view .cd-top-alert-danger{background:var(--vg-color-danger-soft);border-color:var(--vg-color-danger);color:var(--vg-color-text);}
+#main.customer-detail-view .cd-top-alert-warning{background:var(--vg-color-warning-soft);border-color:var(--vg-color-warning);color:var(--vg-color-text);}
+#main.customer-detail-view .cd-top-alert-title{font-weight:var(--vg-weight-title);}
+#main.customer-detail-view .cd-top-alert-desc{font-size:.8rem;color:var(--vg-color-text-muted);}
+#main.customer-detail-view .cust-summary.cd-story{margin-bottom:var(--vg-space-group);border-inline-start-width:3px;border-inline-start-style:solid;}
+#main.customer-detail-view .cust-summary.is-critical{border-inline-start-color:var(--vg-color-danger);}
+#main.customer-detail-view .cust-summary.is-risk{border-inline-start-color:var(--vg-color-warning);}
+#main.customer-detail-view .cust-summary.is-watch{border-inline-start-color:var(--vg-color-warning);}
+#main.customer-detail-view .cust-summary.is-opportunity{border-inline-start-color:var(--vg-color-success);}
+#main.customer-detail-view .cust-summary.is-followup{border-inline-start-color:var(--vg-color-primary);}
+#main.customer-detail-view .cust-summary.is-normal{border-inline-start-color:var(--vg-color-neutral);}
+#main.customer-detail-view .cards.cust-metrics > .cd-metric-cell{background:var(--vg-color-surface);border:0;border-radius:0;box-shadow:none;padding:12px 14px;min-width:0;}
+#main.customer-detail-view .cards.cust-metrics > .cd-metric-cell + .cd-metric-cell{border-inline-start:1px solid var(--vg-color-divider);}
+#main.customer-detail-view .cd-ack-details,#main.customer-detail-view .cd-history-details{margin-bottom:var(--vg-space-group);}
+#main.customer-detail-view .cd-history-details[open] > .customer-behavior-summary{margin-bottom:10px;}
+.bp-qv-balance.is-prominent{display:flex;flex-direction:column;gap:2px;margin-top:14px;line-height:1.35;}
+.bp-qv-balance.is-prominent .bp-qv-balance-label{font-size:.78rem;font-weight:var(--vg-weight-label);color:var(--vg-color-text-muted);}
+.bp-qv-balance.is-prominent .bp-qv-balance-amount{font-size:1.3rem;font-weight:var(--vg-weight-value);color:var(--vg-color-text);font-variant-numeric:tabular-nums;}
+.bp-qv-balance.is-prominent.is-debt .bp-qv-balance-amount{color:var(--vg-color-danger);}
+.bp-qv-action-hint{font-size:.78rem;line-height:1.7;color:var(--vg-color-text-secondary);margin:10px 0 0;padding:8px 10px;background:var(--vg-color-primary-soft);border-radius:10px;}
+.bp-qv-action-hint-label{font-weight:var(--vg-weight-title);color:var(--vg-color-primary);margin-inline-end:4px;}
+.followup-status-badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:var(--vg-radius-pill);font-size:.72rem;font-weight:var(--vg-weight-label);white-space:nowrap;line-height:1.4;}
+.followup-status-overdue{background:var(--vg-color-danger-soft);color:var(--vg-color-danger);}
+.followup-status-today{background:var(--vg-color-warning-soft);color:var(--vg-color-warning);}
+.followup-status-future{background:var(--vg-color-primary-soft);color:var(--vg-color-primary);}
+.followup-status-none{background:var(--vg-color-neutral-soft);color:var(--vg-color-text-muted);}
