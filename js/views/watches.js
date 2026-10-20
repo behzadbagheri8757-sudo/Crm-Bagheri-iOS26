@@ -221,6 +221,19 @@
     '</div>';
   }
 
+  function followUpStatusBadge(o) {
+    var dueDate = (o && o.suppression && o.suppression.followUpDate) ? String(o.suppression.followUpDate).slice(0, 10) : null;
+    if (!dueDate || !/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) return { label: 'بدون موعد', cls: 'followup-status-none' };
+    var today = (typeof todayISO === 'function') ? todayISO() : new Date().toISOString().slice(0, 10);
+    var dueMs = new Date(dueDate + 'T00:00:00').getTime();
+    var todayMs = new Date(today + 'T00:00:00').getTime();
+    if (!isFinite(dueMs)) return { label: 'بدون موعد', cls: 'followup-status-none' };
+    var diff = Math.round((dueMs - todayMs) / 86400000);
+    if (diff < 0) return { label: 'عقب‌افتاده ' + faDigits(Math.abs(diff)) + ' روز', cls: 'followup-status-overdue' };
+    if (diff === 0) return { label: 'امروز', cls: 'followup-status-today' };
+    return { label: 'تا ' + faDigits(diff) + ' روز', cls: 'followup-status-future' };
+  }
+
   function renderWatchList(root) {
     if (!root) return;
     var occs = [];
@@ -259,16 +272,18 @@
         var target = isFollowUp
           ? ' data-watch-customer="' + esc(o.customerId) + '"'
           : ' data-watch-id="' + esc(o.id) + '"';
+        var metaSpan;
+        if (isFollowUp) {
+          var st = followUpStatusBadge(o);
+          metaSpan = '<span class="followup-status-badge ' + st.cls + '">' + esc(st.label) + '</span>';
+        } else {
+          metaSpan = '<span class="watch-severity-badge watch-severity-' + esc(o.level || 'low') + '">' + esc(levelLabel(o.level)) + '</span>' +
+            (reviewed ? '<span class="watch-reviewed-badge is-reviewed">علت ثبت شده</span>' : '');
+        }
         return '<div class="watch-list-row tx-row"' + target + ' role="link" tabindex="0">' +
-          '<div class="watch-list-main">' +
-            '<div class="watch-list-title tx-row-title">' + esc(prodName || catLabel) + '</div>' +
-            (sentence ? '<div class="watch-list-text">' + esc(sentence) + '</div>' : '') +
-          '</div>' +
-          '<div class="watch-list-meta">' +
-            '<span class="watch-severity-badge watch-severity-' + esc(o.level || 'low') + '">' + esc(levelLabel(o.level)) + '</span>' +
-            (reviewed && !isFollowUp ? '<span class="watch-reviewed-badge is-reviewed">علت ثبت شده</span>' : '') +
-          '</div>' +
-        '</div>';
+          '<div class="watch-list-main"><div class="watch-list-title tx-row-title">' + esc(prodName || catLabel) + '</div>' +
+            (sentence ? '<div class="watch-list-text">' + esc(sentence) + '</div>' : '') + '</div>' +
+          '<div class="watch-list-meta">' + metaSpan + '</div></div>';
       }).join('');
       return '<section class="watch-customer-group">' +
         '<div class="watch-customer-head"><span class="watch-customer-name">' + esc(g.name) + '</span><span class="watch-customer-count">' + faDigits(g.items.length) + ' مورد</span></div>' +
@@ -277,7 +292,14 @@
     }).join('');
 
     if (!shown.length) {
-      html = '<div class="empty watch-empty">' + (watchFilter === 'all' ? 'هشدار فعالی نیست' : 'موردی با این فیلتر پیدا نشد') + '</div>';
+      var emptyText;
+      if (watchFilter === 'all') emptyText = 'هشدار فعالی نیست';
+      else if (watchFilter === 'followup') emptyText = 'پیگیری بازی وجود ندارد';
+      else if (watchFilter === 'attention') emptyText = 'هشدار با شدت زیاد وجود ندارد';
+      else if (watchFilter === 'unvisited') emptyText = 'همه مشتریان ویزیت شده‌اند';
+      else if (watchFilter === 'check_due') emptyText = 'چک سررسیدگذشته یا نزدیک سررسید وجود ندارد';
+      else emptyText = 'موردی با این فیلتر پیدا نشد';
+      html = '<div class="empty watch-empty">' + emptyText + '</div>';
     }
 
     var prevBar = root.querySelector('#watch-filters');

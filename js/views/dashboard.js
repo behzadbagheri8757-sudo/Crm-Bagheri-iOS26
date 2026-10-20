@@ -341,13 +341,7 @@
     if (!att.rows.length) return;
 
     var rowsHtml = att.rows.map(function (r) {
-      var line = r.refKind === 'invoice_due'
-        ? (r.daysSince > 0 ? faDigits(r.daysSince) + ' روز از سررسید آخرین فاکتور' : 'سررسید آخرین فاکتور امروز است')
-        : r.refKind === 'invoice_date'
-        ? faDigits(r.daysSince) + ' روز از تاریخ آخرین فاکتور'
-        : (r.refKind === 'no_payment_history'
-          ? faDigits(r.daysSince) + ' روز از آخرین فاکتور، بدون پرداخت'
-          : faDigits(r.daysSince) + ' روز از آخرین پرداخت');
+      var line = receivableAttentionDesc(r);   // one wording shared with Customer Detail / Quick View
       if (r.legacyBalance > 0) line += ' · بدهی قدیمی جدا: ' + money(r.legacyBalance);
       return '<button type="button" class="bp-attention-row" data-attention-cid="' + esc(r.customerId) + '">' +
         '<span class="bp-attention-row-name">' + esc(r.name) + '</span>' +
