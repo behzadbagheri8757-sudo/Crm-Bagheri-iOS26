@@ -23,6 +23,26 @@
     };
   }
 
+  // extractCustomerSignals may be memoized and already decorated by Risk's ACK pass.
+  // Work from a clean copy so this view applies the current ACK set exactly once.
+  function _freshSignalCopy(s) {
+    if (!s) return s;
+    var c = Object.assign({}, s);
+    c.ackRiskDelta = undefined;
+    c.ackPriorityDelta = undefined;
+    c.ackIds = undefined;
+    c.ackPriorityById = undefined;
+    c.ackDecision = undefined;
+    c.ackExpiresAt = undefined;
+    c.ackScope = undefined;
+    c.ackActionEffect = undefined;
+    c.ackUrgency = undefined;
+    c.ackActionText = undefined;
+    c.ackActionType = undefined;
+    c.ackReviewed = undefined;
+    return c;
+  }
+
   let currentCustomerId = null;
   let rootEl = null;
   function customersHref() {
@@ -389,7 +409,7 @@
     try {
       if (typeof isAckLayerActive === 'function' && isAckLayerActive() &&
           typeof getActiveAcksForCustomer === 'function' && typeof applyAcksToSignals === 'function') {
-        confirmed = confirmed.map(function (s) { return s ? Object.assign({}, s) : s; });
+        confirmed = confirmed.map(_freshSignalCopy);
         applyAcksToSignals(confirmed, getActiveAcksForCustomer(cid));
       }
     } catch (eAckW) { /* fail-open */ }
@@ -481,7 +501,7 @@
 
     wd.activeConfirmed.forEach(function (sg) {
       if (!sg || sg.type !== 'risk') return;
-      if (sg.ackReviewed) return;   // v5: Focus excludes reviewed signals
+      if (sg.ackReviewed) return;   // v5: Focus excludes signals the seller already reviewed in a visit
       var grp = TOPIC_GROUPS[sg.category];
       var key = sg.productId ? 'p:' + sg.productId : 'c:' + (grp || sg.category);
       var label = CONFIRMED_TITLES[sg.category] || 'نیاز به بررسی';
@@ -884,6 +904,10 @@
     const color = t.balance > 0 ? 'accent-rust' : t.balance < 0 ? 'accent-olive' : 'accent-olive';
     const balanceLine = t.balance === 0 ? word : word + ': ' + toman(Math.abs(t.balance)) + ' ت';
 
+    /* Hierarchy (v5): identity → ONE top alert → story (toned) → recommended action → primary actions
+       → what matters now → money → behaviour → decisions/history (collapsed). Everything below is a
+       read-only merge of outputs the engine already computes (Priority / Action / Watch / Balance);
+       no new score, threshold or signal. */
     let recommendedAction = null;
     let customerRiskLevel = null;
     let customerHealthLabel = 'وضعیت عادی';
@@ -899,8 +923,10 @@
       _storyTextRaw = (priority && priority.customerStory && priority.customerStory.summary) ? priority.customerStory.summary : '';
     }
 
+    // P0 (what matters now) + follow-ups waiting for this customer — presentation of existing Truth.
     const watchData = loadWatchData(c.id, ctx);
-    var attRow = null, legacyDebtRow = null;
+    var attRow = null;
+    var legacyDebtRow = null;
     try {
       if (ctx && typeof ctx.receivableAttention === 'function') {
         var attData = ctx.receivableAttention();
@@ -908,6 +934,8 @@
         legacyDebtRow = (attData.legacyByCustomerId && attData.legacyByCustomerId[c.id]) ? attData.legacyByCustomerId[c.id] : null;
       }
     } catch (eAtt) { attRow = null; legacyDebtRow = null; }
+    const focus = customerFocusHtml(c.id, ctx, watchData);
+    const followUpTopHtml = pendingFollowUpHtml(c.id);
 
     var pendingFollowUps = [];
     try {
@@ -919,22 +947,25 @@
       }
     } catch (eFU) { pendingFollowUps = []; }
 
+    // ONE top alert: a bounced check always wins over the receivable follow-up.
     var hasBouncedCheck = false;
     try {
-      hasBouncedCheck = (watchData.activeConfirmed || []).some(function (s) { return s && s.category === 'CHECK_BOUNCED'; });
+      hasBouncedCheck = (watchData.activeConfirmed || []).some(function (sg) { return sg && sg.category === 'CHECK_BOUNCED'; });
     } catch (eB) { hasBouncedCheck = false; }
-
     var topAlertHtml = '';
     if (hasBouncedCheck) {
       topAlertHtml = '<div class="cd-top-alert cd-top-alert-danger" role="alert">' +
         '<span class="cd-top-alert-title">چک برگشتی فعال</span>' +
-        '<span class="cd-top-alert-desc">' + esc(typeof getRiskBadge === 'function' ? getRiskBadge('critical').label : 'اقدام فوری') + '</span></div>';
+        '<span class="cd-top-alert-desc">' +
+          esc(typeof getRiskBadge === 'function' ? getRiskBadge('critical').label : 'اقدام فوری') +
+        '</span></div>';
     } else if (attRow && attRow.balance > 0) {
       topAlertHtml = '<div class="cd-top-alert cd-top-alert-warning">' +
         '<span class="cd-top-alert-title">نیازمند پیگیری — ' + toman(attRow.balance) + ' ت</span>' +
         '<span class="cd-top-alert-desc">' + esc(receivableAttentionDesc(attRow)) + '</span></div>';
     }
 
+    // Story tone (colour of the story's leading edge): critical → risk → watch → opportunity → follow-up → normal.
     var storyTone = 'normal';
     if (customerRiskLevel === 'critical') storyTone = 'critical';
     else if (customerRiskLevel === 'high') storyTone = 'risk';
@@ -942,9 +973,10 @@
     else {
       var hasPositive = false;
       try {
-        hasPositive = (watchData.activeConfirmed || []).some(function (s) {
-          return s && s.type === 'opportunity' && POSITIVE_SIGNAL_CATEGORIES.indexOf(s.category) !== -1 &&
-            s.ackActionEffect !== 'suppress' && !s.ackReviewed;
+        hasPositive = (watchData.activeConfirmed || []).some(function (sg) {
+          return sg && sg.type === 'opportunity' &&
+            POSITIVE_SIGNAL_CATEGORIES.indexOf(sg.category) !== -1 &&
+            sg.ackActionEffect !== 'suppress' && !sg.ackReviewed;
         });
       } catch (eOpp) { hasPositive = false; }
       if (hasPositive) storyTone = 'opportunity';
@@ -957,8 +989,6 @@
         '<div class="cust-summary-story">' + esc(_storyTextRaw) + '</div></div>';
     }
 
-    const focus = customerFocusHtml(c.id, ctx, watchData);
-    const followUpTopHtml = pendingFollowUpHtml(c.id);
 
     const invs = customerInvoices(c.id, ctx)
       .slice()
@@ -1289,61 +1319,119 @@
 
     /* Presentation helper: one labelled row of the identity block (label muted, value primary). */
     function cdMeta(label, value) {
-      return '<div class="cd-meta-row"><span class="cd-meta-k">' + label + '</span><span class="cd-meta-v">' + esc(String(value)) + '</span></div>';
+      return '<div class="cd-meta-row"><span class="cd-meta-k">' + label + '</span><span class="cd-meta-v" title="' + esc(String(value)) + '">' + esc(String(value)) + '</span></div>';
     }
 
     var recMatchesVisitDetail = !!(recommendedAction && (recommendedAction.actionType === 'visit' || recommendedAction.actionType === 'follow_up'));
     var recMatchesPaymentDetail = !!(recommendedAction && recommendedAction.actionType === 'payment_followup');
-    var showRecommendedCardInDetail = recommendedAction && !recMatchesVisitDetail && !recMatchesPaymentDetail;
-    function detailBtn(action, label, id) {
+    // The recommendation is a one-line hint above the buttons (never a separate box); when it IS one of the
+    // three fixed actions that button is the single primary one, otherwise «ثبت فاکتور» stays primary.
+    var detailHintHtml = recommendedAction
+      ? '<div class="bp-qv-action-hint cd-action-hint"><span class="bp-qv-action-hint-label">پیشنهاد</span> ' + esc(recommendedAction.action) + '</div>'
+      : '';
+
+    // Primary action follows the recommendation (visit / payment); otherwise the usual «invoice».
+    function detailBtn(action, label, btnId) {
       var primary;
       if (recMatchesVisitDetail) primary = (action === 'visit');
       else if (recMatchesPaymentDetail) primary = (action === 'payment');
       else primary = (action === 'invoice');
-      return '<button type="button" class="btn ' + (primary ? '' : 'secondary') + '" id="' + id + '">' + label + '</button>';
+      return '<button type="button" class="btn ' + (primary ? '' : 'secondary') + '" id="' + btnId + '">' + label + '</button>';
     }
 
+    // Seller decisions live at the bottom, collapsed: reviewing/cancelling is rare, never above the fold.
     var ackHtmlRaw = (typeof ackListHtml === 'function' ? ackListHtml(c.id) : '');
     var ackDetailsHtml = ackHtmlRaw
-      ? ('<details class="cd-ack-details"><summary class="customer-behavior-summary">تصمیم‌های ثبت‌شده</summary>' + ackHtmlRaw + '</details>')
+      ? '<details class="cd-ack-details"><summary class="customer-behavior-summary">تصمیم‌های ثبت‌شده</summary>' + ackHtmlRaw + '</details>'
       : '';
-    var invoiceDetailsHtml = '<details class="cd-history-details"><summary class="customer-behavior-summary">فاکتورها (' + invs.length + ')</summary><div class="customer-tx-list customer-invoice-list">' + invRows + '</div></details>';
-    var paymentDetailsHtml = '<details class="cd-history-details"><summary class="customer-behavior-summary">پرداخت‌ها (' + pays.length + ')</summary><div class="customer-tx-list customer-payment-list">' + payRows + '</div></details>';
-    var checkDetailsHtml = '<details class="cd-history-details"><summary class="customer-behavior-summary">چک‌ها (' + chks.length + ')</summary><div class="customer-tx-list customer-check-list">' + chkRows + '</div></details>';
-    var visitDetailsHtml = '<details class="cd-history-details"><summary class="customer-behavior-summary">ویزیت‌ها و ارزیابی‌ها (' + visits.length + ')</summary><div class="btn-row" style="margin-bottom:8px;"><button type="button" class="btn small" id="act-visit-section">ثبت ویزیت برای این مشتری</button><a class="btn small secondary" href="#/visits">همه ویزیت‌ها</a></div><div class="customer-tx-list customer-visit-list">' + visitRows + '</div></details>';
+
+    // History: collapsed, with the count in the summary.
+    var invoiceDetailsHtml = '<details class="cd-history-details">' +
+      '<summary class="customer-behavior-summary">فاکتورها (' + invs.length + ')</summary>' +
+      '<div class="customer-tx-list customer-invoice-list">' + invRows + '</div></details>';
+    var paymentDetailsHtml = '<details class="cd-history-details">' +
+      '<summary class="customer-behavior-summary">پرداخت‌ها (' + pays.length + ')</summary>' +
+      '<div class="customer-tx-list customer-payment-list">' + payRows + '</div></details>';
+    var checkDetailsHtml = '<details class="cd-history-details">' +
+      '<summary class="customer-behavior-summary">چک‌ها (' + chks.length + ')</summary>' +
+      '<div class="customer-tx-list customer-check-list">' + chkRows + '</div></details>';
+    var visitDetailsHtml = '<details class="cd-history-details">' +
+      '<summary class="customer-behavior-summary">ویزیت‌ها و ارزیابی‌ها (' + visits.length + ')</summary>' +
+      '<div class="btn-row" style="margin-bottom:8px;">' +
+        '<button type="button" class="btn small secondary" id="act-visit-section">ثبت ویزیت برای این مشتری</button>' +
+        '<a class="btn small secondary" href="#/visits">همه ویزیت‌ها</a>' +
+      '</div><div class="customer-tx-list customer-visit-list">' + visitRows + '</div></details>';
 
     root.innerHTML =
-      '<div class="btn-row" style="margin-bottom:10px;"><a class="btn secondary small" href="' + customersHref() + '">← مشتریان</a></div>' +
+      '<div class="btn-row" style="margin-bottom:10px;">' +
+      '<a class="btn secondary small" href="' + customersHref() + '">← مشتریان</a></div>' +
+
       '<div class="card customer-identity-card">' +
         '<div class="customer-identity-name">' + esc(c.name) + '</div>' +
         '<div class="customer-identity-meta">' +
           (c.ownerName ? cdMeta('مسئول فروشگاه', c.ownerName) : '') +
           (c.phone ? cdMeta('تلفن', c.phone) : '') +
-          (c.locationId ? cdMeta('موقعیت', getLocationDisplayString(c.locationId)) : ((c.region ? cdMeta('منطقه', c.region) : '') + (c.route ? cdMeta('مسیر', c.route) : ''))) +
-          (c.address ? cdMeta('آدرس', c.address) : '') + (c.note ? cdMeta('یادداشت', c.note) : '') +
+          (c.locationId
+            ? cdMeta('موقعیت', getLocationDisplayString(c.locationId))
+            : ((c.region ? cdMeta('منطقه', c.region) : '') +
+               (c.route ? cdMeta('مسیر', c.route) : ''))) +
+          (c.address ? cdMeta('آدرس', c.address) : '') +
+          (c.note ? cdMeta('یادداشت', c.note) : '') +
         '</div>' +
-        '<div class="bp-customer-health"><span class="bp-customer-health-label">وضعیت مشتری</span><span class="bp-customer-health-value ' + (customerRiskLevel ? 'radar-risk-' + esc(customerRiskLevel) : '') + '">' + esc(customerHealthLabel) + '</span></div>' +
-        '<div class="customer-balance-block"><div class="label">مانده حساب</div><div class="value ' + color + ' customer-balance-value">' + balanceLine + '</div></div>' +
-        (legacyDebtRow && legacyDebtRow.amount > 0 ? '<div class="bp-customer-legacy-debt sub" style="margin:6px 0;">بدهی فاکتورهای قبلی: ' + toman(legacyDebtRow.amount) + ' ت' + (legacyDebtRow.oldestDate ? ' — قدیمی‌ترین: ' + faDate(legacyDebtRow.oldestDate) : '') + '</div>' : '') +
+        '<div class="bp-customer-health"><span class="bp-customer-health-label">وضعیت مشتری</span>' +
+          '<span class="bp-customer-health-value ' + (customerRiskLevel ? 'radar-risk-' + esc(customerRiskLevel) : '') + '">' +
+            esc(customerHealthLabel) +
+          '</span></div>' +
+        '<div class="customer-balance-block">' +
+          '<div class="label">مانده حساب</div>' +
+          '<div class="value ' + color + ' customer-balance-value">' + balanceLine + '</div>' +
+        '</div>' +
+        (legacyDebtRow && legacyDebtRow.amount > 0
+          ? '<div class="bp-customer-legacy-debt sub" style="margin:6px 0;">بدهی فاکتورهای قبلی: ' +
+              toman(legacyDebtRow.amount) + ' ت' +
+              (legacyDebtRow.oldestDate ? ' — قدیمی‌ترین: ' + faDate(legacyDebtRow.oldestDate) : '') +
+            '</div>'
+          : '') +
       '</div>' +
-      topAlertHtml + storyHtml +
-      (showRecommendedCardInDetail ? '<div class="cust-recommended-action"><div class="cust-recommended-action-label">اقدام پیشنهادی</div><button type="button" class="btn cust-recommended-action-btn" id="cust-recommended-action">' + esc(recommendedAction.action) + '</button></div>' : '') +
+
+      topAlertHtml +
+      storyHtml +
+
+      detailHintHtml +
       '<div class="btn-row cust-actions-primary" style="margin-bottom:8px;">' +
-        detailBtn('invoice', 'ثبت فاکتور', 'act-invoice') + detailBtn('payment', 'ثبت پرداخت', 'act-pay') + detailBtn('visit', 'ثبت ویزیت', 'act-visit') +
+        detailBtn('invoice', 'ثبت فاکتور', 'act-invoice') +
+        detailBtn('payment', 'ثبت پرداخت', 'act-pay') +
+        detailBtn('visit', 'ثبت ویزیت', 'act-visit') +
       '</div>' +
-      '<details class="bp-customer-secondary-actions"><summary>سایر عملیات</summary><div class="btn-row cust-actions-secondary" style="margin-bottom:16px;">' +
-        '<button type="button" class="btn small secondary" id="act-check">ثبت چک</button><button type="button" class="btn small secondary" id="act-edit">ویرایش مشتری</button><button type="button" class="btn small secondary" id="act-location">اختصاص موقعیت</button><button type="button" class="btn small secondary" id="act-print-statement">صورت‌حساب</button><button type="button" class="btn small secondary" id="act-toggle-active">' + (c.active === false ? 'فعال‌سازی مشتری' : 'غیرفعال‌سازی مشتری') + '</button>' +
-      '</div></details>' +
-      focus.html + followUpTopHtml +
-      '<h3 class="sub-title">خلاصه مالی</h3><div class="cards cust-metrics">' +
+      '<details class="bp-customer-secondary-actions"><summary>سایر عملیات</summary>' +
+        '<div class="btn-row cust-actions-secondary" style="margin-bottom:16px;">' +
+          '<button type="button" class="btn small secondary" id="act-check">ثبت چک</button>' +
+          '<button type="button" class="btn small secondary" id="act-edit">ویرایش مشتری</button>' +
+          '<button type="button" class="btn small secondary" id="act-location">اختصاص موقعیت</button>' +
+          '<button type="button" class="btn small secondary" id="act-print-statement">صورت‌حساب</button>' +
+          '<button type="button" class="btn small secondary" id="act-toggle-active">' + (c.active === false ? 'فعال‌سازی مشتری' : 'غیرفعال‌سازی مشتری') + '</button>' +
+        '</div>' +
+      '</details>' +
+
+      '<h3 class="sub-title">خلاصه مالی</h3>' +
+      '<div class="cards cust-metrics">' +
         '<div class="cd-metric-cell"><div class="label">مجموع خرید</div><div class="value">' + toman(t.invTotal) + ' ت</div></div>' +
         '<div class="cd-metric-cell"><div class="label">مجموع پرداخت‌ها</div><div class="value">' + toman(t.payTotal) + ' ت</div></div>' +
         '<div class="cd-metric-cell"><div class="label">مجموع چک‌ها</div><div class="value">' + toman(t.checkTotal) + ' ت</div></div>' +
         '<div class="cd-metric-cell"><div class="label">مانده اولیه</div><div class="value">' + toman(t.openingBalance) + ' ت</div></div>' +
         '<div class="cd-metric-cell"><div class="label">تعداد فاکتور</div><div class="value">' + invs.length + '</div></div>' +
         '<div class="cd-metric-cell"><div class="label">سود مشتری</div><div class="value">' + toman(profit) + ' ت</div></div>' +
-      '</div>' + behaviorHtml + productRejectionInsightsHtml(c.id, ctx) + ackDetailsHtml + invoiceDetailsHtml + paymentDetailsHtml + checkDetailsHtml + visitDetailsHtml;
+      '</div>' +
 
+      focus.html +
+      followUpTopHtml +
+      behaviorHtml +
+      productRejectionInsightsHtml(c.id, ctx) +
+      ackDetailsHtml +
+      invoiceDetailsHtml +
+      paymentDetailsHtml +
+      checkDetailsHtml +
+      visitDetailsHtml;
 
     document.getElementById('act-invoice').onclick = function () {
       openAddInvoice(c.id);
@@ -1383,29 +1471,6 @@
         if (typeof printCustomerStatement === 'function') printCustomerStatement(c.id);
       };
     }
-    const recommendedBtn = document.getElementById('cust-recommended-action');
-    if (recommendedBtn && recommendedAction) {
-      recommendedBtn.onclick = function () {
-        const type = recommendedAction.actionType;
-        if (type === 'visit' || type === 'follow_up') {
-          openAddVisit(c.id);
-        } else if (type === 'check_followup') {
-          openAddCheck(c.id);
-        } else if (type === 'payment_followup') {
-          openAddTransaction(c.id);
-        } else {
-          // For action types without a dedicated existing form (e.g. investigate,
-          // manager_review, call), expose the existing explanation rather than
-          // inventing a new workflow.
-          const target = root.querySelector('.customer-behavior-details');
-          if (target) target.open = true;
-          if (target && typeof target.scrollIntoView === 'function') {
-            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }
-        }
-      };
-    }
-
     const toggleActiveBtn = document.getElementById('act-toggle-active');
     if (toggleActiveBtn) {
       toggleActiveBtn.onclick = async function (ev) {
@@ -1427,28 +1492,14 @@
   }
 
 
-  /* Quick View: the recommended action's button follows its type. Forms that exist open directly;
-     types without a dedicated form (investigate, manager_review, call, ...) go to the full profile. */
-  function recommendedActionCta(actionType) {
-    if (actionType === 'visit' || actionType === 'follow_up') return 'ثبت ویزیت';
-    if (actionType === 'payment_followup') return 'ثبت پرداخت';
-    if (actionType === 'check_followup') return 'ثبت چک';
-    return 'مشاهده جزئیات';
-  }
-  function runRecommendedAction(actionType, cid) {
-    var t = actionType;
-    if ((t === 'visit' || t === 'follow_up') && typeof openAddVisit === 'function') { openAddVisit(cid); return; }
-    if (t === 'payment_followup' && typeof openAddTransaction === 'function') { openAddTransaction(cid); return; }
-    if (t === 'check_followup' && typeof openAddCheck === 'function') { openAddCheck(cid); return; }
-    if (typeof AppRouter !== 'undefined' && AppRouter.navigate) AppRouter.navigate('/customer', { id: cid });
-  }
-
   /* Central quick view for the Customers list. Presentation-only: it reuses
      the frozen Priority/Watch/Balance outputs and existing action APIs. */
   function openCustomerQuickView(cid) {
     var c = (data.customers || []).find(function (x) { return x && x.id === cid; });
     if (!c) return;
-    var ctx = typeof createComputationContext === 'function' ? createComputationContext({ data: data }) : { aggregatePairMapCache: Object.create(null) };
+    var ctx = typeof createComputationContext === 'function'
+      ? createComputationContext({ data: data })
+      : { aggregatePairMapCache: Object.create(null) };
     var totals = customerTotals(cid, ctx) || { balance: 0 };
     var priority = null;
     try { priority = typeof calculateCustomerPriority === 'function' ? calculateCustomerPriority(cid, { ctx: ctx }) : null; } catch (e) { priority = null; }
@@ -1456,6 +1507,9 @@
     var riskLevel = priority ? priority.riskLevel : null;
     var health = (typeof getRiskBadge === 'function' ? getRiskBadge(riskLevel).label : '') || 'وضعیت عادی';
     var watchData = loadWatchData(cid, ctx);
+
+    // Recommended action (same calculateCustomerAction the Detail page and Dashboard queue use).
+    // Signature: calculateCustomerAction(cid, precomputedPriority, { ctx }).
     var recommendedAction = null;
     try {
       if (typeof calculateCustomerAction === 'function') {
@@ -1463,41 +1517,61 @@
         recommendedAction = (qa && qa.actionType !== 'no_action' && qa.action) ? qa : null;
       }
     } catch (eAct) { recommendedAction = null; }
+
+    // v5 hierarchy: when the recommendation IS "register a visit" / "register a payment", the matching
+    // fixed button becomes the primary one and a one-line hint explains why — no duplicate button.
+    // Only actions without a dedicated fixed button (check, investigate, call, ...) get their own card.
     var recMatchesVisit = !!(recommendedAction && (recommendedAction.actionType === 'visit' || recommendedAction.actionType === 'follow_up'));
     var recMatchesPayment = !!(recommendedAction && recommendedAction.actionType === 'payment_followup');
-    var recommendedCardHtml = '', recommendedHintHtml = '';
-    if (recommendedAction) {
-      if (recMatchesVisit || recMatchesPayment) {
-        recommendedHintHtml = '<div class="bp-qv-action-hint"><span class="bp-qv-action-hint-label">پیشنهاد</span> ' + esc(recommendedAction.action) + '</div>';
-      } else {
-        recommendedCardHtml = '<div class="cust-recommended-action" style="margin:12px 0;"><div class="cust-recommended-action-label">اقدام پیشنهادی</div><div style="font-size:.82rem;line-height:1.7;margin-bottom:8px;">' + esc(recommendedAction.action) + '</div><button type="button" class="btn cust-recommended-action-btn" data-qv-action="execute">' + esc(recommendedActionCta(recommendedAction.actionType)) + '</button></div>';
-      }
-    }
+    var recommendedHintHtml = recommendedAction
+      ? '<div class="bp-qv-action-hint"><span class="bp-qv-action-hint-label">پیشنهاد</span> ' + esc(recommendedAction.action) + '</div>'
+      : '';
+
+    // The ONLY alert in Quick View: an active bounced check (always immediate).
     var bouncedAlertHtml = '';
     try {
-      var bounced = (watchData.activeConfirmed || []).some(function (sg) { return sg && sg.category === 'CHECK_BOUNCED'; });
-      if (bounced) bouncedAlertHtml = '<div class="bp-customer-attention" style="margin:10px 0;"><span class="bp-attention-icon" aria-hidden="true"></span><span>چک برگشتی فعال — ' + esc(typeof getRiskBadge === 'function' ? getRiskBadge('critical').label : 'اقدام فوری') + '</span></div>';
+      var bounced = (watchData.activeConfirmed || []).some(function (s) { return s && s.category === 'CHECK_BOUNCED'; });
+      if (bounced) {
+        bouncedAlertHtml = '<div class="bp-customer-attention" style="margin:10px 0;"><span class="bp-attention-icon" aria-hidden="true"></span>' +
+          '<span>چک برگشتی فعال — ' + esc(typeof getRiskBadge === 'function' ? getRiskBadge('critical').label : 'اقدام فوری') + '</span></div>';
+      }
     } catch (eBounced) { bouncedAlertHtml = ''; }
+
     function qvBtn(action, label) {
       var primary;
-      if (recMatchesVisit) primary = action === 'visit';
-      else if (recMatchesPayment) primary = action === 'payment';
-      else primary = action === 'visit';
+      if (recMatchesVisit) primary = (action === 'visit');
+      else if (recMatchesPayment) primary = (action === 'payment');
+      else primary = (action === 'visit');
       return '<button type="button" class="btn ' + (primary ? 'primary' : 'secondary') + '" data-action="' + action + '">' + label + '</button>';
     }
+
     var overlay = document.createElement('div');
     overlay.className = 'bp-qv-overlay';
     overlay.setAttribute('role', 'dialog');
     overlay.setAttribute('aria-modal', 'true');
-    overlay.innerHTML = '<div class="bp-qv-card" role="document"><button type="button" class="bp-qv-close" aria-label="بستن">×</button>' +
-      '<div class="bp-qv-head"><div class="bp-qv-name">' + esc(c.name || 'مشتری') + '</div>' +
-      (c.ownerName ? '<div class="bp-qv-meta">' + esc(c.ownerName) + '</div>' : '') + (c.phone ? '<div class="bp-qv-meta">' + esc(c.phone) + '</div>' : '') +
-      '<div class="bp-qv-balance is-prominent ' + (totals.balance > 0 ? 'is-debt' : '') + '"><span class="bp-qv-balance-label">' + esc(balanceStatusWord(totals.balance)) + '</span>' +
-      (totals.balance !== 0 ? '<span class="bp-qv-balance-amount">' + toman(Math.abs(totals.balance)) + ' ت</span>' : '') + '</div>' +
-      '<div class="bp-qv-health radar-risk-' + esc(riskLevel || 'normal') + '">' + esc(health) + '</div></div>' + bouncedAlertHtml +
-      (story ? '<div class="bp-qv-story"><div class="bp-qv-section-label">وضعیت</div><div>' + esc(story) + '</div></div>' : '') +
-      recommendedCardHtml + recommendedHintHtml + '<div class="bp-qv-actions">' + qvBtn('visit', 'ثبت ویزیت') + qvBtn('invoice', 'ثبت فاکتور') + qvBtn('payment', 'ثبت پرداخت') + '</div>' +
-      '<button type="button" class="bp-qv-full">جزئیات بیشتر ›</button></div>';
+    overlay.innerHTML =
+      '<div class="bp-qv-card" role="document">' +
+        '<button type="button" class="bp-qv-close" aria-label="بستن">×</button>' +
+        '<div class="bp-qv-head">' +
+          '<div class="bp-qv-name">' + esc(c.name || 'مشتری') + '</div>' +
+          (c.ownerName ? '<div class="bp-qv-meta">' + esc(c.ownerName) + '</div>' : '') +
+          (c.phone ? '<div class="bp-qv-meta">' + esc(c.phone) + '</div>' : '') +
+          '<div class="bp-qv-balance is-prominent ' + (totals.balance > 0 ? 'is-debt' : '') + '">' +
+            '<span class="bp-qv-balance-label">' + esc(balanceStatusWord(totals.balance)) + '</span>' +
+            (totals.balance !== 0 ? '<span class="bp-qv-balance-amount">' + toman(Math.abs(totals.balance)) + ' ت</span>' : '') +
+          '</div>' +
+          '<div class="bp-qv-health radar-risk-' + esc(riskLevel || 'normal') + '">' + esc(health) + '</div>' +
+        '</div>' +
+        bouncedAlertHtml +
+        (story ? '<div class="bp-qv-story"><div class="bp-qv-section-label">خلاصه وضعیت</div><div>' + esc(story) + '</div></div>' : '') +
+        recommendedHintHtml +
+        '<div class="bp-qv-actions">' +
+          qvBtn('visit', 'ثبت ویزیت') +
+          qvBtn('invoice', 'ثبت فاکتور') +
+          qvBtn('payment', 'ثبت پرداخت') +
+        '</div>' +
+        '<button type="button" class="bp-qv-full">جزئیات بیشتر ›</button>' +
+      '</div>';
     var modalRoot = document.getElementById('modalRoot');
     if (!modalRoot) return;
     modalRoot.innerHTML = '';
@@ -1521,14 +1595,6 @@
     function onKeydown(e) { if (e.key === 'Escape') { e.preventDefault(); close(); } }
     overlay.addEventListener('click', function (e) {
       if (e.target === overlay || e.target.closest('.bp-qv-close')) { e.preventDefault(); close(); return; }
-      var qvExecute = e.target.closest('[data-qv-action="execute"]');
-      if (qvExecute && recommendedAction) {
-        e.preventDefault();
-        var execType = recommendedAction.actionType;
-        close();
-        setTimeout(function () { runRecommendedAction(execType, cid); }, 185);
-        return;
-      }
       var action = e.target.closest('[data-action]');
       if (action) {
         e.preventDefault();
