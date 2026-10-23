@@ -2861,27 +2861,12 @@ function openInvoiceForm(cid, editInv, opts){
           </div>
           ${editInv?`<div class="inv-edit-notice">با ذخیره‌ی این ویرایش، موجودی انبار و مانده حساب مشتری به‌طور خودکار اصلاح می‌شود.</div>`:''}
 
-          <div class="inv-customer-context">
-            <div class="inv-customer-info">
-              <div class="inv-customer-kicker">مشتری</div>
-              <div class="inv-customer-name">${custDisplay}</div>
-              ${cust&&cust.phone?`<div class="inv-customer-meta">${esc(cust.phone)}</div>`:''}
-            </div>
-          </div>
-
-          <div class="inv-invoice-details-group" aria-label="جزئیات فاکتور">
-            <div class="field inv-date-field">
-              <label>تاریخ فاکتور</label>
-              ${shamsiDateInputHTML('f-date', invoiceDateStr)}
-            </div>
-            <div class="field inv-due-field">
-              <label>سررسید پرداخت</label>
-              <div class="inv-due-control">
-                <label class="field-inline-check" aria-label="فعال‌سازی سررسید">
-                  <input type="checkbox" id="f-due-toggle" ${invoiceDueEnabled?'checked':''}>
-                </label>
-                <div id="f-due-wrap" style="${invoiceDueEnabled?'':'display:none;'}">${shamsiDateInputHTML('f-due-date', invoiceDueStr)}</div>
-                <span class="inv-due-disabled-label"${invoiceDueEnabled?' hidden':''}>بدون سررسید</span>
+          <div class="inv-section inv-customer-section">
+            <h2 class="inv-section-title">مشخصات مشتری</h2>
+            <div class="inv-customer-context">
+              <div class="inv-customer-info">
+                <div class="inv-customer-name">${custDisplay}</div>
+                ${cust&&cust.phone?`<div class="inv-customer-meta">${esc(cust.phone)}</div>`:''}
               </div>
             </div>
           </div>
@@ -2897,6 +2882,28 @@ function openInvoiceForm(cid, editInv, opts){
           </div>
 
           ${nprHtmlInv}
+
+          <div class="inv-section inv-details-section">
+            <h2 class="inv-section-title">مشخصات فاکتور</h2>
+            <div class="inv-rows">
+              <div class="inv-row inv-row-date">
+                <span class="inv-row-label">تاریخ فاکتور</span>
+                ${shamsiDateInputHTML('f-date', invoiceDateStr)}
+              </div>
+              <div class="inv-row">
+                <label class="inv-row-label" for="f-due-toggle">سررسید پرداخت <small>(اختیاری)</small></label>
+                <input type="checkbox" class="inv-switch" id="f-due-toggle" role="switch" ${invoiceDueEnabled?'checked':''}>
+              </div>
+              <div class="inv-row inv-row-date" id="f-due-wrap" style="${invoiceDueEnabled?'':'display:none;'}">
+                <span class="inv-row-label">تاریخ سررسید</span>
+                ${shamsiDateInputHTML('f-due-date', invoiceDueStr)}
+              </div>
+              <div class="inv-row">
+                <span class="inv-row-label">شماره فاکتور</span>
+                <span class="inv-row-value">${editInv ? ('#' + esc(String(editInv.number||'—'))) : 'خودکار'}</span>
+              </div>
+            </div>
+          </div>
 
           <div class="inv-section inv-payment-section">
             <div class="inv-payment-heading">
@@ -3452,8 +3459,6 @@ function openInvoiceForm(cid, editInv, opts){
       invoiceDueEnabled = !!dueToggleEl.checked;
       const w = document.getElementById('f-due-wrap');
       if(w) w.style.display = invoiceDueEnabled ? '' : 'none';
-      const disabledLabel = document.querySelector('.inv-due-disabled-label');
-      if(disabledLabel) disabledLabel.hidden = invoiceDueEnabled;
     });
     const dueDateEl = document.getElementById('f-due-date');
     if(dueDateEl) {
