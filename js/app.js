@@ -2566,15 +2566,15 @@ function openInvoiceForm(cid, editInv, opts){
       body.className = 'inv-line-body';
       const name = document.createElement('span');
       name.className = 'inv-line-name';
-      const meta = document.createElement('div');
-      meta.className = 'inv-line-collapsed-meta';
-      const calc = document.createElement('span');
-      calc.className = 'inv-line-calc';
-      meta.appendChild(calc);
-      body.append(name, meta);
+      body.append(name);
+      const figures = document.createElement('div');
+      figures.className = 'inv-line-figures';
       const amount = document.createElement('span');
       amount.className = 'inv-line-amount';
-      view.append(body, amount);
+      const calc = document.createElement('span');
+      calc.className = 'inv-line-calc';
+      figures.append(amount, calc);
+      view.append(body, figures);
       line.insertBefore(view, line.querySelector('.inv-line-view-active'));
       // قبلاً اینجا setActiveRow صدا زده می‌شد که در scope این تابع نیست (ReferenceError)؛
       // برای آخرین ردیفِ پرشده تپ بی‌اثر می‌ماند تا re-render بعدی. حالا از hook استفاده می‌شود.
@@ -2760,9 +2760,11 @@ function openInvoiceForm(cid, editInv, opts){
         ${prod?`<div class="inv-line-collapsed" role="button" tabindex="0" aria-label="ویرایش ${label}">
           <div class="inv-line-body">
             <span class="inv-line-name">${label}</span>
-            <div class="inv-line-collapsed-meta"><span class="inv-line-calc">${enToFaDigits(fmtQtyDisplay(r.qty||0))} × ${toman(r.price||0)} ت</span></div>
           </div>
-          <span class="inv-line-amount">${toman(lineAmt)} ت</span>
+          <div class="inv-line-figures">
+            <span class="inv-line-amount">${toman(lineAmt)} ت</span>
+            <span class="inv-line-calc">${enToFaDigits(fmtQtyDisplay(r.qty||0))} × ${toman(r.price||0)} ت</span>
+          </div>
         </div>`:''}
         <div class="inv-line-view-active">${activeHtml}</div>
       </div>`;
@@ -2887,7 +2889,7 @@ function openInvoiceForm(cid, editInv, opts){
             <h2 class="inv-section-title">مشخصات فاکتور</h2>
             <div class="inv-rows">
               <div class="inv-row inv-row-date">
-                <span class="inv-row-label">تاریخ فاکتور</span>
+                <label class="inv-row-label" for="f-date">تاریخ فاکتور</label>
                 ${shamsiDateInputHTML('f-date', invoiceDateStr)}
               </div>
               <div class="inv-row">
@@ -2895,7 +2897,7 @@ function openInvoiceForm(cid, editInv, opts){
                 <input type="checkbox" class="inv-switch" id="f-due-toggle" role="switch" ${invoiceDueEnabled?'checked':''}>
               </div>
               <div class="inv-row inv-row-date" id="f-due-wrap" style="${invoiceDueEnabled?'':'display:none;'}">
-                <span class="inv-row-label">تاریخ سررسید</span>
+                <label class="inv-row-label" for="f-due-date">تاریخ سررسید</label>
                 ${shamsiDateInputHTML('f-due-date', invoiceDueStr)}
               </div>
               <div class="inv-row">
