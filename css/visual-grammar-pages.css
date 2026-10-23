@@ -1994,29 +1994,19 @@ html[data-theme="dark"] #main #invoice-chips .chip.active{box-shadow:0 1px 3px r
 html .inv-sheet-v2 .inv-section-title,
 html .inv-sheet-v2 .inv-items-card-label{
   font-size:var(--vg-type-section);font-weight:var(--vg-weight-title);
-  line-height:1.35;color:var(--vg-color-text);
+  line-height:1.35;color:var(--vg-color-text-muted);
 }
 .inv-sheet-v2 .inv-section-title{margin:0 0 10px;}
 .inv-sheet-v2 .inv-items-card-head{padding:0 2px 10px;}
-.inv-sheet-v2 .inv-date-field{margin-bottom:var(--vg-space-section);}
-.inv-sheet-v2 .inv-customer-context{
-  padding:4px 2px 14px;margin-bottom:14px;
-  border-bottom:1px solid var(--vg-color-divider);
-}
 
-/* One surface standard (token border, group shadow, raised radius) */
+/* One surface standard: flat inset-grouped cards (page background separates groups) */
 .inv-sheet-v2 .inv-items-card,
 .inv-sheet-v2 .inv-summary-section,
 .inv-sheet-v2 .inv-profit-summary{
   background:var(--vg-color-surface);
-  border:1px solid var(--vg-color-border);
-  border-radius:var(--vg-radius-raised);
-  box-shadow:var(--vg-shadow-group);
-}
-.inv-sheet-v2 .inv-payment-action,
-.inv-sheet-v2 .inv-discount-block{
-  border:1px solid var(--vg-color-border);
+  border:0;
   border-radius:var(--vg-radius-soft);
+  box-shadow:none;
 }
 .inv-sheet-v2 .inv-line + .inv-line::before{background:var(--vg-color-divider);}
 
