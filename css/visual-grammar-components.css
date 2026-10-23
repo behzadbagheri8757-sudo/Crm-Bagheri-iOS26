@@ -19,6 +19,8 @@
 input[type="search"],
 input[placeholder*="جستجو"]{
   border-radius:var(--vg-radius-control);
+  font-size: 1rem;
+  font-weight: var(--vg-weight-semibold);
 }
 
 /* Native checkbox/radio controls must not inherit text-field geometry. */
@@ -31,6 +33,7 @@ input[placeholder*="جستجو"]{
   border:0;
   box-shadow:none;
   accent-color:var(--vg-color-primary);
+  font-size: 1rem;
 }
 
 .field-inline-check{
@@ -162,9 +165,9 @@ input[placeholder*="جستجو"]{
   color:var(--vg-color-text-muted);
   text-decoration:none;
   font-family:inherit;
-  font-size:.62rem;
+  font-size:var(--vg-type-label);
   font-weight:var(--vg-weight-label);
-  line-height:1.15;
+  line-height:var(--vg-leading-label);
 
   cursor:pointer;
   -webkit-tap-highlight-color:transparent;
@@ -188,12 +191,18 @@ input[placeholder*="جستجو"]{
   align-items:center;
   justify-content:center;
   color:var(--vg-color-icon,#1C1C1E);
+  font-size: var(--vg-type-label);
+  font-weight: var(--vg-weight-label);
+  line-height: var(--vg-leading-label);
 }
 
 .bottom-nav-item .bn-ico svg{
   max-width:100%;
   max-height:100%;
   stroke-width:1.55;
+  font-size: var(--vg-type-label);
+  font-weight: var(--vg-weight-label);
+  line-height: var(--vg-leading-label);
 }
 
 .bottom-nav-item .bn-label{
@@ -211,26 +220,40 @@ input[placeholder*="جستجو"]{
 
   transition:max-height 160ms cubic-bezier(.22,1,.36,1),
              opacity 120ms ease;
+  font-size: var(--vg-type-label);
+  font-weight: var(--vg-weight-label);
+  line-height: var(--vg-leading-label);
 }
 
 /* Active = tint-only (no pill, no glass box) */
 .bottom-nav-item.active{
   color:var(--vg-color-primary);
-  font-weight:var(--vg-weight-title);
+  font-weight:var(--vg-weight-semibold);
   background:transparent;
+  font-size: var(--vg-type-label);
+  line-height: var(--vg-leading-label);
 }
 
 .bottom-nav-item.active .bn-ico{
   color:var(--vg-color-primary);
+  font-size: var(--vg-type-label);
+  font-weight: var(--vg-weight-semibold);
+  line-height: var(--vg-leading-label);
 }
 
 .bottom-nav-item.active .bn-ico .app-icon{
   color:var(--vg-color-primary);
+  font-size: var(--vg-type-label);
+  font-weight: var(--vg-weight-semibold);
+  line-height: var(--vg-leading-label);
 }
 
 .bottom-nav-item.active .bn-ico svg{
   stroke-width:1.9;
   transition:stroke-width 0.2s ease;
+  font-size: var(--vg-type-label);
+  font-weight: var(--vg-weight-semibold);
+  line-height: var(--vg-leading-label);
 }
 
 /* Minimized state while scrolling — matches the calc() endpoints above
@@ -244,6 +267,9 @@ input[placeholder*="جستجو"]{
 .bottom-nav.is-minimized .bottom-nav-item{
   min-height:38px;
   padding-block:2px;
+  font-size: var(--vg-type-label);
+  font-weight: var(--vg-weight-label);
+  line-height: var(--vg-leading-label);
 }
 
 .bottom-nav.is-minimized .bottom-nav-item .bn-label{
@@ -251,16 +277,25 @@ input[placeholder*="جستجو"]{
   opacity:0;
   overflow:hidden;
   pointer-events:none;
+  font-size: var(--vg-type-label);
+  font-weight: var(--vg-weight-label);
+  line-height: var(--vg-leading-label);
 }
 
 .bottom-nav.is-minimized .bottom-nav-item .bn-ico{
   width:25px;
   height:25px;
+  font-size: var(--vg-type-label);
+  font-weight: var(--vg-weight-label);
+  line-height: var(--vg-leading-label);
 }
 
 .bottom-nav.is-minimized .bottom-nav-item .bn-ico svg{
   max-width:100%;
   max-height:100%;
+  font-size: var(--vg-type-label);
+  font-weight: var(--vg-weight-label);
+  line-height: var(--vg-leading-label);
 }
 
 @media (prefers-reduced-motion: reduce){
@@ -268,7 +303,10 @@ input[placeholder*="جستجو"]{
   .bottom-nav-item,
   .bottom-nav-item .bn-label{
     transition:none!important;
-  }
+  font-size: var(--vg-type-label);
+  font-weight: var(--vg-weight-label);
+  line-height: var(--vg-leading-label);
+}
 }
 
 @media (min-width:901px){
@@ -289,8 +327,8 @@ input[placeholder*="جستجو"]{
   color:#fff;
   white-space:pre-wrap;
   border:1px solid var(--vg-color-primary);
-  font-size:var(--vg-type-action);
-  font-weight:var(--vg-weight-title);
+  font-size:0.9375rem;
+  font-weight:var(--vg-weight-semibold);
   box-shadow:0 3px 10px rgba(0,112,210,.14);
   cursor:pointer;
   transition:transform .1s,box-shadow .1s;
@@ -299,6 +337,8 @@ input[placeholder*="جستجو"]{
 .btn:active{
   transform:scale(.98);
   box-shadow:0 1px 4px rgba(0,0,0,.1);
+  font-size: 0.9375rem;
+  font-weight: var(--vg-weight-semibold);
 }
 
 .btn.secondary{
@@ -306,6 +346,8 @@ input[placeholder*="جستجو"]{
   color:var(--vg-color-text-secondary);
   border:1px solid var(--vg-color-border);
   box-shadow:none;
+  font-size: 0.9375rem;
+  font-weight: var(--vg-weight-semibold);
 }
 
 .btn.danger{
@@ -313,17 +355,22 @@ input[placeholder*="جستجو"]{
   color:#fff;
   border-color:var(--vg-color-danger);
   box-shadow:0 3px 10px rgba(250,57,70,.16);
+  font-size: 0.9375rem;
+  font-weight: var(--vg-weight-semibold);
 }
 
 .btn.small{
   min-height:40px;
   padding:8px 12px;
-  font-size:.78rem;
+  font-size:0.8125rem;
+  font-weight: var(--vg-weight-semibold);
 }
 
 .btn:disabled{
   opacity:.55;
   box-shadow:none;
+  font-size: 0.9375rem;
+  font-weight: var(--vg-weight-semibold);
 }
 
 
@@ -338,9 +385,10 @@ input[placeholder*="جستجو"]{
   background:var(--vg-color-surface);
   border:1px solid var(--vg-color-border);
   color:var(--vg-color-text-secondary);
-  font-weight:var(--vg-weight-label);
+  font-weight:var(--vg-weight-medium);
   cursor:pointer;
   transition:background .15s,border-color .15s,color .15s;
+  font-size: 0.8125rem;
 }
 
 .chip.active,
@@ -348,6 +396,8 @@ input[placeholder*="جستجو"]{
   background:var(--vg-color-primary);
   border-color:var(--vg-color-primary);
   color:#fff;
+  font-size: 0.8125rem;
+  font-weight: var(--vg-weight-semibold);
 }
 
 
@@ -360,7 +410,7 @@ input[placeholder*="جستجو"]{
   padding:3px 9px;
   border:1px solid transparent;
   border-radius:var(--vg-radius-pill);
-  font-size:.64rem;
+  font-size:var(--vg-type-label);
   font-weight:var(--vg-weight-title);
   line-height:1.3;
 }
@@ -369,28 +419,33 @@ input[placeholder*="جستجو"]{
 .badge.cleared{
   background:var(--vg-color-success-soft);
   color:var(--vg-color-success);
+  font-size: var(--vg-type-label);
 }
 
 .badge.tone-warning,
 .badge.pending{
   background:var(--vg-color-warning-soft);
   color:var(--vg-color-warning);
+  font-size: var(--vg-type-label);
 }
 
 .badge.tone-danger,
 .badge.low{
   background:var(--vg-color-danger-soft);
   color:var(--vg-color-danger);
+  font-size: var(--vg-type-label);
 }
 
 .badge.tone-muted{
   background:var(--vg-color-surface-soft);
   color:var(--vg-color-text-muted);
+  font-size: var(--vg-type-label);
 }
 
 .badge.tone-neutral{
   background:var(--vg-color-neutral-soft);
   color:var(--vg-color-text-secondary);
+  font-size: var(--vg-type-label);
 }
 
 
@@ -419,7 +474,7 @@ input[placeholder*="جستجو"]{
   background:var(--vg-color-surface);
   color:var(--vg-color-text);
   border:1px solid var(--vg-color-border);
-  font-size:16px;
+  font-size:1rem;
   font-family:inherit;
   box-shadow:none;
   transition:border-color .15s,box-shadow .15s;
@@ -431,6 +486,7 @@ input[placeholder*="جستجو"]{
   outline:none;
   border-color:rgba(0,112,210,.45);
   box-shadow:0 0 0 3px rgba(0,112,210,.10);
+  font-size: 1rem;
 }
 
 .field textarea{
@@ -442,6 +498,7 @@ html[data-theme="dark"] .field select:focus,
 html[data-theme="dark"] .field textarea:focus{
   border-color:rgba(74,163,255,.45);
   box-shadow:0 0 0 3px rgba(74,163,255,.14);
+  font-size: 1rem;
 }
 
 
@@ -472,7 +529,7 @@ input[placeholder*="جستجو"]{
 
   border-radius:var(--vg-radius-control);
 
-  font-size:16px;
+  font-size:1rem;
   font-family:inherit;
 }
 
@@ -481,6 +538,7 @@ input[placeholder*="جستجو"]:focus{
   outline:none;
   border-color:rgba(0,112,210,.45);
   box-shadow:0 0 0 3px rgba(0,112,210,.10);
+  font-size: 1rem;
 }
 
 
@@ -498,6 +556,7 @@ input[placeholder*="جستجو"]:focus{
   background-repeat:no-repeat;
   background-position:left 12px center;
   background-size:16px 16px;
+  font-size: 1rem;
 }
 
 .tx-toolbar-select{
@@ -507,7 +566,7 @@ input[placeholder*="جستجو"]:focus{
   border:1px solid var(--vg-color-border);
   color:var(--vg-color-text);
   font-family:inherit;
-  font-size:16px;
+  font-size:1rem;
   cursor:pointer;
 }
 
@@ -573,7 +632,8 @@ input[placeholder*="جستجو"]:focus{
 .sheet h3,
 .sheet-title{
   color:var(--vg-color-text);
-  font-weight:var(--vg-weight-title);
+  font-weight:var(--vg-weight-semibold);
+  font-size: var(--vg-type-title);
 }
 
 
@@ -591,8 +651,9 @@ input[placeholder*="جستجو"]:focus{
   border:0;
   padding:40px 20px;
   text-align:center;
-  font-size:.88rem;
+  font-size:var(--vg-type-heading);
   line-height:1.6;
+  font-weight: var(--vg-weight-regular);
 }
 
 .empty::before{
@@ -611,20 +672,28 @@ input[placeholder*="جستجو"]:focus{
   mask-repeat:no-repeat;
   -webkit-mask-position:center;
   mask-position:center;
+  font-size: var(--vg-type-heading);
+  font-weight: var(--vg-weight-regular);
 }
 
 .empty[role="alert"]{
   color:#B45309;
+  font-size: var(--vg-type-heading);
+  font-weight: var(--vg-weight-regular);
 }
 
 .empty[role="alert"]::before{
   opacity:.4;
   -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z'/%3E%3C/svg%3E");
   mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z'/%3E%3C/svg%3E");
+  font-size: var(--vg-type-heading);
+  font-weight: var(--vg-weight-regular);
 }
 
 .empty .btn{
   margin-top:4px;
+  font-size: var(--vg-type-heading);
+  font-weight: var(--vg-weight-regular);
 }
 
 .field > .empty{
@@ -632,12 +701,15 @@ input[placeholder*="جستجو"]:focus{
   padding:4px 0 0;
   margin:0;
   text-align:right;
-  font-size:.75rem;
+  font-size:var(--vg-type-caption);
   line-height:1.55;
+  font-weight: var(--vg-weight-regular);
 }
 
 .field > .empty::before{
   display:none;
+  font-size: var(--vg-type-caption);
+  font-weight: var(--vg-weight-regular);
 }
 
 .form-hint{
@@ -701,7 +773,8 @@ button[data-toggle-check]{
 .tx-row-title,
 .customer-list-row .name{
   color:var(--vg-color-text);
-  font-weight:var(--vg-weight-title);
+  font-weight:var(--vg-weight-semibold);
+  font-size: 1rem;
 }
 
 .ledger-row .sub,
@@ -709,7 +782,7 @@ button[data-toggle-check]{
 .tx-hint,
 .customer-list-row .sub{
   color:var(--vg-color-text-muted);
-  font-size:var(--vg-type-meta);
+  font-size:var(--vg-type-caption);
   font-weight:var(--vg-weight-regular);
 }
 
@@ -718,8 +791,10 @@ button[data-toggle-check]{
 .tx-row-amount,
 .customer-row-balance-value{
   color:var(--vg-color-text);
-  font-weight:var(--vg-weight-value);
+  font-weight:var(--vg-weight-semibold);
   font-variant-numeric:tabular-nums;
+  font-size: var(--vg-type-value);
+  line-height: var(--vg-leading-heading);
 }
 
 a.ledger-row:active{
@@ -733,15 +808,18 @@ a.ledger-row:active{
 
 .accent-olive{
   color:var(--vg-color-success)!important;
+  font-size: var(--vg-type-label);
 }
 
 .accent-rust,
 .accent-red{
   color:var(--vg-color-danger)!important;
+  font-size: var(--vg-type-label);
 }
 
 .accent-amber{
   color:var(--vg-color-warning)!important;
+  font-size: var(--vg-type-label);
 }
 
 
@@ -754,6 +832,8 @@ a.ledger-row:active{
   flex-wrap:wrap;
   gap:var(--vg-space-related);
   margin-top:var(--vg-space-group);
+  font-size: 0.9375rem;
+  font-weight: var(--vg-weight-semibold);
 }
 
 .tx-toolbar{
@@ -765,8 +845,8 @@ a.ledger-row:active{
 
 .tx-toolbar-label{
   color:var(--vg-color-text-muted);
-  font-size:var(--vg-type-meta);
-  font-weight:var(--vg-weight-label);
+  font-size:var(--vg-type-caption);
+  font-weight:var(--vg-weight-medium);
 }
 
 
@@ -786,8 +866,8 @@ a.ledger-row:active{
   max-width:calc(100vw - 32px);
   box-sizing:border-box;
   border-radius:var(--vg-radius-control);
-  font-size:.82rem;
-  font-weight:var(--vg-weight-title);
+  font-size:var(--vg-type-caption);
+  font-weight:var(--vg-weight-semibold);
   opacity:0;
   pointer-events:none;
   transition:opacity .2s,transform .2s;
@@ -796,12 +876,16 @@ a.ledger-row:active{
 
 .toast.error{
   background:var(--vg-color-danger);
+  font-size: var(--vg-type-caption);
+  font-weight: var(--vg-weight-semibold);
 }
 
 
 .toast.show{
   opacity:1;
   transform:translateX(-50%) translateY(0);
+  font-size: var(--vg-type-caption);
+  font-weight: var(--vg-weight-semibold);
 }
 
 
@@ -829,6 +913,8 @@ a.ledger-row:active{
   flex-wrap:wrap;
   align-items:center;
   gap:8px;
+  font-size: 0.8125rem;
+  font-weight: var(--vg-weight-medium);
 }
 
 
@@ -926,9 +1012,11 @@ html[data-theme="dark"] input[placeholder*="جستجو"]{
   /* The source SVG is a neutral gray rather than a brand asset; keep it
      unfiltered and raise its literal stroke only for dark contrast. */
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='11' cy='11' r='7' fill='none' stroke='%23969AA3' stroke-width='2'/%3E%3Cline x1='16.65' y1='16.65' x2='21' y2='21' stroke='%23969AA3' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+  font-size: 1rem;
 }
 html[data-theme="dark"] .field select,
 html[data-theme="dark"] .tx-toolbar-select,
 html[data-theme="dark"] .inv-discount-block select{
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239699A3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  font-size: 1rem;
 }
