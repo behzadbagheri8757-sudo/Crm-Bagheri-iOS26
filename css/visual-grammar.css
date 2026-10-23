@@ -53,13 +53,13 @@
   --vg-type-body:              1rem;       /* 16px */
   --vg-type-value:             0.9375rem;  /* 15px */
   --vg-type-caption:           0.75rem;    /* 12px */
-  --vg-type-label:             0.6875rem;  /* 11px */
-  --vg-type-page:              var(--vg-type-title);
-  --vg-type-section:           var(--vg-type-heading);
-  --vg-type-primary:           var(--vg-type-value);
-  --vg-type-secondary:         var(--vg-type-body);
-  --vg-type-meta:              var(--vg-type-caption);
-  --vg-type-action:            0.9375rem;
+  --vg-type-label:             0.70rem; /* 11.2px */
+  --vg-type-page:              1.05rem; /* 16.8px */
+  --vg-type-section:           0.88rem; /* 14.08px */
+  --vg-type-primary:           1.12rem; /* 17.92px */
+  --vg-type-secondary:         0.92rem; /* 14.72px */
+  --vg-type-meta:              0.64rem; /* 10.24px */
+  --vg-type-action:            0.88rem; /* 14.08px */
 
   /* ---------- Font weights ---------- */
   --vg-weight-regular:         400;
@@ -299,8 +299,6 @@ html[data-theme="dark"] .more-sheet-item{
   background:var(--vg-color-surface);
   color:var(--vg-color-text);
   border-color:var(--vg-color-border);
-  font-size: var(--vg-type-heading);
-  font-weight: var(--vg-weight-semibold);
 }
 html.theme-transition,
 html.theme-transition *{
@@ -318,31 +316,21 @@ html[data-theme="dark"] .more-sheet-handle{
 }
 html[data-theme="dark"] .more-sheet-title{
   color:var(--vg-color-text);
-  font-size: var(--vg-type-title);
-  font-weight: var(--vg-weight-semibold);
 }
 html[data-theme="dark"] .more-sheet-item.active{
   background:var(--vg-color-primary-soft);
   border-color:var(--vg-color-primary);
   color:var(--vg-color-primary);
-  font-size: var(--vg-type-heading);
-  font-weight: var(--vg-weight-semibold);
 }
 html[data-theme="dark"] .more-sheet-item-ico{
   background:rgba(90,169,240,.14);
   color:var(--vg-color-icon);
-  font-size: var(--vg-type-heading);
-  font-weight: var(--vg-weight-semibold);
 }
 html[data-theme="dark"] .more-sheet-item.active .more-sheet-item-ico{
   background:rgba(90,169,240,.20);
-  font-size: var(--vg-type-heading);
-  font-weight: var(--vg-weight-semibold);
 }
 html[data-theme="dark"] .more-sheet-item-chevron{
   color:var(--vg-color-text-muted);
-  font-size: var(--vg-type-heading);
-  font-weight: var(--vg-weight-semibold);
 }
 
 /* Common application surfaces that were intentionally white in Light Mode. */
@@ -375,8 +363,6 @@ html[data-theme="dark"] .tx-identity-title,
 html[data-theme="dark"] .cust-summary-story,
 html[data-theme="dark"] .cust-summary-action{
   color:var(--vg-color-text);
-  font-size: var(--vg-type-body);
-  font-weight: var(--vg-weight-regular);
 }
 html[data-theme="dark"] .dash-health-label,
 html[data-theme="dark"] .biz-stat-label,
@@ -406,8 +392,6 @@ html[data-theme="dark"] .inv-payment-check-due > label,
 html[data-theme="dark"] .inv-discount-label,
 html[data-theme="dark"] .inv-summary-discount{
   color:var(--vg-color-text-muted);
-  font-size: var(--vg-type-label);
-  font-weight: var(--vg-weight-semibold);
 }
 
 /* Dashboard semantic controls */
@@ -451,8 +435,6 @@ html[data-theme="dark"] .prod-drop-search{
   background-color:var(--vg-color-surface-soft);
   color:var(--vg-color-text);
   border-color:var(--vg-color-border);
-  font-size: 1rem;
-  font-weight: var(--vg-weight-semibold);
 }
 html[data-theme="dark"] input::placeholder,
 html[data-theme="dark"] textarea::placeholder{
@@ -462,7 +444,6 @@ html[data-theme="dark"] .field select,
 html[data-theme="dark"] .tx-toolbar-select,
 html[data-theme="dark"] .inv-discount-block select{
   background-color:var(--vg-color-surface-soft);
-  font-size: 1rem;
 }
 html[data-theme="dark"] .prod-drop-panel{
   background:rgba(24,26,31,.97);
@@ -486,10 +467,7 @@ html[data-theme="dark"] .inv-summary-section #calc-summary .ledger-row .amount,
 html[data-theme="dark"] .inv-summary-section #calc-summary .inv-total-row .name,
 html[data-theme="dark"] .inv-summary-section #calc-summary .inv-total-row .amount{
   color:var(--vg-color-text);
-  font-size: var(--vg-type-value);
-  font-weight: var(--vg-weight-semibold);
-  line-height: var(--vg-leading-display);
-  font-variant-numeric: tabular-nums;
+font-variant-numeric: tabular-nums;
 }
 
 /* Invoice entry only — printable .inv-doc/#printArea remain untouched. */
@@ -501,8 +479,6 @@ html[data-theme="dark"] .inv-header{
 html[data-theme="dark"] .inv-header-title-main,
 html[data-theme="dark"] .inv-summary-section #calc-summary .ledger-row .name{
   color:var(--vg-color-text);
-  font-size: var(--vg-type-title);
-  font-weight: var(--vg-weight-semibold);
 }
 html[data-theme="dark"] .inv-line-view-active{
   background:var(--vg-color-surface-soft);
@@ -513,14 +489,10 @@ html[data-theme="dark"] .inv-line + .inv-line::before{
 html[data-theme="dark"] .inv-payment-action{
   background:transparent;
   color:var(--vg-color-text);
-  font-size: var(--vg-type-caption);
-  font-weight: var(--vg-weight-semibold);
 }
 html[data-theme="dark"] .inv-payment-action.is-active{
   background:var(--vg-color-primary-soft);
   color:var(--vg-color-primary);
-  font-size: var(--vg-type-caption);
-  font-weight: var(--vg-weight-semibold);
 }
 html[data-theme="dark"] .inv-payment-backdrop{
   background:rgba(0,0,0,.56);
@@ -532,19 +504,14 @@ html[data-theme="dark"] .inv-discount-type-btn.is-active{
   background:var(--vg-color-surface);
   color:var(--vg-color-primary);
   box-shadow:0 1px 4px rgba(0,0,0,.28);
-  font-size: 0.8125rem;
 }
 html[data-theme="dark"] .inv-line-avg-cost{
   background:rgba(255,255,255,.06);
   color:var(--vg-color-text-secondary);
-  font-size: var(--vg-type-caption);
-  font-weight: var(--vg-weight-medium);
 }
 html[data-theme="dark"] .inv-line-avg-cost.is-below{
   background:var(--vg-color-danger-soft);
   color:var(--vg-color-danger);
-  font-size: var(--vg-type-caption);
-  font-weight: var(--vg-weight-medium);
 }
 html[data-theme="dark"] .dash-qa-label{
   color:var(--vg-color-text);
@@ -568,8 +535,6 @@ html[data-theme="dark"] .inv-payment-close,
 html[data-theme="dark"] .inv-header-btn{
   background:rgba(255,255,255,.07);
   color:var(--vg-color-text-muted);
-  font-size: 0.8125rem;
-  font-weight: var(--vg-weight-medium);
 }
 /* Destructive row action stays a danger color in Dark Mode (Light Mode: #D52B36). */
 html[data-theme="dark"] .inv-line-del{
@@ -590,24 +555,16 @@ html[data-theme="dark"] .prospect-daily-target .pdt-of{
 html[data-theme="dark"] .q-title{color:var(--vg-color-primary);}
 html[data-theme="dark"] .q-block{border-color:var(--vg-color-divider);}
 html[data-theme="dark"] .gc-title{color:var(--vg-color-text)!important;
-  font-size: var(--vg-type-title);
-  font-weight: var(--vg-weight-semibold);
 }
 html[data-theme="dark"] .gc-title-line{background:var(--vg-color-divider);
-  font-size: var(--vg-type-title);
-  font-weight: var(--vg-weight-semibold);
 }
 html[data-theme="dark"] .gc-seg{background:rgba(255,255,255,.07);}
 html[data-theme="dark"] .gc-seg-btn{color:var(--vg-color-text-muted);
-  font-size: var(--vg-type-caption);
-  font-weight: var(--vg-weight-semibold);
 }
 html[data-theme="dark"] .gc-seg-btn.is-active{
   background:var(--vg-color-surface);
   color:var(--vg-color-text);
   box-shadow:0 1px 2px rgba(0,0,0,.24);
-  font-size: var(--vg-type-caption);
-  font-weight: var(--vg-weight-semibold);
 }
 html[data-theme="dark"] .gc-section-ico,
 html[data-theme="dark"] .gc-section-title,
@@ -628,7 +585,6 @@ html[data-theme="dark"] .dash-risk-badge{
   color:var(--vg-color-danger);
   background:var(--vg-color-danger-soft);
   border-color:var(--vg-color-danger-soft);
-  font-size: var(--vg-type-label);
 }
 html[data-theme="dark"] .action-urgency-critical{
   color:var(--vg-color-danger);
@@ -657,8 +613,6 @@ html[data-theme="dark"] .watch-detail-reason .watch-detail-value{
 html[data-theme="dark"] .dash-action-toggle{
   border-color:rgba(255,255,255,.14);
   color:var(--vg-color-warning);
-  font-size: var(--vg-type-caption);
-  font-weight: var(--vg-weight-medium);
 }
 
 /* Settings */
@@ -681,21 +635,15 @@ html[data-theme="dark"] .tech-chevron{
    migrated globally without changing the Light-mode rendering. */
 html[data-theme="dark"] .dash-health-value.debt{
   color:var(--vg-color-danger);
-  font-size: clamp(0.875rem, 3vw, 1rem);
-  font-weight: var(--vg-weight-semibold);
 }
 html[data-theme="dark"] .dash-health-link:active,
 html[data-theme="dark"] .dash-qa-btn:active,
 html[data-theme="dark"] .cust-actions-secondary .btn:active{
   background:var(--vg-color-surface-soft);
-  font-size: 0.9375rem;
-  font-weight: var(--vg-weight-semibold);
 }
 html[data-theme="dark"] .product-profit-pct{
   color:var(--vg-color-text);
   background:var(--vg-color-primary-soft);
-  font-size: var(--vg-type-value);
-  font-weight: var(--vg-weight-semibold);
 }
 html[data-theme="dark"] .inv-summary-quiet .value{
   color:var(--vg-color-text-secondary);
@@ -703,13 +651,10 @@ html[data-theme="dark"] .inv-summary-quiet .value{
 }
 html[data-theme="dark"] .field-score-value{
   color:var(--vg-color-text);
-  font-size: var(--vg-type-display);
-  font-weight: var(--vg-weight-semibold);
 }
 html[data-theme="dark"] .field-score-meta,
 html[data-theme="dark"] .report-note{
   color:var(--vg-color-text-muted);
-  font-size: var(--vg-type-caption);
 }
 html[data-theme="dark"] .report-profit-secondary .value{
   color:var(--vg-color-text-secondary);
@@ -729,12 +674,9 @@ html[data-theme="dark"] .eval-incomplete-note{
 html[data-theme="dark"] .eval-incomplete-title,
 html[data-theme="dark"] .rank-pill-incomplete{
   color:var(--vg-color-text-secondary);
-  font-size: var(--vg-type-heading);
-  font-weight: var(--vg-weight-semibold);
 }
 html[data-theme="dark"] .rank-pill-incomplete{
   background:rgba(255,255,255,.08);
-  font-size: var(--vg-type-label);
 }
 html[data-theme="dark"] .snapshot-edit-option.selected{
   background:var(--vg-color-primary-soft);
@@ -744,7 +686,6 @@ html[data-theme="dark"] .snapshot-edit-option.selected{
 html[data-theme="dark"] .inv-payment-panel > input:focus,
 html[data-theme="dark"] .inv-payment-check-due input:focus{
   border-color:var(--vg-color-primary);
-  font-size: 1rem;
 }
 html[data-theme="dark"] .inv-payment-check-due input:focus{
   box-shadow:0 0 0 3px var(--vg-color-danger-soft);
@@ -771,8 +712,6 @@ html[data-theme="dark"] .gc-mission.is-complete .gc-mission-icon,
 html[data-theme="dark"] .gc-line-val.is-ok,
 html[data-theme="dark"] .gc-pill.is-on{
   color:var(--vg-color-success);
-  font-size: var(--vg-type-caption);
-  font-weight: var(--vg-weight-medium);
 }
 
 /* Global icon consumers: currentColor remains the source of truth. */
@@ -781,16 +720,10 @@ html[data-theme="dark"] .bottom-nav-item .bn-ico,
 html[data-theme="dark"] .dash-section-ico,
 html[data-theme="dark"] .dash-qa-ico{
   color:var(--vg-color-icon);
-  font-size: var(--vg-type-label);
-  font-weight: var(--vg-weight-label);
-  line-height: var(--vg-leading-label);
 }
 html[data-theme="dark"] .bottom-nav-item.active .bn-ico,
 html[data-theme="dark"] .bottom-nav-item.active .bn-ico .app-icon{
   color:var(--vg-color-primary);
-  font-size: var(--vg-type-label);
-  font-weight: var(--vg-weight-semibold);
-  line-height: var(--vg-leading-label);
 }
 
 
@@ -843,8 +776,6 @@ html[data-theme="dark"] .gc-pill:not(.is-on){
 }
 html[data-theme="dark"] .gc-line{
   border-bottom-color:var(--vg-color-divider);
-  font-size: var(--vg-type-caption);
-  font-weight: var(--vg-weight-medium);
 }
 /* Default/subtle urgency indicator only; critical/high keep their own colors. */
 html[data-theme="dark"] .action-row:not(.action-row-critical):not(.action-row-high)::after{
@@ -853,9 +784,10 @@ html[data-theme="dark"] .action-row:not(.action-row-critical):not(.action-row-hi
 
 
 /* iOS Bold Text typography adaptation */
+
 @media (prefers-contrast: more) {
-  body, .vg-body, .field input, input[type="search"], .tx-toolbar-select, .confirm-message { font-weight: 500; }
-  .vg-caption, .sub, .tx-row-meta, .customer-row-meta, .inv-line-calc, .inv-line-avg-cost, .bp-topic-text, .watch-list-text, .answer-a { font-weight: 500; }
-  .vg-label, .badge, .bottom-nav-item, .field label, .invoice-row-label, .rp-stat-lab, .customer-row-balance-label { font-weight: 600; }
-  .vg-title, .vg-heading, .vg-value, .section-title, .sub-title, .ledger-row .name, .tx-row-title, .customer-row-name, .amount, .tx-row-total, .customer-row-balance-value, .invoice-row-total, .rp-hero-num, .inv-total-row .amount, .gc-hero-num, .gc-monthly-pct, .field-score-value { font-weight: 700; }
+  body { font-weight: 500; }
+  .sub, .tx-row-meta, .customer-row-meta, .inv-line-calc, .inv-line-avg-cost, .bp-topic-text, .watch-list-text, .answer-a, .tx-hint { font-weight: 500; }
+  .label, .badge, .field label, .invoice-row-label, .rp-stat-lab, .customer-row-balance-label, .bottom-nav-item, .action-badge { font-weight: 600; }
+  .section-title, .sub-title, .tx-row-title, .ledger-row .name, .customer-row-name, .value, .amount, .tx-row-total, .customer-row-balance-value, .invoice-row-total, .rp-hero-num, .gc-hero-num, .gc-monthly-pct, .field-score-value, .inv-total-row .amount { font-weight: 700; }
 }

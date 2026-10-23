@@ -385,10 +385,10 @@ input[placeholder*="جستجو"]{
   background:var(--vg-color-surface);
   border:1px solid var(--vg-color-border);
   color:var(--vg-color-text-secondary);
-  font-weight:var(--vg-weight-medium);
+  font-weight:500;
   cursor:pointer;
   transition:background .15s,border-color .15s,color .15s;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
 }
 
 .chip.active,
@@ -498,7 +498,6 @@ html[data-theme="dark"] .field select:focus,
 html[data-theme="dark"] .field textarea:focus{
   border-color:rgba(74,163,255,.45);
   box-shadow:0 0 0 3px rgba(74,163,255,.14);
-  font-size: 1rem;
 }
 
 
@@ -651,9 +650,9 @@ input[placeholder*="جستجو"]:focus{
   border:0;
   padding:40px 20px;
   text-align:center;
-  font-size:var(--vg-type-heading);
+  font-size:0.88rem;
   line-height:1.6;
-  font-weight: var(--vg-weight-regular);
+  font-weight: 400;
 }
 
 .empty::before{
@@ -866,8 +865,8 @@ a.ledger-row:active{
   max-width:calc(100vw - 32px);
   box-sizing:border-box;
   border-radius:var(--vg-radius-control);
-  font-size:var(--vg-type-caption);
-  font-weight:var(--vg-weight-semibold);
+  font-size:0.82rem;
+  font-weight:600;
   opacity:0;
   pointer-events:none;
   transition:opacity .2s,transform .2s;
@@ -1012,11 +1011,9 @@ html[data-theme="dark"] input[placeholder*="جستجو"]{
   /* The source SVG is a neutral gray rather than a brand asset; keep it
      unfiltered and raise its literal stroke only for dark contrast. */
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='11' cy='11' r='7' fill='none' stroke='%23969AA3' stroke-width='2'/%3E%3Cline x1='16.65' y1='16.65' x2='21' y2='21' stroke='%23969AA3' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
-  font-size: 1rem;
 }
 html[data-theme="dark"] .field select,
 html[data-theme="dark"] .tx-toolbar-select,
 html[data-theme="dark"] .inv-discount-block select{
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239699A3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-  font-size: 1rem;
 }

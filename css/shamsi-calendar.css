@@ -361,16 +361,10 @@ html[data-theme="dark"] .shamsi-sheet-title,
 html[data-theme="dark"] .shamsi-wheel-item[data-selected="1"],
 html[data-theme="dark"] .shamsi-calendar-title,
 html[data-theme="dark"] .shamsi-calendar-day{color:var(--vg-color-text);
-  font-size: var(--vg-type-title);
-  font-weight: var(--vg-weight-semibold);
 }
 html[data-theme="dark"] .shamsi-wheel-item{color:var(--vg-color-text-muted);
-  font-size: var(--vg-type-title);
-  font-weight: var(--vg-weight-medium);
 }
 html[data-theme="dark"] .shamsi-calendar-day.is-outside{color:#5E626B;
-  font-size: var(--vg-type-heading);
-  font-weight: var(--vg-weight-medium);
 }
 html[data-theme="dark"] .shamsi-calendar-nav{
   background:rgba(255,255,255,.07);
@@ -378,8 +372,6 @@ html[data-theme="dark"] .shamsi-calendar-nav{
 }
 html[data-theme="dark"] .shamsi-calendar-nav:active{background:rgba(90,169,240,.20);}
 html[data-theme="dark"] .shamsi-sheet-btn{color:var(--vg-color-primary);
-  font-size: var(--vg-type-heading);
-  font-weight: var(--vg-weight-semibold);
 }
 html[data-theme="dark"] .shamsi-wheels-highlight{
   background:rgba(90,169,240,.10);
@@ -387,25 +379,17 @@ html[data-theme="dark"] .shamsi-wheels-highlight{
 }
 html[data-theme="dark"] .shamsi-sheet-handle{background:rgba(255,255,255,.18);}
 html[data-theme="dark"] .shamsi-calendar-weekdays{color:var(--vg-color-text-muted);
-  font-size: var(--vg-type-label);
-  font-weight: var(--vg-weight-medium);
 }
 html[data-theme="dark"] .shamsi-calendar-day.is-today{
   color:var(--vg-color-primary);
   box-shadow:inset 0 0 0 1.5px rgba(90,169,240,.34);
-  font-size: var(--vg-type-heading);
-  font-weight: var(--vg-weight-medium);
 }
 html[data-theme="dark"] .shamsi-calendar-day.is-selected{
   background:var(--vg-color-primary);
   color:#FFFFFF;
-  font-size: var(--vg-type-heading);
-  font-weight: var(--vg-weight-medium);
 }
 html[data-theme="dark"] .shamsi-calendar-day.is-selected.is-today{
   box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.60);
-  font-size: var(--vg-type-heading);
-  font-weight: var(--vg-weight-medium);
 }
 
 /* If Light is explicitly selected while the device is dark, restore the

@@ -330,8 +330,8 @@ main > .btn-row{
 }
 main .empty{
   margin:14px 0;
-  font-size: var(--vg-type-heading);
-  font-weight: var(--vg-weight-regular);
+  font-size: 0.88rem;
+  font-weight: 400;
 }
 
 /* Cards grid (composition) */
@@ -597,8 +597,8 @@ html[data-theme="dark"] .ptr-spinner{
 .chip,
 .chip-opt{
   transition:background-color .15s ease,border-color .15s ease,color .15s ease,transform .12s ease;
-  font-size: 0.8125rem;
-  font-weight: var(--vg-weight-medium);
+  font-size: 0.875rem;
+  font-weight: 500;
 }
 .chip:active,
 .chip-opt:active{
@@ -693,12 +693,12 @@ a.ledger-row:not(.action-row)::after{
 }
 /* Generic metadata hierarchy used across lists (not always under .ledger-row .name) */
 .sub{
-  font-size:1rem;
+  font-size: 0.72rem;
   color:var(--vg-color-text-muted);
   display:block;
-  font-weight:var(--vg-weight-semibold);
+  font-weight: 400;
   margin-top:0;
-  line-height:1.45;
+  line-height: 1.45;
 }
 .ledger-row .sub,
 .tx-row-meta,
@@ -3181,7 +3181,7 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   line-height:1.2;
 }
 .prospect-daily-target .pdt-count{
-  font-size:2rem;
+  font-size:1.5rem;
   font-weight:600;
   color:var(--vg-color-text);
   letter-spacing:-.6px;
@@ -5026,8 +5026,6 @@ html[data-theme="dark"] .confirm-card {
 }
 html[data-theme="dark"] .confirm-message {
   color: var(--vg-color-text);
-  font-size: var(--vg-type-body);
-  font-weight: var(--vg-weight-regular);
 }
 html[data-theme="dark"] .fab {
   background: #007A50;
