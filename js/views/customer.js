@@ -1368,20 +1368,6 @@
 
       '<div class="card customer-identity-card">' +
         '<div class="customer-identity-name">' + esc(c.name) + '</div>' +
-        '<div class="customer-identity-meta">' +
-          (c.ownerName ? cdMeta('مسئول فروشگاه', c.ownerName) : '') +
-          (c.phone ? cdMeta('تلفن', c.phone) : '') +
-          (c.locationId
-            ? cdMeta('موقعیت', getLocationDisplayString(c.locationId))
-            : ((c.region ? cdMeta('منطقه', c.region) : '') +
-               (c.route ? cdMeta('مسیر', c.route) : ''))) +
-          (c.address ? cdMeta('آدرس', c.address) : '') +
-          (c.note ? cdMeta('یادداشت', c.note) : '') +
-        '</div>' +
-        '<div class="bp-customer-health"><span class="bp-customer-health-label">وضعیت مشتری</span>' +
-          '<span class="bp-customer-health-value ' + (customerRiskLevel ? 'radar-risk-' + esc(customerRiskLevel) : '') + '">' +
-            esc(customerHealthLabel) +
-          '</span></div>' +
         '<div class="customer-balance-block">' +
           '<div class="label">مانده حساب</div>' +
           '<div class="value ' + color + ' customer-balance-value">' + balanceLine + '</div>' +
@@ -1392,6 +1378,20 @@
               (legacyDebtRow.oldestDate ? ' — قدیمی‌ترین: ' + faDate(legacyDebtRow.oldestDate) : '') +
             '</div>'
           : '') +
+        '<div class="bp-customer-health"><span class="bp-customer-health-label">وضعیت مشتری</span>' +
+          '<span class="bp-customer-health-value ' + (customerRiskLevel ? 'radar-risk-' + esc(customerRiskLevel) : '') + '">' +
+            esc(customerHealthLabel) +
+          '</span></div>' +
+        '<div class="customer-identity-meta">' +
+          (c.ownerName ? cdMeta('مسئول فروشگاه', c.ownerName) : '') +
+          (c.phone ? cdMeta('تلفن', c.phone) : '') +
+          (c.locationId
+            ? cdMeta('موقعیت', getLocationDisplayString(c.locationId))
+            : ((c.region ? cdMeta('منطقه', c.region) : '') +
+               (c.route ? cdMeta('مسیر', c.route) : ''))) +
+          (c.address ? cdMeta('آدرس', c.address) : '') +
+          (c.note ? cdMeta('یادداشت', c.note) : '') +
+        '</div>' +
       '</div>' +
 
       topAlertHtml +
