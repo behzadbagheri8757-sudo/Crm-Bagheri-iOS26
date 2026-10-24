@@ -79,14 +79,13 @@ a{
    -------------------------------------------------------------------------- */
 h2.section-title{
   margin:4px 0 14px;
-  font-size:var(--vg-type-title);
-  font-weight:var(--vg-weight-semibold);
+  font-size:1.05rem;
+  font-weight:600;
   color:var(--vg-color-text);
   display:flex;
   align-items:center;
   gap:8px;
   letter-spacing:-.2px;
-  line-height:var(--vg-leading-title);
 }
 h2.section-title::after{
   content:"";
@@ -94,24 +93,23 @@ h2.section-title::after{
   border-bottom:1px solid rgba(31,41,55,.08);
 }
 h3.sub-title{
-  font-size:var(--vg-type-heading);
+  font-size:.88rem;
   margin:16px 0 10px;
   color:var(--vg-color-text);
-  font-weight:var(--vg-weight-semibold);
-  line-height:var(--vg-leading-heading);
+  font-weight:600;
 }
 
 /* Shared card typography hierarchy (used across list/detail/report cards) */
 .label{
-  font-size:0.6875rem;
+  font-size:.68rem;
   font-weight:500;
   color:var(--vg-color-text-muted);
   line-height:1.35;
   margin:0 0 5px;
 }
 .value{
-  font-size:var(--vg-type-value);
-  font-weight:600;
+  font-size:1.02rem;
+  font-weight:700;
   color:var(--vg-color-text);
   line-height:1.35;
   font-variant-numeric:tabular-nums;
@@ -120,7 +118,6 @@ h3.sub-title{
 .value + .sub,
 .label + .value{
   margin-top:0;
-  font-variant-numeric: tabular-nums;
 }
 
 /* --------------------------------------------------------------------------
@@ -156,11 +153,11 @@ header{
 header h1{
   margin:0;
   max-width:calc(100% - 16px);
-  font-weight:var(--vg-weight-semibold);
+  font-weight:700;
   color:var(--vg-color-text);
   letter-spacing:.1px;
-  line-height:var(--vg-leading-title);
-  font-size:clamp(1.0625rem, calc(1.05rem + (0.6875rem * (1 - var(--header-progress)))), 1.375rem);
+  line-height:1.22;
+  font-size:calc(1.05rem + (0.65rem * (1 - var(--header-progress))));
   overflow-wrap:anywhere;
   text-wrap:balance;
 }
@@ -172,7 +169,7 @@ header .header-date{
   margin:0;
   font-size:.72rem;
   color:var(--vg-color-text-muted);
-  font-weight:600;
+  font-weight:550;
   line-height:1.25;
   white-space:nowrap;
   max-width:40%;
@@ -294,9 +291,6 @@ main{
   max-width:720px;
   margin:0 auto;
   padding:14px 14px calc(88px + env(safe-area-inset-bottom,0px));
-  font-size: var(--vg-type-label);
-  font-weight: var(--vg-weight-label);
-  line-height: var(--vg-leading-label);
 }
 
 /* Shared page composition (recovered from old app.css) */
@@ -317,21 +311,15 @@ main > .field{
 }
 main > .chip-row{
   margin-bottom:12px;
-  font-size: 0.8125rem;
-  font-weight: var(--vg-weight-medium);
 }
 main > .tx-toolbar{
   margin:0 0 14px;
 }
 main > .btn-row{
   margin-bottom:12px;
-  font-size: 0.9375rem;
-  font-weight: var(--vg-weight-semibold);
 }
 main .empty{
   margin:14px 0;
-  font-size: 0.88rem;
-  font-weight: 400;
 }
 
 /* Cards grid (composition) */
@@ -351,8 +339,6 @@ main .empty{
   flex-wrap:wrap;
   gap:8px;
   margin-top:12px;
-  font-size: 0.9375rem;
-  font-weight: var(--vg-weight-semibold);
 }
 .tx-toolbar{
   display:flex;
@@ -369,12 +355,11 @@ main .empty{
   min-height:44px;
   margin:0;
   flex:0 0 auto;
-  font-size: 1rem;
 }
 .tx-toolbar-label{
   flex:0 0 auto;
-  font-size:var(--vg-type-caption);
-  font-weight:var(--vg-weight-medium);
+  font-size:.72rem;
+  font-weight:600;
   color:var(--vg-color-text-muted);
   line-height:1.2;
 }
@@ -418,8 +403,8 @@ main .empty{
   margin:4px auto 12px;
 }
 .more-sheet-title{
-  font-size:var(--vg-type-title);
-  font-weight:var(--vg-weight-semibold);
+  font-size:1rem;
+  font-weight:600;
   color:var(--vg-color-text);
   margin:0 0 12px;
   text-align:center;
@@ -438,17 +423,15 @@ main .empty{
   border-radius:12px;
   text-decoration:none;
   color:var(--vg-color-text);
-  font-weight:var(--vg-weight-semibold);
-  font-size:var(--vg-type-heading);
+  font-weight:600;
+  font-size:.92rem;
   background:var(--vg-color-surface);
   border:1px solid rgba(31,41,55,.08);
 }
 .more-sheet-item.active{
   background:var(--vg-color-primary-soft);
-  border-color:var(--vg-color-primary);
+  border-color:#0070D2;
   color:var(--vg-color-primary);
-  font-size: var(--vg-type-heading);
-  font-weight: var(--vg-weight-semibold);
 }
 /* Leading icon tile — iOS Settings-style list row: a small tinted squircle
    holding the icon, label filling the remaining width, trailing chevron
@@ -463,36 +446,24 @@ main .empty{
   border-radius:9px;
   background:rgba(0,112,210,.10);
   color:var(--vg-color-icon);
-  font-size: var(--vg-type-heading);
-  font-weight: var(--vg-weight-semibold);
 }
 .more-sheet-item.active .more-sheet-item-ico{
   background:rgba(0,112,210,.16);
-  font-size: var(--vg-type-heading);
-  font-weight: var(--vg-weight-semibold);
 }
 .more-sheet-item-ico svg{
   width:18px;
   height:18px;
-  font-size: var(--vg-type-heading);
-  font-weight: var(--vg-weight-semibold);
 }
 .more-sheet-item-label{
   flex:1 1 auto;
   min-width:0;
-  font-size: var(--vg-type-heading);
-  font-weight: var(--vg-weight-semibold);
 }
 .more-sheet-item-chevron{
   flex:none;
   color:#B4BCC7;
-  font-size: var(--vg-type-heading);
-  font-weight: var(--vg-weight-semibold);
 }
 .more-sheet-item.active .more-sheet-item-chevron{
   color:var(--vg-color-primary);
-  font-size: var(--vg-type-heading);
-  font-weight: var(--vg-weight-semibold);
 }
 .more-sheet-close{
   width:100%;
@@ -561,7 +532,7 @@ html[data-theme="dark"] .ptr-spinner{
   height:16px;
   border-radius:50%;
   border:2px solid rgba(0,112,210,.22);
-  border-top-color:var(--vg-color-primary);
+  border-top-color:#0070D2;
 }
 #ptr-indicator.ptr-spinning .ptr-spinner{
   animation:ptr-spin .7s linear infinite;
@@ -597,14 +568,10 @@ html[data-theme="dark"] .ptr-spinner{
 .chip,
 .chip-opt{
   transition:background-color .15s ease,border-color .15s ease,color .15s ease,transform .12s ease;
-  font-size: 0.875rem;
-  font-weight: 500;
 }
 .chip:active,
 .chip-opt:active{
   transform:scale(.97);
-  font-size: 0.8125rem;
-  font-weight: var(--vg-weight-medium);
 }
 
 /* --------------------------------------------------------------------------
@@ -655,8 +622,6 @@ a.ledger-row:not(.action-row)::after{
   -webkit-mask-position:center;
   mask-position:center;
   align-self:center;
-  font-size: var(--vg-type-heading);
-  font-weight: var(--vg-weight-semibold);
 }
 .ledger-row:last-child,
 .tx-row:last-child{
@@ -665,7 +630,7 @@ a.ledger-row:not(.action-row)::after{
 .ledger-row .name,
 .tx-row .name,
 .customer-list-row .name{
-  font-weight:var(--vg-weight-semibold);
+  font-weight:600;
   font-size:1rem;
   color:var(--vg-color-text);
   min-width:0;
@@ -676,7 +641,7 @@ a.ledger-row:not(.action-row)::after{
   gap:3px;
 }
 .tx-row-title{
-  font-weight:var(--vg-weight-semibold);
+  font-weight:600;
   font-size:1rem;
   color:var(--vg-color-text);
   line-height:1.35;
@@ -688,48 +653,44 @@ a.ledger-row:not(.action-row)::after{
   text-overflow:ellipsis;
   display:block;
   max-width:100%;
-  font-size: 1rem;
-  font-weight: var(--vg-weight-semibold);
 }
 /* Generic metadata hierarchy used across lists (not always under .ledger-row .name) */
 .sub{
-  font-size: 0.72rem;
+  font-size:.72rem;
   color:var(--vg-color-text-muted);
   display:block;
-  font-weight: 400;
+  font-weight:400;
   margin-top:0;
-  line-height: 1.45;
+  line-height:1.45;
 }
 .ledger-row .sub,
 .tx-row-meta,
 .tx-row .sub,
 .customer-list-row .sub{
-  font-size:var(--vg-type-caption);
+  font-size:.72rem;
   color:var(--vg-color-text-muted);
   display:block;
-  font-weight:var(--vg-weight-regular);
+  font-weight:400;
   margin-top:0;
   line-height:1.45;
 }
 .ledger-row .name,
 .tx-row .name{
   gap:4px;
-  font-size: 1rem;
-  font-weight: var(--vg-weight-semibold);
 }
 .ledger-row .amount,
 .tx-row-total,
 .tx-row-amount,
 .customer-row-balance-value{
-  font-weight:var(--vg-weight-semibold);
-  font-size:var(--vg-type-value);
+  font-weight:700;
+  font-size:.9rem;
   color:var(--vg-color-text);
   white-space:nowrap;
   text-align:left;
   flex-shrink:0;
   font-variant-numeric:tabular-nums;
   letter-spacing:-.2px;
-  line-height:var(--vg-leading-heading);
+  line-height:1.35;
 }
 .invoice-row-summary,
 .product-row-summary{
@@ -738,7 +699,6 @@ a.ledger-row:not(.action-row)::after{
 .invoice-row-label,
 .product-row-label{
   margin-bottom:1px;
-  font-size: var(--vg-type-label);
 }
 a.ledger-row:active,
 a.tx-row:active{
@@ -772,7 +732,7 @@ a.tx-row:active{
 .customer-row-name.tx-row-title{
   display:block;
   min-width:0;
-  font-weight:var(--vg-weight-semibold);
+  font-weight:600;
   font-size:1rem;
   color:var(--vg-color-text);
   line-height:1.35;
@@ -789,8 +749,6 @@ a.tx-row:active{
   min-width:0;
   max-width:100%;
   min-height:1.35em;
-  font-size: var(--vg-type-caption);
-  font-weight: var(--vg-weight-regular);
 }
 .customer-row-status{
   flex:0 0 auto;
@@ -799,7 +757,7 @@ a.tx-row:active{
   justify-content:center;
   line-height:1.2;
   min-height:22px;
-  font-size:var(--vg-type-label);
+  font-size:.7rem;
   font-weight:600;
   border-radius:999px;
   padding:2px 7px;
@@ -812,9 +770,9 @@ a.tx-row:active{
 .customer-list-row .customer-row-meta{
   flex:0 1 auto;
   min-width:0;
-  font-size:var(--vg-type-caption);
+  font-size:.72rem;
   color:var(--vg-color-text-muted);
-  font-weight:var(--vg-weight-regular);
+  font-weight:400;
   line-height:1.35;
   overflow:hidden;
   text-overflow:ellipsis;
@@ -846,7 +804,7 @@ a.tx-row:active{
   white-space:nowrap;
 }
 .customer-row-balance-label{
-  font-size:var(--vg-type-label);
+  font-size:.66rem;
   font-weight:600;
   color:var(--vg-color-text-muted);
   white-space:nowrap;
@@ -854,12 +812,11 @@ a.tx-row:active{
   min-height:1.35em;
 }
 .customer-row-balance-value{
-  font-size:var(--vg-type-value);
-  font-weight:var(--vg-weight-semibold);
+  font-size:.86rem;
+  font-weight:var(--vg-weight-value);
   white-space:nowrap;
   line-height:1.35;
   min-height:1.35em;
-  font-variant-numeric: tabular-nums;
 }
 
 /* Invoice / product row composition (for lists) */
@@ -877,28 +834,21 @@ a.tx-row:active{
   flex-direction:column;
   align-items:flex-end;
   line-height:1.15;
-  font-size: var(--vg-type-caption);
-  font-weight: var(--vg-weight-medium);
-  font-variant-numeric: tabular-nums;
 }
 .invoice-row-total .tx-row-total{
-  font-size:var(--vg-type-value);
-  font-weight:var(--vg-weight-semibold);
+  font-size:.92rem;
+  font-weight:var(--vg-weight-value);
   color:var(--vg-color-text);
-  line-height: var(--vg-leading-heading);
-  font-variant-numeric: tabular-nums;
 }
 .invoice-row-remain .tx-row-meta,
 .invoice-row-paid .tx-row-meta{
-  font-size:var(--vg-type-caption);
-  font-weight:var(--vg-weight-medium);
+  font-size:.78rem;
+  font-weight:var(--vg-weight-label);
 }
 .invoice-row-main .tx-row-title{
   white-space:normal;
   overflow:visible;
   text-overflow:clip;
-  font-size: 1rem;
-  font-weight: var(--vg-weight-semibold);
 }
 .product-row-summary{
   display:flex;
@@ -914,20 +864,17 @@ a.tx-row:active{
   flex-direction:column;
   align-items:flex-start;
   line-height:1.2;
-  font-size: var(--vg-type-value);
-  font-weight: var(--vg-weight-semibold);
-  font-variant-numeric: tabular-nums;
 }
 .product-row-label,
 .invoice-row-label{
-  font-size:var(--vg-type-label);
+  font-size:var(--vg-type-meta);
   font-weight:var(--vg-weight-label);
   color:var(--vg-color-text-muted);
   white-space:nowrap;
 }
 .product-row-qty-value{
-  font-size:0.8125rem;
-  font-weight:var(--vg-weight-semibold);
+  font-size:.76rem;
+  font-weight:700;
   white-space:nowrap;
 }
 
@@ -942,15 +889,15 @@ a.tx-row:active{
   text-decoration:underline;
 }
 .tx-identity-title{
-  font-size:var(--vg-type-title);
-  font-weight:var(--vg-weight-semibold);
+  font-size:1.15rem;
+  font-weight:700;
   color:var(--vg-color-text);
 }
 .tx-identity{
   margin-bottom:12px;
 }
 .tx-identity-meta{
-  font-size:var(--vg-type-caption);
+  font-size:.85rem;
   color:var(--vg-color-text-muted);
   margin-top:4px;
   display:flex;
@@ -991,14 +938,10 @@ a.tx-row:active{
   color:var(--vg-color-text-secondary);
   border-color:rgba(31,41,55,.06);
   box-shadow:none;
-  font-size: 0.9375rem;
-  font-weight: var(--vg-weight-semibold);
 }
 .cust-actions-secondary .btn:active{
   transform:translateY(1px);
   background:#E8EBEF;
-  font-size: 0.9375rem;
-  font-weight: var(--vg-weight-semibold);
 }
 .cust-summary{
   background:var(--vg-color-surface);
@@ -1010,10 +953,9 @@ a.tx-row:active{
   box-shadow:0 3px 10px rgba(26,38,52,.04);
 }
 .cust-summary-story{
-  font-size:var(--vg-type-body);
+  font-size:.92rem;
   line-height:1.75;
   color:var(--vg-color-text);
-  font-weight: var(--vg-weight-regular);
 }
 .cust-summary-action{
   font-size:.88rem;
@@ -1127,7 +1069,7 @@ details[open] > .customer-behavior-summary::after{
   align-items:center;
   padding:2px 7px;
   border-radius:999px;
-  font-size:var(--vg-type-label);
+  font-size:.62rem;
   font-weight:600;
   color:#D52B36;
   background:var(--vg-color-danger-soft);
@@ -1165,7 +1107,7 @@ details[open] > .customer-behavior-summary::after{
   overflow:visible;
 }
 .dash-health-label{
-  font-size:0.6875rem;
+  font-size:.64rem;
   font-weight:500;
   color:var(--vg-color-text-muted);
   line-height:1.3;
@@ -1173,8 +1115,8 @@ details[open] > .customer-behavior-summary::after{
 }
 .dash-health-value{
   /* Primary value: readable floor, fluid scale for long Toman amounts */
-  font-size:clamp(0.875rem, 3vw, 1rem);
-  font-weight:var(--vg-weight-semibold);
+  font-size:clamp(.82rem, 3.4vw, 1.02rem);
+  font-weight:600;
   color:var(--vg-color-text);
   font-variant-numeric:tabular-nums;
   letter-spacing:-.3px;
@@ -1186,8 +1128,6 @@ details[open] > .customer-behavior-summary::after{
 }
 .dash-health-value.debt{
   color:#D52B36;
-  font-size: clamp(0.875rem, 3vw, 1rem);
-  font-weight: var(--vg-weight-semibold);
 }
 .dash-health-link:active{
   transform:scale(.98);
@@ -1196,9 +1136,7 @@ details[open] > .customer-behavior-summary::after{
 @media(max-width:360px){
   .dash-health-surface{gap:6px;}
   .dash-health-row{padding:13px 10px;min-height:72px;}
-  .dash-health-value{font-size:clamp(0.875rem, 3vw, 1rem);
-  font-weight: var(--vg-weight-semibold);
-}
+  .dash-health-value{font-size:clamp(.78rem, 3.6vw, .94rem);}
 }
 /* Monthly target block */
 .dash-target-block{
@@ -1265,7 +1203,7 @@ details[open] > .customer-behavior-summary::after{
 }
 .dmt-title{
   font-size:.92rem;
-  font-weight:600;
+  font-weight:700;
   color:var(--vg-color-primary);
   letter-spacing:-.2px;
 }
@@ -1318,7 +1256,7 @@ details[open] > .customer-behavior-summary::after{
 }
 .dmt-pct{
   font-size:1.12rem;
-  font-weight:600;
+  font-weight:800;
   color:#FF5C35;
   line-height:1;
   flex:none;
@@ -1338,8 +1276,8 @@ details[open] > .customer-behavior-summary::after{
   gap:3px;
   padding:3px 8px;
   border-radius:999px;
-  font-size:0.6875rem;
-  font-weight:600;
+  font-size:.65rem;
+  font-weight:700;
 }
 .dmt-status-behind{
   color:#D52B36;
@@ -1355,7 +1293,7 @@ details[open] > .customer-behavior-summary::after{
   background:rgba(0,160,104,.1);
 }
 .dmt-pace{
-  font-size:0.6875rem;
+  font-size:.66rem;
   color:#8E8E93;
 }
 /* Business status */
@@ -1387,13 +1325,13 @@ details[open] > .customer-behavior-summary::after{
   border-inline-start:none;
 }
 .biz-stat-label{
-  font-size:0.6875rem;
+  font-size:.66rem;
   font-weight:500;
   color:var(--vg-color-text-muted);
 }
 .biz-stat-value{
   font-size:.92rem;
-  font-weight:600;
+  font-weight:700;
   color:var(--vg-color-text);
   display:flex;
   align-items:baseline;
@@ -1460,7 +1398,7 @@ details[open] > .customer-behavior-summary::after{
   display:block;
 }
 .dash-qa-label{
-  font-size:0.6875rem;
+  font-size:.64rem;
   font-weight:500;
   color:#3A3A3C;
   line-height:1.2;
@@ -1498,13 +1436,13 @@ details[open] > .customer-behavior-summary::after{
   display:inline;
   color:var(--vg-color-text);
   font-size:.82rem;
-  font-weight:600;
+  font-weight:550;
 }
 .action-badge{
   display:inline-flex;
   padding:2px 6px;
   border-radius:999px;
-  font-size:var(--vg-type-label);
+  font-size:.58rem;
   font-weight:500;
   color:var(--vg-color-text-muted);
   background:rgba(31,41,55,.05);
@@ -1513,8 +1451,8 @@ details[open] > .customer-behavior-summary::after{
   display:block;
   margin-top:4px;
   color:var(--vg-color-text);
-  font-size:var(--vg-type-caption);
-  font-weight:var(--vg-weight-medium);
+  font-size:.76rem;
+  font-weight:500;
   line-height:1.4;
 }
 .action-why,
@@ -1522,14 +1460,13 @@ details[open] > .customer-behavior-summary::after{
   display:block;
   margin-top:3px;
   color:var(--vg-color-text-muted);
-  font-size:var(--vg-type-label);
+  font-size:.63rem;
   font-weight:400;
   line-height:1.45;
 }
 .action-why-now{
   color:var(--accent-dark);
   font-weight:500;
-  font-size: var(--vg-type-label);
 }
 .action-urgency{
   height:32px;
@@ -1576,19 +1513,15 @@ details[open] > .customer-behavior-summary::after{
   border-radius:999px;
   background:transparent;
   color:var(--accent-dark);
-  font-size:var(--vg-type-caption);
-  font-weight:var(--vg-weight-medium);
+  font-size:.72rem;
+  font-weight:600;
   cursor:pointer;
 }
 .dash-action-toggle-ico{
   transform:rotate(90deg);
-  font-size: var(--vg-type-caption);
-  font-weight: var(--vg-weight-medium);
 }
 .dash-action-toggle.is-open .dash-action-toggle-ico{
   transform:rotate(-90deg);
-  font-size: var(--vg-type-caption);
-  font-weight: var(--vg-weight-medium);
 }
 /* Activity sections — list-row weight, not headline typography */
 .dash-activity{
@@ -1599,23 +1532,21 @@ details[open] > .customer-behavior-summary::after{
   padding:9px 2px;
 }
 .dash-activity .ledger-row .name{
-  font-size:1rem;
-  font-weight:var(--vg-weight-semibold);
+  font-size:.86rem;
+  font-weight:500;
   line-height:1.35;
   gap:2px;
 }
 .dash-activity .ledger-row .sub{
-  font-size:var(--vg-type-caption);
-  font-weight:var(--vg-weight-regular);
+  font-size:.68rem;
+  font-weight:400;
   color:var(--vg-color-text-muted);
   line-height:1.4;
 }
 .dash-activity .ledger-row .amount{
-  font-size:var(--vg-type-value);
-  font-weight:var(--vg-weight-semibold);
+  font-size:.8rem;
+  font-weight:550;
   color:var(--vg-color-text);
-  line-height: var(--vg-leading-heading);
-  font-variant-numeric: tabular-nums;
 }
 .dash-activity-group{
   margin-bottom:18px;
@@ -1660,7 +1591,7 @@ details[open] > .customer-behavior-summary::after{
 }
 .dash-watch-compact-count{
   font-size:1.05rem;
-  font-weight:600;
+  font-weight:800;
   color:var(--vg-color-text);
 }
 .dash-watch-compact-label{
@@ -1684,15 +1615,11 @@ details[open] > .customer-behavior-summary::after{
 
 /* Scoped visual polish for Customer Detail data rows */
 #main.customer-detail-view .tx-row-title{
-  font-weight:var(--vg-weight-semibold);
-  font-size: 1rem;
+  font-weight:var(--vg-weight-label);
 }
 
 #main.customer-detail-view .tx-row-total{
-  font-weight:var(--vg-weight-semibold);
-  font-size: var(--vg-type-value);
-  line-height: var(--vg-leading-heading);
-  font-variant-numeric: tabular-nums;
+  font-weight:var(--vg-weight-value);
 }
 
 /* (No extra needed - all rules covered) */
@@ -1710,8 +1637,6 @@ details[open] > .customer-behavior-summary::after{
 }
 .supplier-purchase-item-row .tx-row-title{
   white-space:normal;
-  font-size: 1rem;
-  font-weight: var(--vg-weight-semibold);
 }
 
 /* --------------------------------------------------------------------------
@@ -1780,8 +1705,8 @@ details[open] > .customer-behavior-summary::after{
   background:rgba(31,41,55,.05);
   color:var(--vg-color-text-muted);
   font-family:inherit;
-  font-size:0.8125rem;
-  font-weight:var(--vg-weight-medium);
+  font-size:.84rem;
+  font-weight:600;
   cursor:pointer;
 }
 .inv-header-title{
@@ -1792,22 +1717,21 @@ details[open] > .customer-behavior-summary::after{
   min-width:0;
 }
 .inv-header-title-main{
-  font-size:var(--vg-type-title);
-  font-weight:var(--vg-weight-semibold);
+  font-size:.95rem;
+  font-weight:700;
   color:var(--vg-color-text);
 }
 .inv-header-title-sub{
-  font-size:var(--vg-type-caption);
+  font-size:.7rem;
   color:var(--vg-color-text-muted);
-  font-weight: var(--vg-weight-medium);
 }
 button.inv-header-save.btn{
   flex:0 0 auto;
   min-height:36px;
   padding:7px 16px;
   border-radius:999px;
-  font-size:0.875rem;
-  font-weight:var(--vg-weight-semibold);
+  font-size:.86rem;
+  font-weight:700;
   background:#0070D2;
   color:#fff;
 }
@@ -1828,16 +1752,15 @@ button.inv-header-save.btn{
   margin-bottom:24px;
 }
 .inv-section-title{
-  font-size:var(--vg-type-caption);
-  font-weight:var(--vg-weight-semibold);
+  font-size:.8rem;
+  font-weight:600;
   color:var(--vg-color-text-muted);
   margin:0 0 10px;
 }
 .inv-section-title-optional{
-  font-weight:var(--vg-weight-semibold);
+  font-weight:400;
   color:var(--vg-color-text-muted);
   opacity:.75;
-  font-size: var(--vg-type-caption);
 }
 .inv-payment-section{
   margin-bottom:16px;
@@ -1863,8 +1786,8 @@ button.inv-header-save.btn{
   flex:1 1 auto;
 }
 .inv-customer-name{
-  font-size:var(--vg-type-title);
-  font-weight:var(--vg-weight-semibold);
+  font-size:.96rem;
+  font-weight:700;
   color:var(--vg-color-text);
   line-height:1.35;
   overflow:hidden;
@@ -1872,11 +1795,10 @@ button.inv-header-save.btn{
   white-space:nowrap;
 }
 .inv-customer-meta{
-  font-size:var(--vg-type-caption);
+  font-size:.78rem;
   color:var(--vg-color-text-muted);
   margin-top:2px;
   line-height:1.3;
-  font-weight: var(--vg-weight-medium);
 }
 /* Invoice details: inset-grouped rows, label at the start, value at the end.
    Date rows lay the existing .shamsi-date field over the whole row so the entire
@@ -2093,8 +2015,8 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   text-align:left;
 }
 .inv-line-calc{
-  font-size:var(--vg-type-caption);
-  font-weight:var(--vg-weight-medium);
+  font-size:12.5px;
+  font-weight:500;
   color:var(--vg-color-text-muted);
   font-variant-numeric:tabular-nums;
   white-space:nowrap;
@@ -2103,9 +2025,9 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   flex:0 0 auto;
   min-width:0;
   text-align:left;
-  font-size:var(--vg-type-value);
+  font-size:16px;
   line-height:1.35;
-  font-weight:var(--vg-weight-semibold);
+  font-weight:700;
   color:var(--vg-color-text);
   font-variant-numeric:tabular-nums;
   white-space:nowrap;
@@ -2133,8 +2055,8 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   outline:none!important;
   min-height:38px!important;
   color:var(--vg-color-text)!important;
-  font-size:0.9375rem;
-  font-weight:var(--vg-weight-semibold);
+  font-size:15px!important;
+  font-weight:600!important;
   line-height:1.4;
   text-align:right;
   overflow:hidden;
@@ -2149,8 +2071,6 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   outline:none!important;
   box-shadow:none!important;
   border-color:transparent!important;
-  font-size: 0.9375rem;
-  font-weight: var(--vg-weight-semibold);
 }
 .inv-line-chevron{
   color:var(--vg-color-text-muted);
@@ -2183,9 +2103,9 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   border:1px solid rgba(15,23,42,.12);
   background:var(--vg-color-surface);
   padding:4px 5px;
-  font-size:0.9375rem;
+  font-size:14px;
   font-family:inherit;
-  font-weight:var(--vg-weight-semibold);
+  font-weight:600;
   color:var(--vg-color-text);
   text-align:center;
   border-radius:9px;
@@ -2197,22 +2117,17 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
 .inv-mini-input-price{
   width:96px;
   min-width:96px;
-  font-size: 0.9375rem;
-  font-weight: var(--vg-weight-semibold);
 }
 .sheet.inv-sheet-host .inv-mini-input:focus{
   outline:none;
   border-color:rgba(15,23,42,.22);
   box-shadow:0 0 0 2px rgba(15,23,42,.04);
-  font-size: 0.9375rem;
-  font-weight: var(--vg-weight-semibold);
 }
 .sheet.inv-sheet-host .inv-discount-block input:focus,
 .sheet.inv-sheet-host .inv-payment-panel > input:focus{
   outline:none;
   border-color:rgba(0,112,210,.45);
   box-shadow:0 0 0 3px rgba(0,112,210,.18);
-  font-size: 1rem;
 }
 .inv-line-x,
 .inv-line-unit{
@@ -2249,8 +2164,8 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   padding:5px 8px;
   border-radius:8px;
   background:rgba(31,41,55,.035);
-  font-size:var(--vg-type-caption);
-  font-weight:var(--vg-weight-medium);
+  font-size:11.5px;
+  font-weight:550;
   color:#475467;
   line-height:1.35;
   font-variant-numeric:tabular-nums;
@@ -2258,14 +2173,11 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
 .inv-line-avg-cost::before{
   content:'میانگین خرید';
   color:var(--vg-color-text-muted);
-  font-weight:var(--vg-weight-medium);
-  font-size: var(--vg-type-caption);
+  font-weight:500;
 }
 .inv-line-avg-cost.is-below{
   background:rgba(250,57,70,.07);
   color:#B42318;
-  font-size: var(--vg-type-caption);
-  font-weight: var(--vg-weight-medium);
 }
 .inv-line-market-details{
   margin:4px 14px 12px;
@@ -2334,27 +2246,17 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   color:#475467;
 }
 .inv-profit-summary .amount{
-  font-size:var(--vg-type-value);
-  font-weight:var(--vg-weight-semibold);
+  font-size:1rem;
+  font-weight:700;
   white-space:nowrap;
   font-variant-numeric:tabular-nums;
-  line-height: var(--vg-leading-heading);
 }
 @media(max-width:360px){
   .inv-line-collapsed{padding-inline:12px;gap:10px;}
-  .inv-line-main,.inv-line-sub,.inv-line-avg-cost{padding-inline:12px;
-  font-size: var(--vg-type-caption);
-  font-weight: var(--vg-weight-medium);
-}
+  .inv-line-main,.inv-line-sub,.inv-line-avg-cost{padding-inline:12px;}
   .inv-line-market-details{margin-inline:12px;}
-  .inv-mini-input{width:46px;min-width:46px;
-  font-size: 0.9375rem;
-  font-weight: var(--vg-weight-semibold);
-}
-  .inv-mini-input-price{width:88px;min-width:88px;
-  font-size: 0.9375rem;
-  font-weight: var(--vg-weight-semibold);
-}
+  .inv-mini-input{width:46px;min-width:46px;}
+  .inv-mini-input-price{width:88px;min-width:88px;}
   .inv-line-del{left:12px;}
   .inv-discount-block{grid-template-columns:1fr;gap:7px;}
   .inv-discount-type{width:100%;}
@@ -2484,8 +2386,8 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   background:transparent!important;
   color:var(--vg-color-primary);
   font-family:inherit;
-  font-size:0.875rem;
-  font-weight:var(--vg-weight-semibold);
+  font-size:.88rem;
+  font-weight:600;
   cursor:pointer;
 }
 .inv-add-line-icon{
@@ -2497,8 +2399,8 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   border-radius:50%;
   background:var(--vg-color-primary);
   color:#fff;
-  font-size:0.875rem;
-  font-weight:var(--vg-weight-semibold);
+  font-size:1.05rem;
+  font-weight:500;
   line-height:1;
 }
 .inv-payment-heading{
@@ -2511,7 +2413,7 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
 .inv-payment-total{
   min-width:1px;
   font-size:.8rem;
-  font-weight:600;
+  font-weight:700;
   color:var(--vg-color-text);
 }
 .inv-payment-actions{
@@ -2521,13 +2423,9 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   background:var(--vg-color-surface);
   border-radius:var(--vg-radius-soft);
   overflow:hidden;
-  font-size: var(--vg-type-caption);
-  font-weight: var(--vg-weight-semibold);
 }
 .inv-payment-action + .inv-payment-action{
   border-inline-start:1px solid var(--vg-color-divider);
-  font-size: var(--vg-type-caption);
-  font-weight: var(--vg-weight-semibold);
 }
 .inv-payment-action{
   min-height:60px;
@@ -2542,21 +2440,17 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   justify-content:center;
   gap:4px;
   font-family:inherit;
-  font-size:var(--vg-type-caption);
-  font-weight:var(--vg-weight-semibold);
+  font-size:.72rem;
+  font-weight:600;
   cursor:pointer;
 }
 .inv-payment-action.is-active{
   background:var(--vg-color-primary-soft);
   color:var(--vg-color-primary);
-  font-size: var(--vg-type-caption);
-  font-weight: var(--vg-weight-semibold);
 }
 .inv-payment-action-icon{
   width:22px;
   height:22px;
-  font-size: var(--vg-type-caption);
-  font-weight: var(--vg-weight-semibold);
 }
 .inv-payment-action-icon svg{
   width:20px;
@@ -2566,8 +2460,6 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   stroke-width:1.7;
   stroke-linecap:round;
   stroke-linejoin:round;
-  font-size: var(--vg-type-caption);
-  font-weight: var(--vg-weight-semibold);
 }
 .inv-payment-backdrop{
   position:fixed;
@@ -2608,7 +2500,7 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   gap:12px;
   margin-bottom:14px;
   font-size:.9rem;
-  font-weight:600;
+  font-weight:700;
   color:var(--vg-color-text);
 }
 .inv-payment-panel-head > div{
@@ -2650,7 +2542,7 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   background:var(--vg-color-surface);
   color:var(--vg-color-text);
   font-family:inherit;
-  font-size:1rem;
+  font-size:16px;
   box-sizing:border-box;
 }
 .inv-payment-panel > input:focus,
@@ -2658,19 +2550,15 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   outline:none;
   border-color:#D94725;
   box-shadow:0 0 0 3px #FFF0EC;
-  font-size: 1rem;
 }
 .inv-payment-action-value{
   min-height:15px;
-  font-size:0.75rem;
-  font-weight:var(--vg-weight-semibold);
+  font-size:.68rem;
+  font-weight:700;
   color:var(--vg-color-primary);
   font-variant-numeric:tabular-nums;
 }
-.inv-payment-action-value:not(.is-filled){visibility:hidden;
-  font-size: 0.75rem;
-  font-weight: var(--vg-weight-semibold);
-}
+.inv-payment-action-value:not(.is-filled){visibility:hidden;}
 .inv-payment-confirm{
   position:static;
   display:block;
@@ -2684,14 +2572,11 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   background:#0070D2;
   color:#FFFFFF;
   font-family:inherit;
-  font-size:0.875rem;
-  font-weight:var(--vg-weight-semibold);
+  font-size:.84rem;
+  font-weight:700;
   cursor:pointer;
 }
-.inv-payment-confirm:active{transform:scale(.985);
-  font-size: 0.875rem;
-  font-weight: var(--vg-weight-semibold);
-}
+.inv-payment-confirm:active{transform:scale(.985);}
 .inv-discount-block{
   display:grid;
   grid-template-columns:auto minmax(112px,1fr) minmax(92px,120px);
@@ -2722,7 +2607,7 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   background:transparent;
   color:var(--vg-color-text-muted);
   font-family:inherit;
-  font-size:0.8125rem;
+  font-size:.78rem;
   font-weight:600;
   cursor:pointer;
 }
@@ -2730,7 +2615,6 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   background:var(--vg-color-surface);
   color:var(--vg-color-primary);
   box-shadow:0 1px 4px rgba(15,23,42,.08);
-  font-size: 0.8125rem;
 }
 .inv-discount-block input{
   width:100%;
@@ -2765,17 +2649,14 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   cursor:default;
 }
 .inv-summary-section #calc-summary .ledger-row .name{
-  font-weight:var(--vg-weight-semibold);
+  font-weight:500;
   color:#475467;
-  font-size: 1rem;
 }
 .inv-summary-section #calc-summary .ledger-row .amount{
-  font-weight:var(--vg-weight-semibold);
+  font-weight:600;
   font-variant-numeric:tabular-nums;
   color:var(--vg-color-text);
   white-space:nowrap;
-  font-size: var(--vg-type-value);
-  line-height: var(--vg-leading-heading);
 }
 .inv-summary-section #calc-summary .inv-total-row{
   margin-top:3px;
@@ -2784,11 +2665,9 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
 }
 .inv-summary-section #calc-summary .inv-total-row .name,
 .inv-summary-section #calc-summary .inv-total-row .amount{
-  font-size:var(--vg-type-display);
-  font-weight:var(--vg-weight-semibold);
+  font-size:1rem;
+  font-weight:700;
   color:var(--vg-color-text);
-  line-height: var(--vg-leading-display);
-  font-variant-numeric: tabular-nums;
 }
 .inv-summary-section #calc-summary .inv-discount-row{
   padding:5px 0 6px;
@@ -2799,10 +2678,7 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
 }
 .inv-summary-section #calc-summary .inv-discount-row .amount{
   color:var(--vg-color-text-muted);
-  font-size:var(--vg-type-value);
-  font-weight: var(--vg-weight-semibold);
-  line-height: var(--vg-leading-heading);
-  font-variant-numeric: tabular-nums;
+  font-size:.8rem;
 }
 .inv-summary-discount{
   margin:-1px 0 4px;
@@ -2818,10 +2694,8 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
 }
 .inv-summary-section #calc-summary .inv-remain-row .name,
 .inv-summary-section #calc-summary .inv-remain-row .amount{
-  font-size:var(--vg-type-value);
-  font-weight:var(--vg-weight-semibold);
-  line-height: var(--vg-leading-heading);
-  font-variant-numeric: tabular-nums;
+  font-size:1.08rem;
+  font-weight:800;
 }
 
 /* Unique V4 compatibility radius */
@@ -2843,7 +2717,7 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   background:rgba(31,41,55,.03);
 }
 .visit-precontext-title{
-  font-weight:600;
+  font-weight:700;
   color:var(--vg-color-text);
   margin-bottom:6px;
 }
@@ -2909,7 +2783,7 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   border-bottom:1px solid var(--vg-color-divider);
 }
 .report-summary-label{
-  font-size:0.6875rem;
+  font-size:.68rem;
   font-weight:500;
   color:var(--vg-color-text-muted);
   margin:0 0 5px;
@@ -2917,7 +2791,7 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
 }
 .report-summary-value{
   font-size:1.05rem;
-  font-weight:600;
+  font-weight:700;
   color:var(--vg-color-text);
   line-height:1.3;
   font-variant-numeric:tabular-nums;
@@ -2933,7 +2807,7 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   color:#D52B36;
 }
 .report-summary-meta{
-  font-size:0.6875rem;
+  font-size:.66rem;
   color:var(--vg-color-text-muted);
   margin-top:5px;
   line-height:1.4;
@@ -2951,7 +2825,7 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   border-radius:12px;
   padding:9px 11px;
   color:var(--vg-color-text-muted);
-  font-size:0.6875rem;
+  font-size:.68rem;
   line-height:1.5;
   margin-bottom:12px;
 }
@@ -3050,8 +2924,8 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
 .mgmt-section-title{
   margin:0 4px 8px;
   padding:0;
-  font-size:var(--vg-type-caption);
-  font-weight:var(--vg-weight-medium);
+  font-size:.78rem;
+  font-weight:var(--vg-weight-label);
   color:var(--vg-color-text-muted);
   line-height:1.35;
   letter-spacing:.01em;
@@ -3084,8 +2958,6 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   display:inline-flex;
   align-items:center;
   gap:6px;
-  font-size: 0.9375rem;
-  font-weight: var(--vg-weight-semibold);
 }
 .settings-action-link::after{
   content:'';
@@ -3181,8 +3053,8 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   line-height:1.2;
 }
 .prospect-daily-target .pdt-count{
-  font-size:1.5rem;
-  font-weight:600;
+  font-size:2rem;
+  font-weight:700;
   color:var(--vg-color-text);
   letter-spacing:-.6px;
   font-variant-numeric:tabular-nums;
@@ -3275,8 +3147,8 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   padding:4px 10px;
   border-radius:999px;
   color:#fff;
-  font-weight:600;
-  font-size:var(--vg-type-label);
+  font-weight:700;
+  font-size:.72rem;
   /* FIX (discovered during Evaluation V2 work): without this, the bidi
      algorithm reorders "A+" to display as "+A" inside RTL pages. This
      pill is reused heavily by the new V2 rank badges, so fixing it here
@@ -3286,23 +3158,18 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
 }
 .rank-pill-A\+{
   background:#00A068;
-  font-size: var(--vg-type-label);
 }
 .rank-pill-A{
   background:#0070D2;
-  font-size: var(--vg-type-label);
 }
 .rank-pill-B{
   background:#F5A131;
-  font-size: var(--vg-type-label);
 }
 .rank-pill-C{
   background:#FF5C35;
-  font-size: var(--vg-type-label);
 }
 .rank-pill-D{
   background:#6B7280;
-  font-size: var(--vg-type-label);
 }
 .converted-banner{
   background:#0070D2;
@@ -3373,11 +3240,11 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
 .answer-index{
   direction:ltr;
   color:var(--vg-color-text-muted);
-  font-size:var(--vg-type-label);
+  font-size:.67rem;
 }
 .answer-a{
   color:var(--vg-color-text);
-  font-size:var(--vg-type-caption);
+  font-size:.77rem;
   line-height:1.65;
 }
 .snapshot-answer-row{
@@ -3408,7 +3275,7 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   overflow:hidden;
   text-overflow:ellipsis;
   white-space:nowrap;
-  font-weight:600;
+  font-weight:550;
 }
 .visit-card-stage{
   min-height:120px;
@@ -3422,7 +3289,7 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   to{opacity:1;transform:translateX(0);}
 }
 .q-title{
-  font-weight:600;
+  font-weight:650;
   margin:0 0 12px;
   font-size:.9rem;
   line-height:1.65;
@@ -3441,8 +3308,6 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   display:flex;
   flex-wrap:wrap;
   gap:8px;
-  font-size: 0.8125rem;
-  font-weight: var(--vg-weight-medium);
 }
 
 /* --------------------------------------------------------------------------
@@ -3467,21 +3332,17 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   display:flex;
   align-items:center;
   gap:10px;
-  font-size: var(--vg-type-title);
-  font-weight: var(--vg-weight-semibold);
 }
 .gc-title{
   margin:0;
-  font-size:var(--vg-type-title);
-  font-weight:var(--vg-weight-semibold);
+  font-size:1.15rem;
+  font-weight:700;
   color:var(--vg-color-text)!important;
 }
 .gc-title-line{
   flex:1;
   height:1px;
   background:rgba(0,0,0,.1);
-  font-size: var(--vg-type-title);
-  font-weight: var(--vg-weight-semibold);
 }
 .gc-title-mark{
   display:inline-flex;
@@ -3490,14 +3351,10 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   width:36px;
   height:36px;
   color:#FF5C35;
-  font-size: var(--vg-type-title);
-  font-weight: var(--vg-weight-semibold);
 }
 .gc-title-mark svg{
   width:28px;
   height:28px;
-  font-size: var(--vg-type-title);
-  font-weight: var(--vg-weight-semibold);
 }
 .gc-seg{
   display:inline-flex;
@@ -3516,16 +3373,14 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   background:transparent;
   color:var(--vg-color-text-muted);
   font-family:inherit;
-  font-size:var(--vg-type-caption);
-  font-weight:var(--vg-weight-semibold);
+  font-size:.78rem;
+  font-weight:600;
   cursor:pointer;
 }
 .gc-seg-btn.is-active{
   background:var(--vg-color-surface);
   color:var(--vg-color-text);
   box-shadow:0 1px 2px rgba(0,0,0,.08);
-  font-size: var(--vg-type-caption);
-  font-weight: var(--vg-weight-semibold);
 }
 .gc-section{
   margin-bottom:18px;
@@ -3543,7 +3398,7 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
 .gc-section-title{
   margin:0;
   font-size:.9rem;
-  font-weight:600;
+  font-weight:700;
   color:var(--vg-color-text);
 }
 .gc-panel{
@@ -3616,13 +3471,13 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   margin-bottom:8px;
 }
 .gc-mission-title{
-  font-size:var(--vg-type-heading);
-  font-weight:var(--vg-weight-semibold);
+  font-size:.9rem;
+  font-weight:700;
   color:var(--vg-color-text);
 }
 .gc-mission-count{
-  font-size:var(--vg-type-caption);
-  font-weight:var(--vg-weight-medium);
+  font-size:.88rem;
+  font-weight:600;
   color:var(--vg-color-text-muted);
 }
 .gc-track{
@@ -3643,16 +3498,15 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
 }
 .gc-monthly-pct{
   text-align:center;
-  font-size:var(--vg-type-display);
-  font-weight:var(--vg-weight-semibold);
+  font-size:1.55rem;
+  font-weight:700;
   color:var(--vg-color-text);
   margin-bottom:8px;
-  font-variant-numeric: tabular-nums;
 }
 .gc-monthly-amounts{
   text-align:center;
-  font-size:var(--vg-type-value);
-  font-weight:var(--vg-weight-semibold);
+  font-size:.88rem;
+  font-weight:600;
   color:var(--vg-color-text);
 }
 .gc-line{
@@ -3662,31 +3516,24 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   gap:10px;
   padding:9px 0;
   border-bottom:1px solid rgba(0,0,0,.05);
-  font-size:var(--vg-type-caption);
-  font-weight: var(--vg-weight-medium);
+  font-size:.88rem;
 }
 .gc-line-last{
   border-bottom:0;
-  font-size: var(--vg-type-caption);
-  font-weight: var(--vg-weight-medium);
 }
 .gc-line-lab{
   display:inline-flex;
   align-items:center;
   gap:7px;
-  font-weight:var(--vg-weight-medium);
+  font-weight:500;
   color:var(--vg-color-text);
-  font-size: var(--vg-type-caption);
 }
 .gc-line-val{
-  font-weight:var(--vg-weight-medium);
+  font-weight:700;
   color:var(--vg-color-text);
-  font-size: var(--vg-type-caption);
 }
 .gc-line-val.is-ok{
   color:#007A50;
-  font-size: var(--vg-type-caption);
-  font-weight: var(--vg-weight-medium);
 }
 .gc-soft{
   font-size:.75rem;
@@ -3707,10 +3554,9 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   gap:6px;
 }
 .gc-hero-num{
-  font-size:var(--vg-type-display);
-  font-weight:var(--vg-weight-semibold);
+  font-size:1.75rem;
+  font-weight:700;
   color:var(--vg-color-text);
-  font-variant-numeric: tabular-nums;
 }
 .gc-hero-lab{
   font-size:.85rem;
@@ -3736,10 +3582,9 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   gap:8px;
 }
 .gc-xp-num{
-  font-size:var(--vg-type-value);
-  font-weight:var(--vg-weight-semibold);
+  font-size:1.35rem;
+  font-weight:700;
   color:var(--vg-color-text);
-  font-variant-numeric: tabular-nums;
 }
 .gc-kpi-grid{
   display:grid;
@@ -3754,10 +3599,9 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   background:transparent;
 }
 .gc-kpi-num{
-  font-size:var(--vg-type-value);
-  font-weight:var(--vg-weight-semibold);
+  font-size:1.15rem;
+  font-weight:700;
   color:var(--vg-color-text);
-  font-variant-numeric: tabular-nums;
 }
 
 /* --------------------------------------------------------------------------
@@ -3785,7 +3629,7 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   background:rgba(31,41,55,.05);
   border:1px solid rgba(31,41,55,.08);
   font-size:.78rem;
-  font-weight:600;
+  font-weight:700;
 }
 .watch-customer-group{
   margin:0 0 10px;
@@ -3804,11 +3648,11 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
 }
 .watch-customer-name{
   font-size:.82rem;
-  font-weight:600;
+  font-weight:700;
   color:var(--vg-color-text);
 }
 .watch-customer-count{
-  font-size:0.6875rem;
+  font-size:.68rem;
   color:var(--vg-color-text-muted);
 }
 .watch-customer-items{
@@ -3835,7 +3679,7 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   color:var(--vg-color-text);
 }
 .watch-list-sub{
-  font-size:0.6875rem;
+  font-size:.66rem;
   color:var(--vg-color-text-muted);
 }
 .watch-list-meta{
@@ -3863,7 +3707,7 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   background:rgba(107,114,128,.1);
 }
 .watch-reviewed-badge{
-  font-size:0.6875rem;
+  font-size:.62rem;
   color:var(--vg-color-icon);
 }
 .watch-reviewed-badge.is-reviewed{
@@ -3879,12 +3723,12 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   box-shadow:0 3px 10px rgba(26,38,52,.04);
 }
 .watch-detail-kicker{
-  font-size:0.6875rem;
+  font-size:.65rem;
   color:var(--vg-color-text-muted);
 }
 .watch-detail-customer-name{
   font-size:1rem;
-  font-weight:600;
+  font-weight:700;
   color:var(--vg-color-text);
 }
 .watch-detail-block{
@@ -3914,7 +3758,7 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   margin-bottom:8px;
 }
 .watch-detail-footnote{
-  font-size:0.6875rem;
+  font-size:.68rem;
   color:var(--vg-color-text-muted);
   text-align:center;
 }
@@ -3957,16 +3801,15 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   color:var(--vg-color-icon);
 }
 #pin-lock-overlay .pin-title{
-  font-size:var(--vg-type-title);
-  font-weight:var(--vg-weight-semibold);
+  font-size:1.25rem;
+  font-weight:700;
   color:var(--vg-color-text);
   margin:0 0 8px;
 }
 #pin-lock-overlay .pin-sub{
-  font-size:var(--vg-type-caption);
+  font-size:.85rem;
   color:var(--vg-color-text-muted);
   margin:0 0 28px;
-  font-weight: var(--vg-weight-regular);
 }
 #pin-lock-overlay .pin-cells-wrap{
   position:relative;
@@ -4026,10 +3869,9 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
 }
 #pin-lock-overlay .pin-err{
   color:#D52B36;
-  font-size:var(--vg-type-caption);
+  font-size:.85rem;
   min-height:1.3em;
   margin:16px 0 0;
-  font-weight: var(--vg-weight-semibold);
 }
 #pin-lock-overlay .pin-btn{
   width:auto;
@@ -4040,8 +3882,8 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   border-radius:12px;
   background:#0070D2;
   color:#fff;
-  font-weight:var(--vg-weight-semibold);
-  font-size:0.9375rem;
+  font-weight:600;
+  font-size:.9rem;
   min-height:44px;
   cursor:pointer;
 }
@@ -4049,11 +3891,9 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   opacity:.35;
   background:#9AA3B2;
   cursor:not-allowed;
-  font-size: 0.9375rem;
-  font-weight: var(--vg-weight-semibold);
 }
 #pin-lock-overlay .pin-powered{
-  font-size:var(--vg-type-label);
+  font-size:.7rem;
   color:var(--vg-color-text-muted);
   margin:18px 0 0;
 }
@@ -4110,8 +3950,7 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   }
   .tx-toolbar-select{
     min-width:100px;
-  font-size: 1rem;
-}
+  }
 }
 @media(max-width:419px){
   .cards{
@@ -4122,17 +3961,14 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
     min-width:58px;
   }
   .dash-qa-label{
-    font-size:0.6875rem;
+    font-size:.6rem;
   }
   .inv-payment-actions{
     gap:5px;
-  font-size: var(--vg-type-caption);
-  font-weight: var(--vg-weight-semibold);
-}
+  }
   .inv-payment-action{
-    font-size:var(--vg-type-caption);
-  font-weight: var(--vg-weight-semibold);
-}
+    font-size:.68rem;
+  }
   .inv-discount-block{
     grid-template-columns:auto 76px minmax(88px,1fr);
     gap:6px;
@@ -4191,7 +4027,7 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
 }
 .inv-doc{
   font-family:'Vazirmatn',Tahoma,sans-serif;
-  color:var(--vg-color-primary);
+  color:#0070D2;
   direction:rtl;
   text-align:right;
   background:#fff;
@@ -4216,7 +4052,7 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   text-align:center;
 }
 .inv-brand-name{
-  font-weight:600;
+  font-weight:800;
   font-size:1.05rem;
 }
 .inv-doc-title{
@@ -4246,7 +4082,7 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
 }
 .inv-table th{
   background:#F0F2F5;
-  font-weight:600;
+  font-weight:700;
 }
 .inv-totals{
   width:100%;
@@ -4259,7 +4095,7 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   border-bottom:1px solid #E0E4E8;
 }
 .inv-totals .inv-final td{
-  font-weight:600;
+  font-weight:800;
   border-bottom:2px solid #0070D2;
 }
 .inv-signatures{
@@ -4297,9 +4133,7 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   }
   .overlay,.sheet,header,nav,.fab,.toast,.bottom-nav,button.app-back,main,#ptr-indicator{
     display:none!important;
-  font-size: var(--vg-type-caption);
-  font-weight: var(--vg-weight-semibold);
-}
+  }
   body{
     background:#fff!important;
   }
@@ -4369,14 +4203,9 @@ html[data-theme="dark"] .route-ghost.route-ghost-canvas-white{
              box-shadow var(--ios-control) var(--ios-ease-out),
              background-color var(--ios-control) ease,
              border-color var(--ios-control) ease;
-  font-size: var(--vg-type-label);
-  font-weight: var(--vg-weight-label);
-  line-height: var(--vg-leading-label);
 }
 .btn:active{
   transform:scale(.975) translateY(1px);
-  font-size: 0.9375rem;
-  font-weight: var(--vg-weight-semibold);
 }
 .btn.secondary,
 .chip,
@@ -4391,8 +4220,6 @@ input[placeholder*="جستجو"]{
              0 1px 3px rgba(26,38,52,.035);
   backdrop-filter:saturate(150%) blur(12px);
   -webkit-backdrop-filter:saturate(150%) blur(12px);
-  font-size: 1rem;
-  font-weight: var(--vg-weight-semibold);
 }
 .chip,
 .chip-opt,
@@ -4402,15 +4229,11 @@ input[placeholder*="جستجو"]{
              border-color var(--ios-control) ease,
              color var(--ios-control) ease,
              box-shadow var(--ios-control) var(--ios-ease-out);
-  font-size: var(--vg-type-caption);
-  font-weight: var(--vg-weight-semibold);
 }
 .chip:active,
 .chip-opt:active,
 .gc-seg-btn:active{
   transform:scale(.975);
-  font-size: var(--vg-type-caption);
-  font-weight: var(--vg-weight-semibold);
 }
 
 /* Search controls: focused but not over-decorated. */
@@ -4420,7 +4243,6 @@ input[placeholder*="جستجو"]{
              border-color var(--ios-control) ease,
              box-shadow var(--ios-control) var(--ios-ease-out),
              background-color var(--ios-control) ease;
-  font-size: 1rem;
 }
 input[type="search"]:focus,
 input[placeholder*="جستجو"]:focus{
@@ -4428,7 +4250,6 @@ input[placeholder*="جستجو"]:focus{
   box-shadow:inset 0 1px 0 rgba(255,255,255,.72),
              0 0 0 3px rgba(0,112,210,.075),
              0 4px 14px rgba(0,112,210,.045);
-  font-size: 1rem;
 }
 
 /* Icon controls and floating action button get the same native-feeling tap response. */
@@ -4487,15 +4308,11 @@ a.ledger-row:active,
              background-color var(--ios-control) ease,
              border-color var(--ios-control) ease,
              box-shadow var(--ios-control) var(--ios-ease-out);
-  font-size: var(--vg-type-heading);
-  font-weight: var(--vg-weight-semibold);
 }
 .more-sheet-item:active{
   transform:scale(.985);
   background:rgba(247,248,250,.9);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.7);
-  font-size: var(--vg-type-heading);
-  font-weight: var(--vg-weight-semibold);
 }
 
 /* Generic bottom sheet (openSheet()/closeModal() in js/ui.js) — brought up to
@@ -4587,25 +4404,22 @@ a.ledger-row:active,
 
 /* 2 — Products: reduce visual weight of total value */
 .product-row-value .tx-row-total{
-  font-size:var(--vg-type-value);
-  font-weight:var(--vg-weight-semibold);
+  font-size:.88rem;
+  font-weight:var(--vg-weight-value);
   color:var(--vg-color-text);
-  line-height: var(--vg-leading-heading);
-  font-variant-numeric: tabular-nums;
 }
 .product-row-value .product-row-label{
-  font-size:var(--vg-type-value);
-  font-weight:var(--vg-weight-semibold);
-  font-variant-numeric: tabular-nums;
+  font-size:var(--vg-type-meta);
+  font-weight:var(--vg-weight-label);
 }
 
 /* 3 — Product detail profit % readability */
 .product-profit-pct{
   padding:0;
   margin:0 0 10px;
-  font-size:var(--vg-type-value);
-  font-weight:var(--vg-weight-semibold);
-  color:var(--vg-color-text);
+  font-size:.88rem;
+  font-weight:600;
+  color:#1F2937;
   text-align:right;
   background:rgba(0,112,210,.06);
   border-radius:10px;
@@ -4619,25 +4433,22 @@ a.ledger-row:active,
   gap:8px;
 }
 .product-price-history .ledger-row .amount{
-  font-size:var(--vg-type-caption);
-  font-weight:var(--vg-weight-medium);
+  font-size:.78rem;
+  font-weight:500;
   white-space:normal;
   text-align:left;
-  line-height:var(--vg-leading-heading);
+  line-height:1.4;
   max-width:62%;
-  font-variant-numeric: tabular-nums;
 }
 
 /* 6 — Inventory summary hierarchy: value card slightly quieter */
 #main .cards .card .value{
   font-weight:600;
-  font-variant-numeric: tabular-nums;
 }
 .inv-summary-quiet .value{
   font-size:.95rem;
   font-weight:600;
-  color:var(--vg-color-text-secondary);
-  font-variant-numeric: tabular-nums;
+  color:#4B5563;
 }
 
 /* 7 — Supplier payment delete: smaller, less aggressive */
@@ -4645,9 +4456,8 @@ a.ledger-row:active,
 .tx-row .btn.danger.small[data-sup-pay-del]{
   min-height:32px;
   padding:4px 8px;
-  font-size:0.9375rem;
+  font-size:.72rem;
   border-radius:8px;
-  font-weight: var(--vg-weight-semibold);
 }
 
 /* 8 — Return purchase qty inputs */
@@ -4677,8 +4487,8 @@ a.ledger-row:active,
   width:100%;
   min-height:40px;
   padding:8px 6px;
-  font-size:0.8125rem;
-  font-weight:var(--vg-weight-medium);
+  font-size:.78rem;
+  font-weight:600;
   text-align:center;
   line-height:1.25;
   border-radius:10px;
@@ -4692,9 +4502,8 @@ a.ledger-row:active,
 .eval-q-opt{
   min-height:40px;
   padding:8px 12px;
-  font-size:0.8125rem;
+  font-size:.84rem;
   border-radius:10px;
-  font-weight: var(--vg-weight-medium);
 }
 .eval-q-options{
   gap:8px;
@@ -4713,16 +4522,16 @@ a.ledger-row:active,
   margin-top:8px;
 }
 .field-score-value{
-  font-size:var(--vg-type-display);
-  font-weight:var(--vg-weight-semibold);
-  color:var(--vg-color-text);
+  font-size:1.35rem;
+  font-weight:700;
+  color:#1F2937;
   letter-spacing:-.3px;
   line-height:1.2;
 }
 .field-score-meta{
-  font-size:var(--vg-type-caption);
+  font-size:.78rem;
   font-weight:500;
-  color:var(--vg-color-text-muted);
+  color:#667085;
 }
 
 /* 13–16 — Monthly target: layering, light surface, spacing, bar */
@@ -4770,7 +4579,7 @@ a.ledger-row:active,
 }
 .dmt-pct{
   font-size:1rem;
-  font-weight:600;
+  font-weight:700;
   min-width:2.2em;
 }
 .dmt-status-row{
@@ -4782,19 +4591,17 @@ a.ledger-row:active,
 .report-note{
   font-size:.72rem;
   line-height:1.45;
-  color:var(--vg-color-text-muted);
+  color:#667085;
   margin-top:6px;
 }
 .report-profit-primary .value{
   font-size:1.12rem;
-  font-weight:600;
-  font-variant-numeric: tabular-nums;
+  font-weight:700;
 }
 .report-profit-secondary .value{
   font-size:.95rem;
   font-weight:600;
-  color:var(--vg-color-text-secondary);
-  font-variant-numeric: tabular-nums;
+  color:#4B5563;
 }
 .report-profit-secondary .label{
   font-weight:500;
@@ -4822,7 +4629,7 @@ input[type="file"]#import-file{
   min-height:44px;
   font-family:inherit;
   font-size:.84rem;
-  color:var(--vg-color-text);
+  color:#1F2937;
   background:#F8FAFC;
   border:1px solid rgba(31,41,55,.1);
   border-radius:12px;
@@ -4834,8 +4641,8 @@ button#save-tx{
   width:100%;
   min-height:48px;
   border-radius:12px;
-  font-size:0.9375rem;
-  font-weight:var(--vg-weight-semibold);
+  font-size:.95rem;
+  font-weight:600;
 }
 
 /* Evaluation V2 — optional follow-up date: keep native iOS date picker, replace only the empty-state placeholder visually. */
@@ -4856,7 +4663,7 @@ button#save-tx{
   justify-content:flex-start;
   padding:10px 12px;
   font:inherit;
-  color:var(--vg-color-text);
+  color:#1F2937;
   background:#F8FAFC;
   border:1px solid rgba(31,41,55,.1);
   border-radius:12px;
@@ -4873,9 +4680,9 @@ button#save-tx{
    adds what those components genuinely don't cover.
    ========================================================================== */
 .eval-step-label{
-  font-weight:var(--vg-weight-medium);
-  font-size:var(--vg-type-label);
-  color:var(--vg-color-primary);
+  font-weight:600;
+  font-size:.88rem;
+  color:#0070D2;
   margin-bottom:8px;
 }
 .eval-progress-bar{
@@ -4934,9 +4741,9 @@ button#save-tx{
   border:1px solid rgba(31,41,55,.08);
 }
 .eval-incomplete-title{
-  font-weight:var(--vg-weight-semibold);
-  font-size:var(--vg-type-heading);
-  color:var(--vg-color-text-secondary);
+  font-weight:600;
+  font-size:.86rem;
+  color:#4B5563;
   margin-bottom:2px;
 }
 /* Incomplete rank badge: calm and muted, not alarming (spec §24-§25) —
@@ -4944,8 +4751,7 @@ button#save-tx{
    rank, it's an absence of enough data to rank at all. */
 .rank-pill-incomplete{
   background:rgba(31,41,55,.08);
-  color:var(--vg-color-text-secondary);
-  font-size: var(--vg-type-label);
+  color:#4B5563;
 }
 .snapshot-meta-row{
   display:flex;
@@ -4976,7 +4782,7 @@ button#save-tx{
 .snapshot-edit-option.selected{
   background:rgba(0,112,210,.08);
   border-color:rgba(0,112,210,.24);
-  color:var(--vg-color-text);
+  color:#1F2937;
 }
 
 /* In-app confirmation layer; sits above an existing sheet without replacing it. */
@@ -5005,8 +4811,6 @@ button#save-tx{
   line-height:1.7;
   color:var(--vg-color-text);
   margin-bottom:14px;
-  font-size: var(--vg-type-body);
-  font-weight: var(--vg-weight-regular);
 }
 
 
@@ -5131,7 +4935,7 @@ input.has-input-clear.has-input-clear-sm{padding-inline-end:26px !important}
 .visit-card .chip-opt.vp-opt{
   width:100%;min-height:52px;padding:10px 12px;margin:0;
   border-radius:var(--vg-radius-soft);
-  font-size:0.8125rem;font-weight:var(--vg-weight-medium);line-height:1.4;text-align:center;
+  font-size:.88rem;font-weight:var(--vg-weight-title);line-height:1.4;text-align:center;
   white-space:normal;word-break:break-word;
   -webkit-tap-highlight-color:transparent;
 }
