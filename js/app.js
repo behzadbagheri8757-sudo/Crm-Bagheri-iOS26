@@ -1789,8 +1789,8 @@ function openAddVisit(cid){
     return '<span class="vp-purchase-cycle is-' + tone + '"><span class="vp-purchase-dot"></span><span>' + esc(text) + '</span></span>';
   }
 
-  function chipBtn(group, value, label){
-    return '<button type="button" class="chip-opt" data-vgroup="' + esc(group) + '" data-value="' + esc(value) + '">' + esc(label) + '</button>';
+  function chipBtn(group, value, label, selected){
+    return '<button type="button" class="chip-opt' + (selected ? ' selected' : '') + '" aria-pressed="' + (selected ? 'true' : 'false') + '" data-vgroup="' + esc(group) + '" data-value="' + esc(value) + '">' + esc(label) + '</button>';
   }
 
   openSheet(
@@ -1949,7 +1949,7 @@ function openAddVisit(cid){
   const customerProductCandidates = buildCustomerProductCandidates();
 
   function optBtn(group, value, label, selected){
-    return '<button type="button" class="chip-opt vp-opt' + (selected ? ' selected' : '') + '" data-vgroup="' + esc(group) + '" data-value="' + esc(value) + '">' + esc(label) + '</button>';
+    return '<button type="button" class="chip-opt vp-opt' + (selected ? ' selected' : '') + '" aria-pressed="' + (selected ? 'true' : 'false') + '" data-vgroup="' + esc(group) + '" data-value="' + esc(value) + '">' + esc(label) + '</button>';
   }
   function currentOffer(pid){
     return (state.offeredProducts || []).find(function (op) { return op.productId === pid; }) || null;
@@ -2027,7 +2027,7 @@ function openAddVisit(cid){
       const noProducts = !(state.offeredProducts || []).length;
       if (!state.userChangedResult) state.result = state.kind === 'checkin' && noProducts ? VISIT_RESULTS[3] : (accepted ? VISIT_RESULTS[0] : VISIT_RESULTS[1]);
       const allowed = RESULT_CHIPS.filter(function (o) { return o.value !== VISIT_RESULTS[3] || (state.kind === 'checkin' && noProducts); });
-      html = '<div class="visit-card visit-card-enter" data-visit-step="outcome"><div class="q-title">نتیجهٔ ویزیت</div><div class="chip-wrap">' + allowed.map(function (o) { return chipBtn('result', o.value, o.label, state.result === o.value); }).join('') + '</div>' + footerBack('list') + '</div>';
+      html = '<div class="visit-card visit-card-enter" data-visit-step="outcome"><div class="q-title">نتیجهٔ ویزیت</div><div class="vp-opts vp-outcome-opts" role="group" aria-label="نتیجهٔ ویزیت">' + allowed.map(function (o) { return optBtn('result', o.value, o.label, state.result === o.value); }).join('') + '</div>' + footerBack('list') + '</div>';
     } else if (step === 'closedFinish') {
       html = '<div class="visit-card visit-card-enter" data-visit-step="closedFinish"><div class="q-title">فروشگاه بسته بود</div><div class="vp-sub">زمان ویزیت بعدی را مشخص کنید؛ محصول یا فاکتوری ثبت نمی‌شود.</div>' + footerBack('kind') + '</div>';
     } else if (step === 'list') {
@@ -2889,7 +2889,7 @@ function openInvoiceForm(cid, editInv, opts){
             <h2 class="inv-section-title">مشخصات فاکتور</h2>
             <div class="inv-rows">
               <div class="inv-row inv-row-date">
-                <label class="inv-row-label" for="f-date">تاریخ فاکتور</label>
+                <span class="inv-row-label">تاریخ فاکتور</span>
                 ${shamsiDateInputHTML('f-date', invoiceDateStr)}
               </div>
               <div class="inv-row">
@@ -2897,7 +2897,7 @@ function openInvoiceForm(cid, editInv, opts){
                 <input type="checkbox" class="inv-switch" id="f-due-toggle" role="switch" ${invoiceDueEnabled?'checked':''}>
               </div>
               <div class="inv-row inv-row-date" id="f-due-wrap" style="${invoiceDueEnabled?'':'display:none;'}">
-                <label class="inv-row-label" for="f-due-date">تاریخ سررسید</label>
+                <span class="inv-row-label">تاریخ سررسید</span>
                 ${shamsiDateInputHTML('f-due-date', invoiceDueStr)}
               </div>
               <div class="inv-row">
