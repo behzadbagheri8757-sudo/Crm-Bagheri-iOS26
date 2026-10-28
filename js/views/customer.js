@@ -1346,16 +1346,16 @@
       : '';
 
     // History: collapsed, with the count in the summary.
-    var invoiceDetailsHtml = '<details class="cd-history-details">' +
+    var invoiceDetailsHtml = '<details class="cd-history-details cd-ios-accordion">' +
       '<summary class="customer-behavior-summary">فاکتورها (' + invs.length + ')</summary>' +
       '<div class="customer-tx-list customer-invoice-list">' + invRows + '</div></details>';
-    var paymentDetailsHtml = '<details class="cd-history-details">' +
+    var paymentDetailsHtml = '<details class="cd-history-details cd-ios-accordion">' +
       '<summary class="customer-behavior-summary">پرداخت‌ها (' + pays.length + ')</summary>' +
       '<div class="customer-tx-list customer-payment-list">' + payRows + '</div></details>';
-    var checkDetailsHtml = '<details class="cd-history-details">' +
+    var checkDetailsHtml = '<details class="cd-history-details cd-ios-accordion">' +
       '<summary class="customer-behavior-summary">چک‌ها (' + chks.length + ')</summary>' +
       '<div class="customer-tx-list customer-check-list">' + chkRows + '</div></details>';
-    var visitDetailsHtml = '<details class="cd-history-details">' +
+    var visitDetailsHtml = '<details class="cd-history-details cd-ios-accordion">' +
       '<summary class="customer-behavior-summary">ویزیت‌ها و ارزیابی‌ها (' + visits.length + ')</summary>' +
       '<div class="btn-row" style="margin-bottom:8px;">' +
         '<button type="button" class="btn small secondary" id="act-visit-section">ثبت ویزیت برای این مشتری</button>' +
@@ -1398,7 +1398,7 @@
       storyHtml +
 
       detailHintHtml +
-      '<div class="btn-row cust-actions-primary" style="margin-bottom:8px;">' +
+      '<div class="btn-row cust-actions-primary cd-identity-actions" style="margin-bottom:8px;">' +
         detailBtn('invoice', 'ثبت فاکتور', 'act-invoice') +
         detailBtn('payment', 'ثبت پرداخت', 'act-pay') +
         detailBtn('visit', 'ثبت ویزیت', 'act-visit') +
