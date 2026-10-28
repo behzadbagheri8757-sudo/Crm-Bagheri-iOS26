@@ -39,7 +39,8 @@
    configured, so it is boot-critical, not merely a nice-to-have precache
    entry. It was already in PRECACHE_URLS; no asset list, route, or business
    logic otherwise changed.) */
-const CACHE_NAME = 'baqeri-shell-v97';
+/* CHANGED: v98 -> v99 (Dashboard v2 UI: new css/dashboard-v2.css added to the precache list; no other asset, route or business logic changed.) */
+const CACHE_NAME = 'baqeri-shell-v99';
 
 /** App Shell — paths relative to this SW (same directory as index.html). */
 const PRECACHE_URLS = [
@@ -48,6 +49,7 @@ const PRECACHE_URLS = [
   './css/visual-grammar.css',
   './css/visual-grammar-components.css',
   './css/visual-grammar-pages.css',
+  './css/dashboard-v2.css',
   './css/shamsi-calendar.css',
   './js/shamsi-calendar.js',
   './js/models.js',
