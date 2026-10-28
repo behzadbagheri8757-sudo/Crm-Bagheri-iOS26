@@ -9,8 +9,11 @@
   function dashboardIcon(key, size) { var name=ICON_MAP[key]||key; return (typeof AppIcons!=='undefined' && AppIcons.render) ? AppIcons.render(name,{size:size||20}) : ''; }
   function urgencyIcon(level) { return dashboardIcon(URGENCY_ICON_MAP[level]||URGENCY_ICON_MAP.low,20); }
 
+  /* v2 presentation helpers — section heads are plain iOS-style titles (no icons).
+     Signature kept (ico is accepted but unused) so every caller stays valid. */
   function dashSectionHead(ico, title, href, action, badge) {
-    return '<div class="dashboard-block-head"><div class="dash-section-label"><span class="dash-section-ico" aria-hidden="true">' + ico + '</span><span>' + title + '</span>' + (badge || '') + '</div>' + (href ? '<a class="section-action" href="' + href + '">' + action + '</a>' : '') + '</div>';
+    return '<div class="dx-head"><h2 class="dx-title">' + title + (badge || '') + '</h2>' +
+      (href ? '<a class="dx-link" href="' + href + '">' + action + '</a>' : '') + '</div>';
   }
 
   function normalizeDigits(v) {
@@ -58,22 +61,20 @@
   }
 
   function quickActionsHtml() {
-    const gameShortcut = '<a class="section-action" href="#/game">بازی فروش ←</a>';
-  function qaIco(name) { return dashboardIcon(name, 20); }
-
-  return '<div class="dashboard-block dash-quick-actions-block">' +
-      '<div class="dashboard-block-head"><div class="dash-section-label"><span class="dash-section-ico" aria-hidden="true">' + dashboardIcon('quick',20) + '</span><span>اقدام سریع</span></div>' + gameShortcut + '</div>' +
-      '<div class="dash-quick-actions dash-qa-bar">' +
-        '<button type="button" class="dash-qa-btn" data-qa="invoice"><span class="dash-qa-ico" aria-hidden="true">' + qaIco('invoice') + '</span><span class="dash-qa-label">فاکتور جدید</span></button>' +
-        '<button type="button" class="dash-qa-btn" data-qa="payment"><span class="dash-qa-ico" aria-hidden="true">' + qaIco('card') + '</span><span class="dash-qa-label">ثبت دریافت</span></button>' +
-        '<button type="button" class="dash-qa-btn" data-qa="visit"><span class="dash-qa-ico" aria-hidden="true">' + qaIco('visit') + '</span><span class="dash-qa-label">ثبت ویزیت</span></button>' +
-        '<a class="dash-qa-btn" href="#/evaluation"><span class="dash-qa-ico" aria-hidden="true">' + qaIco('shop') + '</span><span class="dash-qa-label">ارزیابی مغازه</span></a>' +
+    function qaIco(name) { return dashboardIcon(name, 22); }
+    return '<section class="dx-section dash-quick-actions-block">' +
+      dashSectionHead('', 'اقدام سریع', '#/game', 'بازی فروش') +
+      '<div class="dx-qa dash-quick-actions">' +
+        '<button type="button" class="dx-qa-btn" data-qa="invoice"><span class="dx-qa-ico" aria-hidden="true">' + qaIco('invoice') + '</span><span class="dx-qa-label">فاکتور جدید</span></button>' +
+        '<button type="button" class="dx-qa-btn" data-qa="payment"><span class="dx-qa-ico" aria-hidden="true">' + qaIco('card') + '</span><span class="dx-qa-label">ثبت دریافت</span></button>' +
+        '<button type="button" class="dx-qa-btn" data-qa="visit"><span class="dx-qa-ico" aria-hidden="true">' + qaIco('visit') + '</span><span class="dx-qa-label">ثبت ویزیت</span></button>' +
+        '<a class="dx-qa-btn" href="#/evaluation"><span class="dx-qa-ico" aria-hidden="true">' + qaIco('shop') + '</span><span class="dx-qa-label">ارزیابی مغازه</span></a>' +
       '</div>' +
-    '</div>';
+    '</section>';
   }
 
   function bindQuickActions(root) {
-    const wrap = root.querySelector('.dash-quick-actions');
+    const wrap = root.querySelector('.dx-qa');
     if (!wrap) return;
     wrap.addEventListener('click', function (e) {
       const btn = e.target.closest('[data-qa]');
@@ -106,14 +107,12 @@
       }
     } catch (e) { return ''; }
     if (!items.length) {
-      return '<div class="dashboard-block">' +
-        dashSectionHead(dashboardIcon('actions',20), 'کارهای پیشنهادی امروز', '', '') +
-        '<div class="dash-activity">' +
-          '<div class="empty" style="padding:18px 8px;text-align:center;">' +
-            '<div style="font-weight:600;color:var(--vg-color-text);margin-bottom:4px;">امروز کار ضروری نداری</div>' +
-            '<div class="sub" style="opacity:.85;">وضعیت مشتری‌ها و پتانسیل‌ها تحت کنترل است.</div>' +
-          '</div>' +
-        '</div></div>';
+      return '<section class="dx-section">' +
+        dashSectionHead('', 'کارهای پیشنهادی امروز', '', '') +
+        '<div class="dx-card dx-empty">' +
+          '<strong>امروز کار ضروری نداری</strong>' +
+          '<span>وضعیت مشتری‌ها و پتانسیل‌ها تحت کنترل است.</span>' +
+        '</div></section>';
     }
 
     // Max Top 5 by unifiedScore (already sorted by calculateAllActions)
@@ -140,22 +139,15 @@
       const href = isProspect
         ? ('#/prospect?id=' + encodeURIComponent(a.prospectId || ''))
         : ('#/customer?id=' + encodeURIComponent(a.customerId || ''));
-      const lines = [];
-      lines.push('<span class="action-person">' + esc(name) +
-        '</span> <span class="action-badge">' + esc(badge) + '</span>');
-      if (actionText) {
-        lines.push('<span class="action-main">' + esc(actionText) + '</span>');
-      }
-      if (why) {
-        lines.push('<span class="action-why"><span class="action-meta-label">چرا:</span> ' + esc(why) + '</span>');
-      }
-      if (whyNow) {
-        lines.push('<span class="action-why-now"><span class="action-meta-label-now">الان:</span> ' + esc(whyNow) + '</span>');
-      }
-      return '<a class="ledger-row action-row action-row-' + esc(urgency) + '" href="' + href + '">' +
-        '<span class="amount action-urgency action-urgency-' + esc(urgency) + '" aria-label="اولویت ' + esc(urgency) + '">' + icon + '</span>' +
-        '<span class="name action-content">' + lines.join('') + '</span>' +
-        '<span class="filler"></span>' +
+      return '<a class="dx-row dx-act dx-act-' + esc(urgency) + '" href="' + href + '">' +
+        '<span class="dx-act-ico" aria-label="اولویت ' + esc(urgency) + '">' + icon + '</span>' +
+        '<span class="dx-act-body">' +
+          '<span class="dx-act-head"><span class="dx-act-name">' + esc(name) + '</span><span class="dx-chip">' + esc(badge) + '</span></span>' +
+          (actionText ? '<span class="dx-act-main">' + esc(actionText) + '</span>' : '') +
+          (why ? '<span class="dx-act-why"><span class="dx-act-key">چرا:</span> ' + esc(why) + '</span>' : '') +
+          (whyNow ? '<span class="dx-act-now"><span class="dx-act-key">الان:</span> ' + esc(whyNow) + '</span>' : '') +
+        '</span>' +
+        '<span class="dx-chev" aria-hidden="true"></span>' +
       '</a>';
     }
 
@@ -164,10 +156,10 @@
     if (hiddenItems.length) {
       const hiddenRows = hiddenItems.map(renderRow).join('');
       hiddenBlock =
-        '<div class="dash-action-more" data-action-more hidden>' + hiddenRows + '</div>' +
-        '<button type="button" class="dash-action-toggle" data-action-toggle aria-expanded="false">' +
+        '<div class="dx-act-more" data-action-more hidden>' + hiddenRows + '</div>' +
+        '<button type="button" class="dx-toggle" data-action-toggle aria-expanded="false">' +
           '<span data-action-toggle-label>نمایش ' + enToFaDigits(String(hiddenItems.length)) + ' کار دیگر</span>' +
-          '<span class="dash-action-toggle-ico" aria-hidden="true">›</span>' +
+          '<span class="dx-toggle-ico" aria-hidden="true"></span>' +
         '</button>';
     }
 
@@ -175,10 +167,10 @@
       return a && (a.urgency === 'critical' || a.urgency === 'high');
     }).length;
     const riskBadge = riskCount > 0
-      ? '<span class="dash-risk-badge" title="تعداد موارد بحرانی/پراهمیت در همین لیست">' + riskCount + ' مورد مهم</span>'
+      ? '<span class="dx-badge" title="تعداد موارد بحرانی/پراهمیت در همین لیست">' + riskCount + ' مورد مهم</span>'
       : '';
 
-    return '<div class="dashboard-block">' + dashSectionHead(dashboardIcon('actions',20), 'کارهای پیشنهادی امروز', '', '', riskBadge) + '<div class="dash-activity dash-action-queue">' + visibleRows + hiddenBlock + '</div></div>';
+    return '<section class="dx-section">' + dashSectionHead('', 'کارهای پیشنهادی امروز', '', '', riskBadge) + '<div class="dx-card dx-list dx-act-list">' + visibleRows + hiddenBlock + '</div></section>';
   }
 
   /* Toggles the collapsed remainder of the Action Queue (items 3-5).
@@ -188,7 +180,7 @@
     const more = root.querySelector('[data-action-more]');
     const label = root.querySelector('[data-action-toggle-label]');
     if (!btn || !more) return;
-    const hiddenCount = more.querySelectorAll('.action-row').length;
+    const hiddenCount = more.querySelectorAll('.dx-act').length;
     btn.addEventListener('click', function () {
       const expanded = btn.getAttribute('aria-expanded') === 'true';
       if (expanded) {
@@ -248,18 +240,20 @@
       var cid = o.customerId || '';
       var customer = (data.customers || []).find(function (c) { return c.id === cid; });
       var sev = o.severity || o.level || 'medium';
+      var sevKey = (sev === 'critical' || sev === 'high' || sev === 'medium') ? sev : 'low';
       var sevLabel = sev === 'critical' ? 'فوری' : sev === 'high' ? 'زیاد' : sev === 'medium' ? 'متوسط' : 'کم';
-      return '<a class="bp-dashboard-watch-card" href="#/watch?id=' + encodeURIComponent(o.id || '') + '">' +
-        '<span class="bp-dashboard-watch-main"><span class="bp-dashboard-watch-title">' +
-          (customer ? '<strong class="bp-watch-customer-name">' + esc(customer.name) + '</strong><span class="bp-watch-sep"> · </span>' : '') +
-          esc(label(o)) + '</span>' +
-        '<span class="bp-dashboard-watch-reason">' + esc(body(o)) + '</span>' +
-        '</span><span class="bp-dashboard-watch-severity">' + esc(sevLabel) + '</span></a>';
+      return '<a class="dx-row dx-watch" href="#/watch?id=' + encodeURIComponent(o.id || '') + '">' +
+        '<span class="dx-watch-body">' +
+          '<span class="dx-watch-title">' + (customer ? '<strong>' + esc(customer.name) + '</strong><span class="dx-dot-sep" aria-hidden="true"></span>' : '') + '<span>' + esc(label(o)) + '</span></span>' +
+          '<span class="dx-watch-reason">' + esc(body(o)) + '</span>' +
+        '</span>' +
+        '<span class="dx-sev dx-sev-' + sevKey + '">' + esc(sevLabel) + '</span>' +
+      '</a>';
     }).join('');
-    return '<div class="dashboard-block bp-dashboard-watch-block">' +
-      dashSectionHead(dashboardIcon('actions',20), 'هشدارهای زودهنگام', '#/watches', 'همه ' + faDigits(total) + ' مورد') +
-      '<div class="bp-dashboard-watch-list">' + cards + '</div>' +
-      '</div>';
+    return '<section class="dx-section">' +
+      dashSectionHead('', 'هشدارهای زودهنگام', '#/watches', 'همه ' + faDigits(total) + ' مورد') +
+      '<div class="dx-card dx-list">' + cards + '</div>' +
+      '</section>';
   }
 
   function dashboardAlertBar(ctx) {
@@ -306,12 +300,13 @@
 
     if (!(att.count || overdueChecks.length || dueSoonChecks.length || followups || lowStock)) return '';
 
-    /* هر مورد یک ردیف کامل (iOS list row): متن راست، مقدار/توضیح کنار آن، فلش در انتها. */
+    /* هر مورد یک ردیف کامل (iOS list row): عدد، عنوان، توضیح/مقدار و فلش. */
     function row(href, count, label, meta, extraAttr) {
-      return '<a class="bp-alert-row" href="' + href + '"' + (extraAttr || '') + '>' +
-        '<span class="bp-alert-row-text"><strong>' + faDigits(count) + '</strong> ' + label + '</span>' +
-        (meta ? '<span class="bp-alert-row-meta">' + meta + '</span>' : '') +
-        '<span class="bp-alert-row-chev" aria-hidden="true"></span>' +
+      return '<a class="dx-row dx-att" href="' + href + '"' + (extraAttr || '') + '>' +
+        '<span class="dx-att-count">' + faDigits(count) + '</span>' +
+        '<span class="dx-att-text">' + label + '</span>' +
+        (meta ? '<span class="dx-att-meta">' + meta + '</span>' : '') +
+        '<span class="dx-chev" aria-hidden="true"></span>' +
       '</a>';
     }
 
@@ -322,13 +317,10 @@
     if (followups) bits.push(row('#/watches?filter=followup', followups, 'پیگیری‌های باز'));
     if (lowStock) bits.push(row('#/inventory', lowStock, 'کالای کم‌موجودی'));
 
-    return '<div class="bp-dashboard-alert" role="status">' +
-      '<div class="bp-dashboard-alert-head">' +
-        '<span class="bp-dashboard-alert-dot" aria-hidden="true"></span>' +
-        '<span class="bp-dashboard-alert-label">نیازمند رسیدگی</span>' +
-      '</div>' +
-      '<div class="bp-dashboard-alert-items">' + bits.join('') + '</div>' +
-    '</div>';
+    return '<section class="dx-section" role="status">' +
+      '<div class="dx-head"><h2 class="dx-title"><span class="dx-alert-dot" aria-hidden="true"></span>نیازمند رسیدگی</h2></div>' +
+      '<div class="dx-card dx-list">' + bits.join('') + '</div>' +
+    '</section>';
   }
 
   function openAttentionSheet(ctx) {
@@ -392,12 +384,33 @@
       (data.payments || []).forEach(function (p) { if (typeof isSameDay === 'function' && isSameDay(p.date, now) && ['cash','card','transfer'].indexOf(p.method) !== -1) received += Number(p.amount) || 0; });
       (data.customers || []).forEach(function (c) { (c.visits || []).forEach(function (v) { if (typeof isSameDay === 'function' && isSameDay(v.date, now)) visits++; }); });
     } catch (e) {}
-    return '<div class="dashboard-block bp-dashboard-snapshot"><div class="dashboard-block-head"><div class="dash-section-label"><span class="dash-section-ico" aria-hidden="true">' + dashboardIcon('summary',20) + '</span><span>خلاصه امروز</span></div></div>' +
-      '<div class="bp-dashboard-snapshot-grid">' +
-      '<div class="bp-dashboard-snapshot-item"><span>فروش</span><strong>' + money(sales) + '</strong><small>' + faDigits(invoices) + ' فاکتور</small></div>' +
-      '<div class="bp-dashboard-snapshot-item"><span>ویزیت</span><strong>' + faDigits(visits) + '</strong><small>امروز</small></div>' +
-      '<div class="bp-dashboard-snapshot-item"><span>دریافتی</span><strong>' + money(received) + '</strong><small>امروز</small></div>' +
-      '</div></div>';
+    /* Compact amounts for the tiles only (display formatting, same numbers):
+       ≥ 1B → «میلیارد», ≥ 1M → «میلیون», ≥ 10K → «هزار». Exact value stays in title/aria-label. */
+    function tileMoney(v) {
+      var n = Math.round(Number(v) || 0);
+      var abs = Math.abs(n);
+      function f(x) { return x.toLocaleString('fa-IR', { maximumFractionDigits: 1 }); }
+      if (abs >= 1e9) return { num: f(n / 1e9), unit: 'میلیارد ت', full: money(n) };
+      if (abs >= 1e6) return { num: f(n / 1e6), unit: 'میلیون ت', full: money(n) };
+      if (abs >= 1e4) return { num: f(n / 1e3), unit: 'هزار ت', full: money(n) };
+      return { num: toman(n), unit: 'ت', full: money(n) };
+    }
+    function tile(tone, label, num, unit, sub, full) {
+      return '<div class="dx-kpi dx-kpi-' + tone + '"' + (full ? ' title="' + esc(full) + '" aria-label="' + esc(label + ': ' + full) + '"' : '') + '>' +
+        '<span class="dx-kpi-label">' + label + '</span>' +
+        '<span class="dx-kpi-value"><strong>' + num + '</strong>' + (unit ? '<small>' + unit + '</small>' : '') + '</span>' +
+        '<span class="dx-kpi-sub">' + sub + '</span>' +
+      '</div>';
+    }
+    var s1 = tileMoney(sales), s2 = tileMoney(received);
+    return '<section class="dx-section">' +
+      dashSectionHead('', 'خلاصه امروز', '', '') +
+      '<div class="dx-kpis">' +
+        tile('blue', 'فروش', s1.num, s1.unit, faDigits(invoices) + ' فاکتور', s1.full) +
+        tile('green', 'ویزیت', faDigits(visits), '', 'امروز', '') +
+        tile('violet', 'دریافتی', s2.num, s2.unit, 'امروز', s2.full) +
+      '</div>' +
+    '</section>';
   }
 
 
@@ -410,10 +423,9 @@
       const cust = ctx && typeof ctx.customerById === 'function'
         ? ctx.customerById(inv.customerId)
         : (data.customers || []).find(function (c) { return c.id === inv.customerId; });
-      return '<a class="ledger-row" href="#/invoice?id=' + encodeURIComponent(inv.id) + '"><span class="name">فاکتور #' + esc(String(inv.number || '')) + '<span class="sub">' + esc(cust ? cust.name : '—') + ' — ' + faDate(inv.date) + '</span></span><span class="filler"></span><span class="amount">' + money(inv.total) + '</span></a>';
+      return '<a class="dx-row dx-act-line" href="#/invoice?id=' + encodeURIComponent(inv.id) + '"><span class="dx-line-body"><span class="dx-line-title">فاکتور #' + esc(String(inv.number || '')) + '</span><span class="dx-line-sub">' + esc(cust ? cust.name : '—') + ' — ' + faDate(inv.date) + '</span></span><span class="dx-line-amount">' + money(inv.total) + '</span></a>';
     }).join('');
-    /* Inner section only — parent .dash-activity-group provides the surface */
-    return '<div class="dash-activity-section">' + dashSectionHead(dashboardIcon('invoiceSection',20), 'آخرین فاکتورها', '#/invoices', 'همه ←') + '<div class="dash-activity">' + rows + '</div></div>';
+    return '<div class="dx-subhead"><span>آخرین فاکتورها</span><a class="dx-link" href="#/invoices">همه</a></div>' + rows;
   }
 
   function recentVisitsHtml() {
@@ -425,10 +437,9 @@
     const top = items.slice(0, 5);
     if (!top.length) return '';
     const rows = top.map(function (v) {
-      return '<a class="ledger-row" href="#/customer?id=' + encodeURIComponent(v.customerId) + '"><span class="name">' + esc(v.name) + '<span class="sub">' + faDate(v.date) + (v.time ? ' ' + esc(v.time) : '') + (v.result ? ' — ' + esc(v.result) : '') + '</span></span><span class="filler"></span><span class="amount">ویزیت</span></a>';
+      return '<a class="dx-row dx-act-line" href="#/customer?id=' + encodeURIComponent(v.customerId) + '"><span class="dx-line-body"><span class="dx-line-title">' + esc(v.name) + '</span><span class="dx-line-sub">' + faDate(v.date) + (v.time ? ' ' + esc(v.time) : '') + (v.result ? ' — ' + esc(v.result) : '') + '</span></span><span class="dx-chip">ویزیت</span></a>';
     }).join('');
-    /* Inner section only — parent .dash-activity-group provides the surface */
-    return '<div class="dash-activity-section">' + dashSectionHead(dashboardIcon('visitSection',20), 'آخرین ویزیت‌ها', '#/visits', 'همه ←') + '<div class="dash-activity">' + rows + '</div></div>';
+    return '<div class="dx-subhead"><span>آخرین ویزیت‌ها</span><a class="dx-link" href="#/visits">همه</a></div>' + rows;
   }
 
   function targetHtml(metrics) {
@@ -449,24 +460,48 @@
       return toman(n);
     }
 
-    /* فقط دکمهٔ آیکون قابل کلیک است؛ بقیهٔ نوار صرفاً نمایشی است. */
+    /* Pure-SVG gauge (270° arc, opens at the bottom). Fills from the right edge
+       counter-clockwise so progress reads in the same direction as RTL text. */
+    function ringSvg(p) {
+      const cx = 62, cy = 62, r = 50;
+      function pt(deg) {
+        const a = deg * Math.PI / 180;
+        return (cx + r * Math.cos(a)).toFixed(2) + ' ' + (cy + r * Math.sin(a)).toFixed(2);
+      }
+      const trackPath = 'M ' + pt(45) + ' A ' + r + ' ' + r + ' 0 1 0 ' + pt(135);
+      let fillPath = '';
+      if (p > 0) {
+        const sweep = 270 * Math.min(100, p) / 100;
+        fillPath = '<path class="dx-ring-fill" d="M ' + pt(45) + ' A ' + r + ' ' + r + ' 0 ' + (sweep > 180 ? 1 : 0) + ' 0 ' + pt(45 - sweep) + '" fill="none" stroke="url(#dx-ring-grad)" stroke-width="12" stroke-linecap="round"/>';
+      }
+      return '<svg class="dx-ring-svg" viewBox="0 0 124 124" aria-hidden="true" focusable="false">' +
+        '<defs><linearGradient id="dx-ring-grad" gradientUnits="userSpaceOnUse" x1="112" y1="62" x2="12" y2="62"><stop class="dx-g0" offset="0"/><stop class="dx-g1" offset="1"/></linearGradient></defs>' +
+        '<path class="dx-ring-track" d="' + trackPath + '" fill="none" stroke-width="12" stroke-linecap="round"/>' +
+        fillPath +
+      '</svg>';
+    }
+
+    /* فقط دکمهٔ آیکون قابل کلیک است؛ بقیهٔ کارت صرفاً نمایشی است. */
     function targetTitleHtml() {
-      return '<div class="bp-target-strip-title">' +
-        '<button type="button" class="bp-target-strip-settings-btn" data-monthly-target aria-label="تنظیم هدف فروش این ماه">' +
+      return '<div class="dx-hero-top">' +
+        '<span class="dx-hero-title">هدف فروش این ماه</span>' +
+        '<button type="button" class="dx-icon-btn" data-monthly-target aria-label="تنظیم هدف فروش این ماه">' +
           dashboardIcon('target',20) +
         '</button>' +
-        '<strong>هدف فروش این ماه</strong>' +
       '</div>';
     }
 
     if (!(target > 0)) {
-      return '<div class="bp-target-strip is-empty">' +
-        '<div class="bp-target-strip-head">' +
-          targetTitleHtml() +
-          '<button type="button" class="bp-target-strip-settings" data-monthly-target>تنظیم ›</button>' +
+      return '<section class="dx-section"><div class="dx-card dx-hero dx-tone-empty">' +
+        targetTitleHtml() +
+        '<div class="dx-hero-body">' +
+          '<div class="dx-ring">' + ringSvg(0) + '<div class="dx-ring-center"><strong>—</strong></div></div>' +
+          '<div class="dx-hero-info">' +
+            '<div class="dx-hero-empty-text">هنوز هدفی برای این ماه تعیین نشده</div>' +
+            '<button type="button" class="dx-btn" data-monthly-target>تنظیم هدف</button>' +
+          '</div>' +
         '</div>' +
-        '<div class="bp-target-strip-empty-text">هنوز هدفی برای این ماه تعیین نشده</div>' +
-      '</div>';
+      '</div></section>';
     }
 
     let status = { cls: 'ontrack', icon: '✓', text: 'روی برنامه' };
@@ -485,21 +520,25 @@
       }
     }
 
-    const progressClass = pct > 0 ? ' has-progress' : '';
+    const tone = done ? 'done' : status.cls;   /* behind | ontrack | ahead | done */
 
-    return '<div class="bp-target-strip ' + (done ? 'is-done' : 'is-' + status.cls) + progressClass + '">' +
-      '<div class="bp-target-strip-head">' +
-        targetTitleHtml() +
-        '<span class="bp-target-strip-status">' + (done ? '✓ رسید' : status.icon + ' ' + status.text) + '</span>' +
+    return '<section class="dx-section"><div class="dx-card dx-hero dx-tone-' + tone + '">' +
+      targetTitleHtml() +
+      '<div class="dx-hero-body">' +
+        '<div class="dx-ring" role="img" aria-label="پیشرفت هدف ' + enToFaDigits(String(pct)) + ' درصد">' +
+          ringSvg(pct) +
+          '<div class="dx-ring-center"><strong>' + enToFaDigits(String(pct)) + '<small>٪</small></strong></div>' +
+        '</div>' +
+        '<div class="dx-hero-info">' +
+          '<div class="dx-hero-fig"><strong>' + compactMoney(sales) + '</strong><span>از ' + compactMoney(target) + ' تومان</span></div>' +
+          '<span class="dx-pill"><i aria-hidden="true"></i>' + (done ? 'رسید' : status.text) + '</span>' +
+          '<div class="dx-hero-meta">' +
+            (done ? '<span>آفرین!</span>' : '<span>نیاز روزانه <b>' + compactMoney(requiredDaily) + '</b> ت</span>') +
+            (!done && daysLeft > 0 ? '<span>' + enToFaDigits(String(daysLeft)) + ' روز مانده</span>' : '') +
+          '</div>' +
+        '</div>' +
       '</div>' +
-      '<div class="bp-target-strip-figures">' +
-        '<span class="bp-target-strip-sales"><strong class="bp-target-strip-current">' + compactMoney(sales) + '</strong><span class="bp-target-strip-target"> / ' + compactMoney(target) + '</span> <small>تومان</small></span>' +
-        '<span class="bp-target-strip-percent"><strong>' + enToFaDigits(String(pct)) + '٪</strong></span>' +
-        (done ? '<span class="bp-target-strip-congrats">آفرین!</span>' : '<span>نیاز روزانه <strong>' + compactMoney(requiredDaily) + '</strong> ت</span>') +
-      '</div>' +
-      '<div class="bp-target-strip-bar"><span style="width:' + capped + '%"></span></div>' +
-      (!done && daysLeft > 0 ? '<div class="bp-target-strip-days">' + enToFaDigits(String(daysLeft)) + ' روز مانده</div>' : '') +
-    '</div>';
+    '</div></section>';
   }
 
   function bindMonthlyTarget(root, refresh) {
@@ -551,57 +590,47 @@
     const invVal = inventoryValue();
     if (typeof isStale === 'function' && isStale()) return;
 
-    /* Semantic composition (presentation only):
-         A. Today's Focus  — target + action queue (primary attention)
-         B. Financial Health — profit / inventory / debt (one surface, stacked rows)
-         C. Quick Actions — tools (de-emphasized)
-         D. Recent Activity — invoices + visits (one activity surface)
-         Data sources, helpers, IDs, and event bindings are unchanged. */
-     const alertBar = dashboardAlertBar(ctx);
+    /* Eyeflow (presentation only — data sources, helpers, IDs and bindings unchanged):
+         1. Target ring      — how is the month going?
+         2. Today's KPIs     — three coloured tiles
+         3. Today's actions  — what do I do now (heart of the page)
+         4. Needs attention  — debts / checks / stock
+         5. Early warnings   — watch summary
+         6. Financial status — calm list rows
+         7. Quick actions    — tools
+         8. Recent activity  — invoices + visits */
+    const alertBar = dashboardAlertBar(ctx);
     const todaySnapshot = todaySnapshotHtml(ctx);
     const focusActions = todaysActionsHtml(ctx);
     const watchSummary = watchSummaryHtml(ctx);
-    const activityInvoices = recentInvoicesHtml(ctx);
-    const activityVisits = recentVisitsHtml();
-    const activityBody = activityInvoices + activityVisits;
+    const activityBody = recentInvoicesHtml(ctx) + recentVisitsHtml();
     const activityBlock = activityBody
-      ? ('<div class="dashboard-block dash-activity-group">' +
-          '<div class="dashboard-block-head"><div class="dash-section-label"><span class="dash-section-ico" aria-hidden="true">' + dashboardIcon('summary',20) + '</span><span>فعالیت اخیر</span></div></div>' +
-          activityBody +
-        '</div>')
+      ? ('<section class="dx-section">' + dashSectionHead('', 'فعالیت اخیر', '', '') +
+          '<div class="dx-card dx-list">' + activityBody + '</div></section>')
       : '';
 
     root.innerHTML =
-      '<div class="dashboard-shell">' +
-      '<div class="dashboard-eyebrow">مرکز فرماندهی روزانه</div>' +
-      alertBar +
-      todaySnapshot +
+      '<div class="dx">' +
       targetHtml(metrics) +
-
-      /* A — Today's Focus */
-      '<div class="dash-focus">' +
-        '<div class="dash-focus-actions">' + focusActions + '</div>' +
-      '</div>' +
+      todaySnapshot +
+      focusActions +
+      alertBar +
       watchSummary +
 
-      /* B — Financial Health (same metrics; stacked rows for mobile) */
-      '<div class="dashboard-block dash-health">' +
-        '<div class="dashboard-block-head"><div class="dash-section-label"><span class="dash-section-ico" aria-hidden="true">' + dashboardIcon('card',20) + '</span><span>وضعیت مالی</span></div></div>' +
-        '<div class="dash-health-surface">' +
-          '<div class="dash-health-row"><span class="dash-health-label">سود این ماه</span><span class="dash-health-value">' + money(metrics.mtdProfit) + '</span></div>' +
-          '<div class="dash-health-row"><span class="dash-health-label">ارزش موجودی</span><span class="dash-health-value">' + money(invVal) + '</span></div>' +
-          '<a class="dash-health-row dash-health-link" href="#/customers?filter=debt"><span class="dash-health-label">بدهی مشتریان</span><span class="dash-health-value debt">' + money(g.customerDebt) + '</span></a>' +
+      '<section class="dx-section">' +
+        dashSectionHead('', 'وضعیت مالی', '', '') +
+        '<div class="dx-card dx-list">' +
+          '<div class="dx-row dx-fin"><span class="dx-fin-label">سود این ماه</span><span class="dx-fin-value">' + money(metrics.mtdProfit) + '</span></div>' +
+          '<div class="dx-row dx-fin"><span class="dx-fin-label">ارزش موجودی</span><span class="dx-fin-value">' + money(invVal) + '</span></div>' +
+          '<a class="dx-row dx-fin" href="#/customers?filter=debt"><span class="dx-fin-label">بدهی مشتریان</span><span class="dx-fin-value is-debt">' + money(g.customerDebt) + '</span><span class="dx-chev" aria-hidden="true"></span></a>' +
         '</div>' +
-      '</div>' +
+      '</section>' +
 
-      /* C — Quick Actions (tools) */
       quickActionsHtml() +
-
-      /* D — Recent Activity */
       activityBlock +
       '</div>';
 
-     bindMonthlyTarget(root, function () { renderInto(root, isStale, ctx); });
+    bindMonthlyTarget(root, function () { renderInto(root, isStale, ctx); });
     bindActionQueueToggle(root);
     bindQuickActions(root);
     bindAttentionLink(root, ctx);
@@ -611,6 +640,7 @@
     if (!root) return function () {};
     const nav = document.getElementById('nav');
     if (nav) nav.style.display = 'none';
+    document.documentElement.classList.add('dx-on');   /* presentation only: scopes the Dashboard canvas */
     let cancelled = false;
     let refreshToken = null;
     const isStale = function () { return cancelled; };
@@ -627,6 +657,7 @@
       if (typeof ViewHost !== 'undefined' && ViewHost.clearRefresh) ViewHost.clearRefresh(refreshToken);
       refreshToken = null;
       if (nav) nav.style.display = '';
+      document.documentElement.classList.remove('dx-on');
       root.innerHTML = '';
     };
   }
