@@ -153,7 +153,7 @@
         lines.push('<span class="action-why-now"><span class="action-meta-label-now">الان:</span> ' + esc(whyNow) + '</span>');
       }
       return '<a class="ledger-row action-row action-row-' + esc(urgency) + '" href="' + href + '">' +
-        '<span class="amount action-urgency action-urgency-icon action-urgency-' + esc(urgency) + '" aria-label="اولویت ' + esc(urgency) + '">' + icon + '</span>' +
+        '<span class="amount action-urgency action-urgency-' + esc(urgency) + '" aria-label="اولویت ' + esc(urgency) + '">' + icon + '</span>' +
         '<span class="name action-content">' + lines.join('') + '</span>' +
         '<span class="filler"></span>' +
       '</a>';
@@ -394,9 +394,9 @@
     } catch (e) {}
     return '<div class="dashboard-block bp-dashboard-snapshot"><div class="dashboard-block-head"><div class="dash-section-label"><span class="dash-section-ico" aria-hidden="true">' + dashboardIcon('summary',20) + '</span><span>خلاصه امروز</span></div></div>' +
       '<div class="bp-dashboard-snapshot-grid">' +
-      '<div class="bp-dashboard-snapshot-item bp-kpi-sales"><span>فروش</span><strong>' + money(sales) + '</strong><small>' + faDigits(invoices) + ' فاکتور</small></div>' +
-      '<div class="bp-dashboard-snapshot-item bp-kpi-visits"><span>ویزیت</span><strong>' + faDigits(visits) + '</strong><small>امروز</small></div>' +
-      '<div class="bp-dashboard-snapshot-item bp-kpi-received"><span>دریافتی</span><strong>' + money(received) + '</strong><small>امروز</small></div>' +
+      '<div class="bp-dashboard-snapshot-item"><span>فروش</span><strong>' + money(sales) + '</strong><small>' + faDigits(invoices) + ' فاکتور</small></div>' +
+      '<div class="bp-dashboard-snapshot-item"><span>ویزیت</span><strong>' + faDigits(visits) + '</strong><small>امروز</small></div>' +
+      '<div class="bp-dashboard-snapshot-item"><span>دریافتی</span><strong>' + money(received) + '</strong><small>امروز</small></div>' +
       '</div></div>';
   }
 
@@ -444,7 +444,7 @@
       if (n >= 1000000) {
         const m = n / 1000000;
         const text = Number.isInteger(m) ? String(m) : m.toFixed(1).replace(/\.0$/, '');
-        return enToFaDigits(text) + ' میلیون';
+        return enToFaDigits(text) + 'M';
       }
       return toman(n);
     }
@@ -492,20 +492,13 @@
         targetTitleHtml() +
         '<span class="bp-target-strip-status">' + (done ? '✓ رسید' : status.icon + ' ' + status.text) + '</span>' +
       '</div>' +
-      '<div class="bp-target-ring-layout">' +
-        '<div class="bp-target-ring" role="img" aria-label="پیشرفت هدف فروش ' + enToFaDigits(String(pct)) + ' درصد">' +
-          '<svg viewBox="0 0 100 100" aria-hidden="true" focusable="false">' +
-            '<circle class="bp-target-ring-track" cx="50" cy="50" r="42"></circle>' +
-            '<circle class="bp-target-ring-progress" cx="50" cy="50" r="42" style="stroke-dasharray:263.89;stroke-dashoffset:' + (263.89 - (263.89 * capped / 100)).toFixed(2) + '"></circle>' +
-          '</svg>' +
-          '<span class="bp-target-ring-value"><strong>' + enToFaDigits(String(pct)) + '٪</strong><small>پیشرفت</small></span>' +
-        '</div>' +
-        '<div class="bp-target-ring-details">' +
-          '<div class="bp-target-strip-sales"><strong class="bp-target-strip-current">' + compactMoney(sales) + '</strong><span class="bp-target-strip-target"> از ' + compactMoney(target) + '</span> <small>تومان</small></div>' +
-          (done ? '<div class="bp-target-strip-congrats">هدف ماه محقق شد</div>' : '<div class="bp-target-daily-need">نیاز روزانه <strong>' + compactMoney(requiredDaily) + '</strong> تومان</div>') +
-          (!done && daysLeft > 0 ? '<div class="bp-target-strip-days">' + enToFaDigits(String(daysLeft)) + ' روز مانده</div>' : '') +
-        '</div>' +
+      '<div class="bp-target-strip-figures">' +
+        '<span class="bp-target-strip-sales"><strong class="bp-target-strip-current">' + compactMoney(sales) + '</strong><span class="bp-target-strip-target"> / ' + compactMoney(target) + '</span> <small>تومان</small></span>' +
+        '<span class="bp-target-strip-percent"><strong>' + enToFaDigits(String(pct)) + '٪</strong></span>' +
+        (done ? '<span class="bp-target-strip-congrats">آفرین!</span>' : '<span>نیاز روزانه <strong>' + compactMoney(requiredDaily) + '</strong> ت</span>') +
       '</div>' +
+      '<div class="bp-target-strip-bar"><span style="width:' + capped + '%"></span></div>' +
+      (!done && daysLeft > 0 ? '<div class="bp-target-strip-days">' + enToFaDigits(String(daysLeft)) + ' روز مانده</div>' : '') +
     '</div>';
   }
 
