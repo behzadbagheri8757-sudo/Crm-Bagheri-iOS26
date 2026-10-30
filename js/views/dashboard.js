@@ -487,18 +487,48 @@
 
     const progressClass = pct > 0 ? ' has-progress' : '';
 
+    /* Progress ring — pure SVG, 270° gauge opening at the bottom.
+       Fills from the right edge counter-clockwise so it reads like RTL text.
+       Presentation only: the value comes from the same `pct` as before. */
+    function ringSvg(p) {
+      const cx = 60, cy = 60, r = 47;
+      function pt(deg) {
+        const a = deg * Math.PI / 180;
+        return [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+      }
+      function f(n) { return n.toFixed(2); }
+      const s0 = pt(45), e0 = pt(135);
+      const trackPath = 'M ' + f(s0[0]) + ' ' + f(s0[1]) + ' A ' + r + ' ' + r + ' 0 1 0 ' + f(e0[0]) + ' ' + f(e0[1]);
+      let fill = '';
+      if (p > 0) {
+        const sweep = 270 * Math.min(100, p) / 100;
+        const en = pt(45 - sweep);
+        fill = '<path class="bp-ring-fill" d="M ' + f(s0[0]) + ' ' + f(s0[1]) + ' A ' + r + ' ' + r + ' 0 ' + (sweep > 180 ? 1 : 0) + ' 0 ' + f(en[0]) + ' ' + f(en[1]) + '" fill="none" stroke="url(#bp-ring-grad)" stroke-width="9" stroke-linecap="round"/>' +
+          '<circle class="bp-ring-knob" cx="' + f(en[0]) + '" cy="' + f(en[1]) + '" r="2.6"/>';
+      }
+      return '<svg class="bp-ring-svg" viewBox="0 0 120 120" aria-hidden="true" focusable="false">' +
+        '<defs><linearGradient id="bp-ring-grad" gradientUnits="userSpaceOnUse" x1="108" y1="60" x2="12" y2="60"><stop class="bp-ring-g0" offset="0"/><stop class="bp-ring-g1" offset="1"/></linearGradient></defs>' +
+        '<path class="bp-ring-track" d="' + trackPath + '" fill="none" stroke-width="9" stroke-linecap="round"/>' +
+        fill +
+      '</svg>';
+    }
+
     return '<div class="bp-target-strip ' + (done ? 'is-done' : 'is-' + status.cls) + progressClass + '">' +
       '<div class="bp-target-strip-head">' +
         targetTitleHtml() +
         '<span class="bp-target-strip-status">' + (done ? '✓ رسید' : status.icon + ' ' + status.text) + '</span>' +
       '</div>' +
-      '<div class="bp-target-strip-figures">' +
-        '<span class="bp-target-strip-sales"><strong class="bp-target-strip-current">' + compactMoney(sales) + '</strong><span class="bp-target-strip-target"> / ' + compactMoney(target) + '</span> <small>تومان</small></span>' +
-        '<span class="bp-target-strip-percent"><strong>' + enToFaDigits(String(pct)) + '٪</strong></span>' +
-        (done ? '<span class="bp-target-strip-congrats">آفرین!</span>' : '<span>نیاز روزانه <strong>' + compactMoney(requiredDaily) + '</strong> ت</span>') +
+      '<div class="bp-target-strip-body">' +
+        '<div class="bp-target-ring" role="img" aria-label="پیشرفت هدف ' + enToFaDigits(String(pct)) + ' درصد">' +
+          ringSvg(pct) +
+          '<span class="bp-target-ring-pct"><strong>' + enToFaDigits(String(pct)) + '</strong><em>٪</em></span>' +
+        '</div>' +
+        '<div class="bp-target-strip-info">' +
+          '<span class="bp-target-strip-sales"><strong class="bp-target-strip-current">' + compactMoney(sales) + '</strong><span class="bp-target-strip-target"> / ' + compactMoney(target) + '</span> <small>تومان</small></span>' +
+          (done ? '<span class="bp-target-strip-congrats">آفرین!</span>' : '<span class="bp-target-strip-need">نیاز روزانه <strong>' + compactMoney(requiredDaily) + '</strong> ت</span>') +
+          (!done && daysLeft > 0 ? '<span class="bp-target-strip-days">' + enToFaDigits(String(daysLeft)) + ' روز مانده</span>' : '') +
+        '</div>' +
       '</div>' +
-      '<div class="bp-target-strip-bar"><span style="width:' + capped + '%"></span></div>' +
-      (!done && daysLeft > 0 ? '<div class="bp-target-strip-days">' + enToFaDigits(String(daysLeft)) + ' روز مانده</div>' : '') +
     '</div>';
   }
 
