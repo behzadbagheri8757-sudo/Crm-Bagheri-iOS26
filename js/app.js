@@ -1478,7 +1478,7 @@ window.BagheriPresent = (function () {
         if (!op || !op.productId) return;
         var cur = map[op.productId];
         if (!cur || key >= cur.key) {
-          map[op.productId] = { key: key, date: v.date, time: v.time || '', reaction: op.reaction, reason: op.rejectionReason || null, stockSource: op.stockSource || null };
+          map[op.productId] = { key: key, date: v.date, reaction: op.reaction, reason: op.rejectionReason || null, stockSource: op.stockSource || null };
         }
       });
     });
@@ -1601,7 +1601,7 @@ window.BagheriPresent = (function () {
     detailsHtml: detailsHtml, evidenceLines: evidenceLines, namesText: namesText,
     stockSentence: stockSentence, stockShort: stockShort, reasonLabel: reasonLabel,
     relDays: relDays, productHints: productHints, hintHtml: hintHtml,
-    lastPurchaseMap: lastPurchaseMap, lastOfferMap: lastOfferMap, productPurchaseCycle: productPurchaseCycle
+    lastPurchaseMap: lastPurchaseMap, productPurchaseCycle: productPurchaseCycle
   };
 })();
 
