@@ -1286,6 +1286,8 @@ html[data-theme="dark"] .watch-detail-reason .watch-detail-value{color:var(--vg-
 .bp-qv-card{position:relative;width:min(100%,380px);max-height:min(85vh, 85dvh);overflow-y:auto;border-radius:20px;padding:20px;padding-bottom:calc(20px + env(safe-area-inset-bottom, 0px));background:var(--vg-color-surface);box-shadow:var(--vg-shadow-overlay);transform:scale(.94);opacity:0;transition:transform 220ms cubic-bezier(.22,1,.36,1),opacity 220ms cubic-bezier(.22,1,.36,1);overscroll-behavior:contain;}
 .bp-qv-overlay.is-open .bp-qv-card{transform:scale(1);opacity:1;}
 .bp-qv-overlay.is-closing .bp-qv-card{transform:scale(.96);opacity:0;}
+.bp-qv-drag-region{height:32px;margin:-12px auto 0;display:flex;align-items:center;justify-content:center;touch-action:none;cursor:grab;}
+.bp-qv-drag-handle{width:40px;height:4px;border-radius:99px;background:var(--vg-color-divider);}
 .bp-qv-close{position:absolute;top:10px;left:10px;width:32px;height:32px;border:0;border-radius:50%;background:var(--vg-color-surface-2,var(--vg-color-bg));color:var(--vg-color-text-muted);font-size:20px;line-height:1;cursor:pointer;}
 .bp-qv-head{padding-left:34px;}
 .bp-qv-name{font-size:1.02rem;font-weight:750;color:var(--vg-color-text);line-height:1.45;}
@@ -1304,6 +1306,28 @@ html[data-theme="dark"] .watch-detail-reason .watch-detail-value{color:var(--vg-
 .bp-qv-actions{display:grid;grid-template-columns:1.15fr 1fr 1fr;gap:7px;margin-top:18px;}
 .bp-qv-actions .btn{min-height:42px;padding-inline:8px;font-size:.7rem;white-space:nowrap;}
 .bp-qv-full{width:100%;margin-top:10px;padding:9px;border:0;background:transparent;color:var(--vg-color-primary);font-size:.72rem;font-weight:700;cursor:pointer;}
+.bp-qv-subsection + .bp-qv-subsection{margin-top:12px;padding-top:10px;border-top:1px dashed var(--vg-color-divider);}
+.bp-qv-section{margin-top:16px;padding-top:14px;border-top:1px solid var(--vg-color-divider);min-width:0;}
+.bp-qv-section-label{margin-bottom:7px;font-size:.68rem;font-weight:750;color:var(--vg-color-text-muted);overflow-wrap:anywhere;}
+.bp-qv-inline-label{font-weight:600;color:var(--vg-color-text-secondary);}
+.bp-qv-data-row{display:flex;justify-content:space-between;gap:10px;font-size:.78rem;line-height:1.7;min-width:0;}
+.bp-qv-data-row span,.bp-qv-data-row strong{min-width:0;overflow-wrap:anywhere;}
+.bp-qv-data-row strong{font-weight:750;text-align:end;}
+.bp-qv-muted{font-size:.68rem;color:var(--vg-color-text-muted);margin-top:2px;}
+.bp-qv-timing{margin-top:8px;padding:8px 10px;border-radius:10px;background:var(--vg-color-surface-2,var(--vg-color-bg));font-size:.76rem;line-height:1.65;overflow-wrap:anywhere;}
+.bp-qv-timing.is-due{color:var(--vg-color-danger);font-weight:700;}
+.bp-qv-timing.is-near{color:var(--vg-color-warning);font-weight:700;}
+.bp-qv-alert{display:flex;flex-direction:column;gap:2px;margin-top:14px;padding:10px 12px;border-radius:12px;font-size:.76rem;line-height:1.65;overflow-wrap:anywhere;}
+.bp-qv-alert.is-danger{background:var(--vg-color-danger-soft);border:1px solid var(--vg-color-danger);color:var(--vg-color-danger);}
+.bp-qv-alert.is-warning{background:var(--vg-color-warning-soft);border:1px solid var(--vg-color-warning);color:var(--vg-color-text);}
+.bp-qv-product-list,.bp-qv-check-list{display:flex;flex-direction:column;gap:7px;}
+.bp-qv-check-list{margin-top:8px;padding-top:8px;border-top:1px dashed var(--vg-color-divider);}
+.bp-qv-product-row{display:flex;flex-direction:column;gap:1px;min-width:0;padding:8px 10px;border-radius:10px;background:var(--vg-color-surface-2,var(--vg-color-bg));font-size:.76rem;line-height:1.65;}
+.bp-qv-product-row strong{overflow-wrap:anywhere;}
+.bp-qv-product-row span{font-size:.67rem;color:var(--vg-color-text-muted);}
+.bp-qv-product-row.is-check{border-inline-start:3px solid var(--vg-color-warning);}
+.bp-qv-story{margin-top:16px;padding-top:14px;border-top:1px solid var(--vg-color-divider);}
+.bp-qv-story>div:last-child{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:.76rem;line-height:1.8;color:var(--vg-color-text);overflow-wrap:anywhere;}
 @media(max-width:380px){
   .bp-target-strip{padding-inline:11px;margin-bottom:12px;}
   .bp-target-strip-figures{gap:6px;font-size:.58rem;}
@@ -2499,7 +2523,14 @@ html[data-theme="dark"] #main .dashboard-shell .bp-dashboard-snapshot-item{
 html[data-theme="dark"] #main .dashboard-shell .bp-target-strip.is-behind .bp-target-strip-status{color:var(--vg-color-warning);}
 
 /* ---------- Action queue: no side rail, roomier rows, plain text toggle ---------- */
-#main .dashboard-shell .action-row::after{display:none;}
+/* Action rows: the old colour rail is gone; they now get the same disclosure chevron as every other link row. */
+#main .dashboard-shell a.action-row::after{
+  content:'';position:static;inset:auto;top:auto;bottom:auto;
+  flex:none;width:14px;height:14px;margin-inline-start:2px;align-self:center;
+  border-radius:0;opacity:.38;background:currentColor;
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m15 18-6-6 6-6'/%3E%3C/svg%3E") center/contain no-repeat;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m15 18-6-6 6-6'/%3E%3C/svg%3E") center/contain no-repeat;
+}
 #main .dashboard-shell .dash-action-queue{padding:4px 16px 6px;}
 #main .dashboard-shell .dash-action-queue .action-row{padding:16px 2px;gap:12px;}
 #main .dashboard-shell .dash-action-toggle{
@@ -2510,30 +2541,25 @@ html[data-theme="dark"] #main .dashboard-shell .bp-target-strip.is-behind .bp-ta
 #main .dashboard-shell .dash-action-toggle:active{opacity:.55;}
 
 
-/* ---------- Monthly target: progress ring (replaces the linear bar) ---------- */
-#main .dashboard-shell .bp-target-strip{--ring-0:#4F8DF7;--ring-1:#34C58E;--ring-glow:rgba(79,141,247,.32);}
-#main .dashboard-shell .bp-target-strip.is-behind{--ring-0:#F7B24F;--ring-1:#EE8A2B;--ring-glow:rgba(238,138,43,.32);}
+/* ---------- Monthly target: 270° progress ring ---------- */
+#main .dashboard-shell .bp-target-strip{--ring-0:#4F8DF7;--ring-1:#34C58E;}
+#main .dashboard-shell .bp-target-strip.is-behind{--ring-0:#F7B24F;--ring-1:#EE8A2B;}
 #main .dashboard-shell .bp-target-strip.is-ahead,
-#main .dashboard-shell .bp-target-strip.is-done{--ring-0:#3CCB93;--ring-1:#16A870;--ring-glow:rgba(22,168,112,.30);}
-#main .dashboard-shell .bp-target-strip-body{
-  display:flex;align-items:center;gap:20px;padding:4px 2px 2px;
-}
+#main .dashboard-shell .bp-target-strip.is-done{--ring-0:#3CCB93;--ring-1:#16A870;}
+#main .dashboard-shell .bp-target-strip-body{display:flex;align-items:center;gap:20px;padding:4px 2px 2px;}
 #main .dashboard-shell .bp-target-ring{position:relative;flex:0 0 112px;width:112px;height:112px;}
 #main .dashboard-shell .bp-ring-svg{display:block;width:100%;height:100%;overflow:visible;}
 #main .dashboard-shell .bp-ring-track{stroke:var(--vg-color-neutral-soft);}
 #main .dashboard-shell .bp-ring-g0{stop-color:var(--ring-0);}
 #main .dashboard-shell .bp-ring-g1{stop-color:var(--ring-1);}
-#main .dashboard-shell .bp-ring-fill{filter:drop-shadow(0 3px 5px var(--ring-glow));}
-#main .dashboard-shell .bp-ring-knob{fill:#fff;opacity:.95;}
 #main .dashboard-shell .bp-target-ring-pct{
   position:absolute;inset:0;padding-bottom:5px;
   display:flex;align-items:center;justify-content:center;
   color:var(--vg-color-text);
 }
-#main .dashboard-shell .bp-target-ring-pct::before{content:none;}
-#main .dashboard-shell .bp-target-ring-pct strong{font-size:1.65rem;line-height:1;font-weight:760;letter-spacing:-.02em;}
 #main .dashboard-shell .bp-target-ring-pct strong,
 #main .dashboard-shell .bp-target-ring-pct em{display:inline-block;}
+#main .dashboard-shell .bp-target-ring-pct strong{font-size:1.65rem;line-height:1;font-weight:760;letter-spacing:-.02em;}
 #main .dashboard-shell .bp-target-ring-pct em{font-style:normal;font-size:.78rem;font-weight:650;color:var(--vg-color-text-muted);margin-inline-start:2px;}
 #main .dashboard-shell .bp-target-strip-info{
   flex:1 1 auto;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:7px;
@@ -2541,11 +2567,12 @@ html[data-theme="dark"] #main .dashboard-shell .bp-target-strip.is-behind .bp-ta
 }
 #main .dashboard-shell .bp-target-strip-need strong{font-weight:700;color:var(--vg-color-text);}
 #main .dashboard-shell .bp-target-strip-info .bp-target-strip-days{text-align:start;}
+#main .dashboard-shell .bp-target-strip.is-behind .bp-target-strip-status{color:#9A5B00;}
+html[data-theme="dark"] #main .dashboard-shell .bp-target-strip.is-behind .bp-target-strip-status{color:var(--vg-color-warning);}
 @media (max-width:359px){
   #main .dashboard-shell .bp-target-strip-body{flex-direction:column;align-items:center;gap:10px;}
   #main .dashboard-shell .bp-target-strip-info{align-items:center;}
 }
-
 
 /* ============================================================
    SOFT iOS LAYER — part 2 (2026-10): whole-project consistency
@@ -2630,3 +2657,123 @@ h2.section-title::after{ display:none; }
 .rp-dot{ background:#34C58E; border-width:3px; box-shadow:0 2px 6px rgba(52,197,142,.45); }
 .rp-card,
 .rp-hero{ border-color:transparent; }
+
+
+/* ============================================================
+   SOFT iOS LAYER — part 3 (2026-10): fixes confirmed in code review
+   ============================================================ */
+
+/* 1.1 Customers list: sparkline sits on the NAME line (was falling to a 2nd line) */
+.customer-row-title-line{display:flex;align-items:center;gap:8px;}
+.customer-row-title-line .customer-row-name{flex:0 1 auto;}
+
+/* 1.2 Summary cards → ONE grouped card with hairline separators */
+#payment-summary,
+#check-summary,
+#visit-summary,
+#prospect-summary{
+  gap:0;
+  background:var(--vg-color-surface);
+  border-radius:var(--vg-radius-soft);
+  box-shadow:var(--vg-shadow-group);
+  overflow:hidden;
+}
+#payment-summary > .card,
+#check-summary > .card,
+#visit-summary > .card,
+#prospect-summary > .card{
+  margin:0;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:inset 0 0 0 .5px var(--vg-color-divider);   /* hairlines between cells */
+}
+html[data-theme="dark"] #payment-summary,
+html[data-theme="dark"] #check-summary,
+html[data-theme="dark"] #visit-summary,
+html[data-theme="dark"] #prospect-summary{ border:1px solid var(--vg-color-border); }
+
+/* 1.2b Many-option filters: one swipeable row instead of 2–3 wrapped lines */
+#payment-chips,
+#check-chips,
+#visit-chips,
+#prospect-chips,
+#product-chips{
+  flex-wrap:nowrap;
+  overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:none;
+  margin-inline:-14px;
+  padding-inline:14px;
+}
+#payment-chips::-webkit-scrollbar,
+#check-chips::-webkit-scrollbar,
+#visit-chips::-webkit-scrollbar,
+#prospect-chips::-webkit-scrollbar,
+#product-chips::-webkit-scrollbar{ display:none; }
+#payment-chips .chip,
+#check-chips .chip,
+#visit-chips .chip,
+#prospect-chips .chip,
+#product-chips .chip{ flex:0 0 auto; white-space:nowrap; }
+
+/* 2.2 Customer detail: address / note show in full (wrap) instead of "…" */
+#main.customer-detail-view .cd-meta-v{
+  white-space:normal;
+  overflow:visible;
+  text-overflow:clip;
+  overflow-wrap:anywhere;
+  line-height:1.7;
+}
+
+/* 2.3 Visits: context lines wrap (max 2 lines each) instead of one clipped line */
+.tx-row-ctx{
+  white-space:normal;
+  display:-webkit-box;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:2;
+  overflow:hidden;
+  text-overflow:clip;
+}
+
+/* Visits summary: when only one small card + the wide one are shown, the small card takes the full row (no empty cell) */
+#visit-summary > .card:first-child:nth-last-child(2){ grid-column:1 / -1; }
+
+
+/* ============================================================
+   Chart language — every chart in the app looks like the Reports chart:
+   smooth line, blue→green stroke, soft green area, green end dot.
+   (declining customer sparkline = amber instead of green)
+   ============================================================ */
+.ch-a{stop-color:#4F8DF7;}
+.ch-b{stop-color:#34C58E;}
+.is-down .ch-a{stop-color:#F7B24F;}
+.is-down .ch-b{stop-color:#EE8A2B;}
+.ch-line{fill:none;stroke-linecap:round;stroke-linejoin:round;}
+.ch-area{fill:#34C58E;}
+.is-down .ch-area{fill:#EE8A2B;}
+.ch-fade-top{stop-color:#34C58E;stop-opacity:.22;}
+.ch-fade-bottom{stop-color:#34C58E;stop-opacity:0;}
+
+/* Customers list sparkline */
+.customer-row-spark svg{opacity:1;}
+.customer-row-spark .ch-line{stroke-width:1.8;}
+.customer-row-spark .ch-area{opacity:.14;}
+.customer-row-spark .customer-row-spark-dot{
+  width:7px;height:7px;margin-left:-3.5px;margin-top:-3.5px;
+  background:#34C58E;border:1.5px solid var(--vg-color-surface);box-sizing:border-box;
+  box-shadow:0 1px 4px rgba(52,197,142,.45);
+}
+.customer-row-spark.is-down{color:inherit;}
+.customer-row-spark.is-down .customer-row-spark-dot{background:#EE8A2B;box-shadow:0 1px 4px rgba(238,138,43,.45);}
+.customer-list-trend-sample{color:#4F8DF7;opacity:1;}
+.customer-list-trend-sample b{background:#34C58E;}
+
+/* Customer detail trend chart */
+#main.customer-detail-view .customer-trend-chart .ch-line{stroke-width:2.5;}
+#main.customer-detail-view .customer-trend-card{border-color:transparent;}
+#main.customer-detail-view .customer-trend-dot{
+  width:11px;height:11px;margin-left:-5.5px;margin-top:-5.5px;
+  background:#34C58E;border:3px solid var(--vg-color-surface);box-sizing:border-box;
+  box-shadow:0 2px 6px rgba(52,197,142,.45);
+}
