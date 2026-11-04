@@ -220,12 +220,13 @@
     var rows = [];
     try { rows = typeof getActiveWatchOccurrences === 'function' ? (getActiveWatchOccurrences() || []) : []; } catch (e) { rows = []; }
     if (!rows.length) return '';
+    var allActiveCount = rows.length;   /* full count, before the top-2 slice */
     rows = rows.slice().sort(function (a, b) {
       var rank = { critical: 4, high: 3, medium: 2, low: 1 };
       return (rank[b.level || b.severity] || 0) - (rank[a.level || a.severity] || 0) || String(b.lastEvaluatedAt || '').localeCompare(String(a.lastEvaluatedAt || ''));
     }).slice(0, 2);
     var total = 0;
-    try { var sum = typeof getWatchLifecycleSummary === 'function' ? getWatchLifecycleSummary() : null; total = sum && Number.isFinite(sum.active) ? sum.active : rows.length; } catch (e2) { total = rows.length; }
+    try { var sum = typeof getWatchLifecycleSummary === 'function' ? getWatchLifecycleSummary() : null; total = sum && Number.isFinite(sum.active) ? sum.active : allActiveCount; } catch (e2) { total = allActiveCount; }
     function label(o) {
       var product = o && o.productName;
       if (!product && o && o.productId && Array.isArray(data.products)) {
@@ -487,11 +488,11 @@
 
     const progressClass = pct > 0 ? ' has-progress' : '';
 
-    /* Progress ring — pure SVG, 270° gauge opening at the bottom.
+    /* Progress ring — pure SVG, 270° gauge opening at the bottom, thick rounded arc.
        Fills from the right edge counter-clockwise so it reads like RTL text.
        Presentation only: the value comes from the same `pct` as before. */
     function ringSvg(p) {
-      const cx = 60, cy = 60, r = 47;
+      const cx = 60, cy = 60, r = 46;
       function pt(deg) {
         const a = deg * Math.PI / 180;
         return [cx + r * Math.cos(a), cy + r * Math.sin(a)];
@@ -503,12 +504,11 @@
       if (p > 0) {
         const sweep = 270 * Math.min(100, p) / 100;
         const en = pt(45 - sweep);
-        fill = '<path class="bp-ring-fill" d="M ' + f(s0[0]) + ' ' + f(s0[1]) + ' A ' + r + ' ' + r + ' 0 ' + (sweep > 180 ? 1 : 0) + ' 0 ' + f(en[0]) + ' ' + f(en[1]) + '" fill="none" stroke="url(#bp-ring-grad)" stroke-width="9" stroke-linecap="round"/>' +
-          '<circle class="bp-ring-knob" cx="' + f(en[0]) + '" cy="' + f(en[1]) + '" r="2.6"/>';
+        fill = '<path class="bp-ring-fill" d="M ' + f(s0[0]) + ' ' + f(s0[1]) + ' A ' + r + ' ' + r + ' 0 ' + (sweep > 180 ? 1 : 0) + ' 0 ' + f(en[0]) + ' ' + f(en[1]) + '" fill="none" stroke="url(#bp-ring-grad)" stroke-width="13" stroke-linecap="round"/>';
       }
       return '<svg class="bp-ring-svg" viewBox="0 0 120 120" aria-hidden="true" focusable="false">' +
         '<defs><linearGradient id="bp-ring-grad" gradientUnits="userSpaceOnUse" x1="108" y1="60" x2="12" y2="60"><stop class="bp-ring-g0" offset="0"/><stop class="bp-ring-g1" offset="1"/></linearGradient></defs>' +
-        '<path class="bp-ring-track" d="' + trackPath + '" fill="none" stroke-width="9" stroke-linecap="round"/>' +
+        '<path class="bp-ring-track" d="' + trackPath + '" fill="none" stroke-width="13" stroke-linecap="round"/>' +
         fill +
       '</svg>';
     }
