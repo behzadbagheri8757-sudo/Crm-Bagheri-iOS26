@@ -682,6 +682,9 @@
         return x.toFixed(1) + ',' + y.toFixed(1);
       }).join(' ');
       const area = '0,36 ' + pts + ' 100,36';
+      const trendCoords = pts.split(' ').map(function (q) { return q.split(',').map(Number); });
+      const trendLine = chartSmoothPath(trendCoords);
+      const trendArea = trendLine + ' L 100 36 L 0 36 Z';
       const last = pts.split(' ').pop();
       const lastParts = last.split(',');
       const firstHalf = vals.slice(0, 4).reduce(function (s, v) { return s + v; }, 0);
@@ -694,7 +697,7 @@
         if (ratio >= 1.15) trendText = 'خرید اخیر بیشتر شده';
         else if (ratio <= 0.85) trendText = 'خرید اخیر کمتر شده';
       }
-      return '<div class="customer-trend-card"><div class="customer-trend-head"><div><span class="label">روند خرید</span><span class="customer-trend-period">۸ هفته اخیر</span></div><span class="customer-trend-note">' + esc(trendText) + '</span></div><div class="customer-trend-chart" aria-label="روند خرید بر اساس مبلغ فاکتورها در ۸ هفته اخیر" style="position:relative;"><svg viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true"><polygon points="' + area + '" class="customer-trend-area"></polygon><polyline points="' + pts + '" class="customer-trend-line" vector-effect="non-scaling-stroke"></polyline></svg><i class="customer-trend-dot" style="left:' + parseFloat(lastParts[0]) + '%;top:' + ((parseFloat(lastParts[1]) / 40) * 100) + '%;"></i></div></div>';
+      return '<div class="customer-trend-card"><div class="customer-trend-head"><div><span class="label">روند خرید</span><span class="customer-trend-period">۸ هفته اخیر</span></div><span class="customer-trend-note">' + esc(trendText) + '</span></div><div class="customer-trend-chart" aria-label="روند خرید بر اساس مبلغ فاکتورها در ۸ هفته اخیر" style="position:relative;"><svg viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="ct-grad" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="100" y2="0"><stop class="ch-a" offset="0"/><stop class="ch-b" offset="1"/></linearGradient><linearGradient id="ct-fade" x1="0" y1="0" x2="0" y2="1"><stop class="ch-fade-top" offset="0"/><stop class="ch-fade-bottom" offset="1"/></linearGradient></defs><path d="' + trendArea + '" fill="url(#ct-fade)"/><path class="ch-line" d="' + trendLine + '" stroke="url(#ct-grad)" vector-effect="non-scaling-stroke"/></svg><i class="customer-trend-dot" style="left:' + parseFloat(lastParts[0]) + '%;top:' + ((parseFloat(lastParts[1]) / 40) * 100) + '%;"></i></div></div>';
     } catch (e) { return ''; }
   }
 
@@ -751,7 +754,7 @@
     if (typeof openSheet !== 'function') return;
     openSheet(
       '<div class="sheet-title">ثبت علت هشدار</div>' +
-      '<div class="report-note" style="margin-bottom:10px;">سه پاسخ اول هشدار را می‌بندند و همان مورد را فوراً برنمی‌گردانند؛ سایر علت‌ها فقط ثبت می‌شوند.</div>' +
+      '<div class="report-note" style="margin-bottom:10px;">پاسخ‌های «هنوز موجودی دارد»، «این محصول را نمی‌خواهد»، «بعداً پیگیری می‌کنم» و «فعلاً نیاز ندارد» هشدار را می‌بندند و همان مورد را فوراً برنمی‌گردانند؛ سایر علت‌ها فقط ثبت می‌شوند.</div>' +
       '<div id="watch-reason-list">' + optsHtml + '</div>' +
       '<div class="field" style="margin-top:10px;"><label>یادداشت (اختیاری)</label>' +
       '<input type="text" id="watch-reason-note" autocomplete="off" placeholder="توضیح کوتاه..."></div>' +
@@ -1492,101 +1495,326 @@
   }
 
 
-  /* Central quick view for the Customers list. Presentation-only: it reuses
-     the frozen Priority/Watch/Balance outputs and existing action APIs. */
+  /* -------------------------------------------------------------------------
+     Quick View = pre-visit summary. All shared inputs are read once per open
+     and passed through this precomputed object; render helpers never reload
+     customer, invoice, check, watch, product, offer or purchase data.
+     ------------------------------------------------------------------------- */
+  var TIMING_NEAR_RATIO = 0.7;
+  var TIMING_DUE_RATIO = 1;
+
+  function hasKnownValue(value) {
+    return value !== null && value !== undefined && !(typeof value === 'string' && value.trim() === '');
+  }
+
+  function finiteNumber(value) {
+    if (!hasKnownValue(value)) return null;
+    var n = Number(value);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  function validISODate(value) {
+    return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) &&
+      typeof parseISODateParts === 'function' && !!parseISODateParts(value);
+  }
+
+  function validTime(value) {
+    if (!hasKnownValue(value)) return true;
+    return typeof value === 'string' && /^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/.test(value.trim());
+  }
+
+  function getRelativeDateInfo(date) {
+    if (!hasKnownValue(date) || (typeof date === 'string' && !validISODate(date))) return null;
+    var days = null;
+    try {
+      if (typeof daysAgo === 'function') days = daysAgo(date);
+      else if (typeof _behaviorDaysDiff === 'function' && typeof todayISO === 'function') days = _behaviorDaysDiff(date, todayISO());
+    } catch (e) { days = null; }
+    days = finiteNumber(days);
+    if (days === null || days < 0) return null;
+    days = Math.round(days);
+    var text = days === 0 ? 'امروز' : days === 1 ? 'دیروز' :
+      (typeof enToFaDigits === 'function' ? enToFaDigits(String(days)) : String(days)) + ' روز پیش';
+    return { days: days, text: text };
+  }
+
+  function getRelativeDateText(date) {
+    var info = getRelativeDateInfo(date);
+    return info ? info.text : '';
+  }
+
+  function getProduct(precomputed, productId) {
+    if (productId == null) return null;
+    return precomputed.productMap.get(productId) || null;
+  }
+
+  function isActiveProduct(product) {
+    return !!product && product.active !== false;
+  }
+
+  function getLatestPurchase(precomputed) {
+    var invoices = Array.isArray(precomputed.invoices) ? precomputed.invoices.slice() : [];
+    invoices = invoices.filter(function (inv) { return inv && validISODate(inv.date) && finiteNumber(inv.total) !== null; });
+    invoices.sort(function (a, b) {
+      return String(b.date).localeCompare(String(a.date)) ||
+        (finiteNumber(b.number) || 0) - (finiteNumber(a.number) || 0) ||
+        String(b.number || '').localeCompare(String(a.number || ''));
+    });
+    var inv = invoices[0];
+    if (!inv) return null;
+    var amount = finiteNumber(inv.total);
+    var relative = getRelativeDateInfo(inv.date);
+    return {
+      date: inv.date,
+      amount: amount,
+      invoiceNumber: hasKnownValue(inv.number) ? inv.number : null,
+      daysSince: relative ? relative.days : null,
+      relativeText: relative ? relative.text : ''
+    };
+  }
+
+  function getPurchaseTiming(behavior) {
+    if (!behavior) return { text: 'سابقهٔ کافی برای برآورد زمان خرید نداریم', state: 'unknown' };
+    var count = finiteNumber(behavior.invoiceCount);
+    if (count === 0) return { text: 'خریدی ثبت نشده', state: 'none' };
+    var avg = finiteNumber(behavior.avgIntervalDays);
+    var since = finiteNumber(behavior.daysSinceLast);
+    if (count === null || count < 0 || count < 3 || avg === null || avg <= 0 || since === null || since < 0) {
+      return { text: 'سابقهٔ کافی برای برآورد زمان خرید نداریم', state: 'insufficient' };
+    }
+    var ratio = since / avg;
+    // Customer-level cycle only: <.7 is not due, .7–<1 is near, >=1 is due.
+    if (ratio >= TIMING_DUE_RATIO) return { text: 'احتمالاً زمان خرید بعدی رسیده است', state: 'due' };
+    if (ratio >= TIMING_NEAR_RATIO) return { text: 'احتمالاً به زمان خرید بعدی نزدیک شده است', state: 'near' };
+    return { text: 'هنوز تا زمان احتمالی خرید بعدی فاصله دارد', state: 'not_due' };
+  }
+
+  function getPriorityAlert(precomputed) {
+    var checks = Array.isArray(precomputed.checks) ? precomputed.checks : [];
+    var watch = precomputed.watchData || {};
+    // loadWatchData already applies the project's active/ACK contract:
+    // active signal only, active ACKs applied, suppress decisions removed.
+    var activeConfirmed = Array.isArray(watch.activeConfirmed) ? watch.activeConfirmed : [];
+    var activeBouncedSignal = activeConfirmed.some(function (s) {
+      return s && s.status === 'active' && s.category === 'CHECK_BOUNCED' && s.ackActionEffect !== 'suppress';
+    });
+    if (activeBouncedSignal) return { type: 'danger', title: 'چک برگشتی فعال', text: 'اقدام فوری' };
+    var today = typeof todayISO === 'function' ? todayISO() : null;
+    if (!validISODate(today)) return null;
+    var overdue = checks.some(function (ch) {
+      return ch && ch.status === 'pending' && validISODate(ch.dueDate) && String(ch.dueDate) < today;
+    });
+    if (overdue) return { type: 'warning', title: 'چک سررسیدگذشته و وصول‌نشده', text: 'وصول چک سررسیدگذشته را بررسی کن' };
+    var near = checks.some(function (ch) {
+      if (!ch || ch.status !== 'pending' || !validISODate(ch.dueDate)) return false;
+      var diff = null;
+      try { diff = typeof _behaviorDaysDiff === 'function' ? _behaviorDaysDiff(today, ch.dueDate) : null; } catch (e) { diff = null; }
+      diff = finiteNumber(diff);
+      return diff !== null && diff >= 0 && diff <= 3;
+    });
+    if (near) return { type: 'warning', title: 'چک نزدیک سررسید', text: 'سررسید چک در ۰ تا ۳ روز آینده است' };
+    return null;
+  }
+
+  function getRejectionText(reason, stockSource) {
+    var reasons = { price: 'قیمت', quality: 'کیفیت', competitor: 'رقیب', unavailable: 'ناموجود', no_need: 'عدم نیاز', still_stock: 'موجود داشت', other: 'سایر' };
+    var sources = { ours: 'موجودی خودش را دارد', competitor: 'از رقیب تهیه می‌کند', unknown: 'منبع موجودی نامشخص است' };
+    if (reason === 'still_stock' && stockSource && sources[stockSource]) return sources[stockSource];
+    return reason && reasons[reason] ? reasons[reason] : 'پیشنهاد قبلی را نپذیرفت';
+  }
+
+  function getSuggestedProducts(precomputed) {
+    var top = precomputed.behavior && Array.isArray(precomputed.behavior.topProducts) ? precomputed.behavior.topProducts : [];
+    var out = [];
+    top.forEach(function (row) {
+      if (out.length >= 2 || !row || row.productId == null) return;
+      var product = getProduct(precomputed, row.productId);
+      if (!isActiveProduct(product)) return;
+      // null/undefined stock means unknown, not zero; only a known non-positive stock excludes it.
+      if (product.stockQty !== null && product.stockQty !== undefined && !(Number(product.stockQty) > 0)) return;
+      var latestOffer = precomputed.lastOfferMap[row.productId];
+      if (latestOffer && latestOffer.reaction === 'rejected' &&
+          (!precomputed.lastPurchaseMap[row.productId] || String(latestOffer.date || '') >= String(precomputed.lastPurchaseMap[row.productId]))) return;
+      out.push({
+        productId: row.productId,
+        productName: product.name || row.name || String(row.productId),
+        lastPurchaseDate: precomputed.lastPurchaseMap[row.productId] || null,
+        lastPurchaseText: getRelativeDateText(precomputed.lastPurchaseMap[row.productId])
+      });
+    });
+    return out;
+  }
+
+  function getProductsToCheck(precomputed) {
+    var stats = precomputed.behavior && Array.isArray(precomputed.behavior.offeredProductStats)
+      ? precomputed.behavior.offeredProductStats : [];
+    var candidates = [];
+    stats.forEach(function (st) {
+      if (!st || st.productId == null) return;
+      var latest = precomputed.lastOfferMap[st.productId];
+      if (!latest || latest.reaction !== 'rejected' || !validISODate(latest.date) || !validTime(latest.time)) return;
+      var bought = precomputed.lastPurchaseMap[st.productId];
+      if (bought && validISODate(bought) && String(bought) > String(latest.date)) return;
+      var product = getProduct(precomputed, st.productId);
+      var name = product && product.name ? product.name : (st.productName || String(st.productId));
+      var when = getRelativeDateText(latest.date);
+      var reason = getRejectionText(latest.reason, latest.stockSource);
+      candidates.push({
+        productId: st.productId,
+        productName: name,
+        reason: reason,
+        lastReactionDate: latest.date,
+        lastReactionTime: latest.time || '',
+        reactionKey: String(latest.date) + ' ' + String(latest.time || ''),
+        text: name + ' — ' + reason + (when ? ' · ' + when : '')
+      });
+    });
+    candidates.sort(function (a, b) { return b.reactionKey.localeCompare(a.reactionKey); });
+    return candidates.slice(0, 2);
+  }
+
+  function prepareCustomerVisitSummary(cid, ctx) {
+    var source = (typeof window !== 'undefined' && window.data) ? window.data : data;
+    var sharedCtx = ctx || (typeof createComputationContext === 'function' ? createComputationContext({ data: source }) : { aggregatePairMapCache: Object.create(null) });
+    var customer = sharedCtx && typeof sharedCtx.customerById === 'function' ? sharedCtx.customerById(cid) : (source.customers || []).find(function (x) { return x && x.id === cid; });
+    if (!customer) return null;
+    var P = (typeof window !== 'undefined' && window.BagheriPresent) ? window.BagheriPresent : null;
+    var behavior = null, invoices = [], checks = [], lastPurchaseMap = {}, lastOfferMap = {};
+    try { behavior = typeof customerBehavior === 'function' ? (customerBehavior(cid, sharedCtx) || null) : null; }
+    catch (eBehavior) { console.error('Quick View behavior calculation failed', eBehavior); }
+    try { invoices = typeof customerInvoices === 'function' ? (customerInvoices(cid, sharedCtx) || []) : []; }
+    catch (eInvoices) { console.error('Quick View invoice calculation failed', eInvoices); }
+    try { checks = typeof customerChecks === 'function' ? (customerChecks(cid, sharedCtx) || []) : []; }
+    catch (eChecks) { console.error('Quick View check calculation failed', eChecks); }
+    try { lastPurchaseMap = P && typeof P.lastPurchaseMap === 'function' ? (P.lastPurchaseMap(cid) || {}) : {}; }
+    catch (ePurchases) { console.error('Quick View purchase index failed', ePurchases); }
+    try { lastOfferMap = P && typeof P.lastOfferMap === 'function' ? (P.lastOfferMap(cid) || {}) : {}; }
+    catch (eOffers) { console.error('Quick View offer index failed', eOffers); }
+    var productMap = new Map();
+    try {
+      (Array.isArray(source.products) ? source.products : []).forEach(function (p) {
+        if (p && p.id != null) productMap.set(p.id, p);
+      });
+    } catch (eProducts) { console.error('Quick View product index failed', eProducts); }
+    return {
+      ctx: sharedCtx,
+      customer: customer,
+      behavior: behavior,
+      invoices: invoices,
+      checks: checks,
+      watchData: loadWatchData(cid, sharedCtx),
+      productMap: productMap,
+      lastPurchaseMap: lastPurchaseMap,
+      lastOfferMap: lastOfferMap
+    };
+  }
+
+  function buildCustomerVisitSummary(cid, ctx, precomputed) {
+    var pc = precomputed || prepareCustomerVisitSummary(cid, ctx);
+    var summary = {
+      lastPurchase: null,
+      purchaseTiming: null,
+      priorityAlert: null,
+      suggestedProducts: [],
+      productsToCheck: []
+    };
+    if (!pc || !pc.customer || pc.customer.id !== cid) return summary;
+    summary.lastPurchase = getLatestPurchase(pc);
+    try { summary.purchaseTiming = getPurchaseTiming(pc.behavior || null); }
+    catch (eTiming) { console.error('Quick View purchase timing failed', eTiming); summary.purchaseTiming = { text: 'سابقهٔ کافی برای برآورد زمان خرید نداریم', state: 'unknown' }; }
+    summary.priorityAlert = getPriorityAlert(pc);
+    try { summary.productsToCheck = getProductsToCheck(pc); }
+    catch (eProductsToCheck) { console.error('Quick View product checks failed', eProductsToCheck); summary.productsToCheck = []; }
+    try { summary.suggestedProducts = getSuggestedProducts(pc); }
+    catch (eSuggestions) { console.error('Quick View product suggestions failed', eSuggestions); summary.suggestedProducts = []; }
+    var checked = Object.create(null);
+    summary.productsToCheck.forEach(function (p) { checked[p.productId] = true; });
+    // A newer rejected reaction wins over the generic product suggestion.
+    summary.suggestedProducts = summary.suggestedProducts.filter(function (p) { return !checked[p.productId]; });
+    return summary;
+  }
+
+  function renderVisitSummary(summary) {
+    var html = '';
+    if (summary.priorityAlert) {
+      html += '<div class="bp-qv-alert is-' + esc(summary.priorityAlert.type) + '" role="alert"><strong>' + esc(summary.priorityAlert.title) + '</strong><span>' + esc(summary.priorityAlert.text) + '</span></div>';
+    }
+    if (summary.lastPurchase || summary.purchaseTiming) {
+      html += '<div class="bp-qv-section"><div class="bp-qv-section-label">آخرین خرید و زمان احتمالی خرید</div>';
+      if (summary.lastPurchase) {
+        html += '<div class="bp-qv-data-row"><span>آخرین خرید</span><strong>' + esc(summary.lastPurchase.relativeText || 'تاریخ نامشخص') + ' · ' + esc(toman(summary.lastPurchase.amount)) + ' ت</strong></div>';
+        html += '<div class="bp-qv-muted">' + esc(typeof faDate === 'function' ? faDate(summary.lastPurchase.date) : summary.lastPurchase.date) + (summary.lastPurchase.invoiceNumber != null ? ' · فاکتور #' + esc(summary.lastPurchase.invoiceNumber) : '') + '</div>';
+      }
+      if (summary.purchaseTiming) html += '<div class="bp-qv-timing is-' + esc(summary.purchaseTiming.state) + '">' + esc(summary.purchaseTiming.text) + '</div>';
+      html += '</div>';
+    }
+    if (summary.suggestedProducts.length || summary.productsToCheck.length) {
+      html += '<div class="bp-qv-section">';
+      if (summary.suggestedProducts.length) html += '<div class="bp-qv-subsection"><div class="bp-qv-section-label">پیشنهاد محتمل</div><div class="bp-qv-product-list">' + summary.suggestedProducts.map(function (p) { return '<div class="bp-qv-product-row"><strong>' + esc(p.productName) + '</strong>' + (p.lastPurchaseText ? '<span>آخرین خرید: ' + esc(p.lastPurchaseText) + '</span>' : '') + '</div>'; }).join('') + '</div></div>';
+      if (summary.productsToCheck.length) html += '<div class="bp-qv-subsection bp-qv-check-subsection"><div class="bp-qv-section-label">قبل از پیشنهاد بررسی کن</div><div class="bp-qv-check-list">' + summary.productsToCheck.map(function (p) { return '<div class="bp-qv-product-row is-check"><strong>' + esc(p.text) + '</strong></div>'; }).join('') + '</div></div>';
+      html += '</div>';
+    }
+    return html;
+  }
+
   function openCustomerQuickView(cid) {
-    var c = (data.customers || []).find(function (x) { return x && x.id === cid; });
-    if (!c) return;
-    var ctx = typeof createComputationContext === 'function'
-      ? createComputationContext({ data: data })
-      : { aggregatePairMapCache: Object.create(null) };
-    var totals = customerTotals(cid, ctx) || { balance: 0 };
+    var source = (typeof window !== 'undefined' && window.data) ? window.data : data;
+    var ctx = typeof createComputationContext === 'function' ? createComputationContext({ data: source }) : { aggregatePairMapCache: Object.create(null) };
+    var precomputed = prepareCustomerVisitSummary(cid, ctx);
+    if (!precomputed) return;
+    var c = precomputed.customer;
+    var summary = buildCustomerVisitSummary(cid, ctx, precomputed);
+
+    var totals = null;
+    try { totals = typeof customerTotals === 'function' ? (customerTotals(cid, ctx) || null) : null; }
+    catch (eTotals) { console.error('Quick View financial calculation failed', eTotals); }
+    var balance = totals ? finiteNumber(totals.balance) : null;
+    var balanceKnown = balance !== null;
     var priority = null;
     try { priority = typeof calculateCustomerPriority === 'function' ? calculateCustomerPriority(cid, { ctx: ctx }) : null; } catch (e) { priority = null; }
-    var story = priority && priority.customerStory && priority.customerStory.summary ? priority.customerStory.summary : '';
     var riskLevel = priority ? priority.riskLevel : null;
     var health = (typeof getRiskBadge === 'function' ? getRiskBadge(riskLevel).label : '') || 'وضعیت عادی';
-    var watchData = loadWatchData(cid, ctx);
-
-    // Recommended action (same calculateCustomerAction the Detail page and Dashboard queue use).
-    // Signature: calculateCustomerAction(cid, precomputedPriority, { ctx }).
+    var story = priority && priority.customerStory && priority.customerStory.summary ? String(priority.customerStory.summary).split(/\n+/).slice(0, 2).join(' ') : '';
+    var storyHtml = story && (!summary.priorityAlert || story.indexOf(summary.priorityAlert.title) < 0) ? '<div class="bp-qv-story"><div class="bp-qv-section-label">خلاصه وضعیت</div><div>' + esc(story) + '</div></div>' : '';
     var recommendedAction = null;
-    try {
-      if (typeof calculateCustomerAction === 'function') {
-        var qa = calculateCustomerAction(cid, priority, { ctx: ctx });
-        recommendedAction = (qa && qa.actionType !== 'no_action' && qa.action) ? qa : null;
-      }
-    } catch (eAct) { recommendedAction = null; }
-
-    // v5 hierarchy: when the recommendation IS "register a visit" / "register a payment", the matching
-    // fixed button becomes the primary one and a one-line hint explains why — no duplicate button.
-    // Only actions without a dedicated fixed button (check, investigate, call, ...) get their own card.
+    try { if (typeof calculateCustomerAction === 'function') { var qa = calculateCustomerAction(cid, priority, { ctx: ctx }); recommendedAction = qa && qa.actionType !== 'no_action' ? qa : null; } } catch (eAct) { recommendedAction = null; }
     var recMatchesVisit = !!(recommendedAction && (recommendedAction.actionType === 'visit' || recommendedAction.actionType === 'follow_up'));
     var recMatchesPayment = !!(recommendedAction && recommendedAction.actionType === 'payment_followup');
-    var recommendedHintHtml = recommendedAction
-      ? '<div class="bp-qv-action-hint"><span class="bp-qv-action-hint-label">پیشنهاد</span> ' + esc(recommendedAction.action) + '</div>'
-      : '';
-
-    // The ONLY alert in Quick View: an active bounced check (always immediate).
-    var bouncedAlertHtml = '';
-    try {
-      var bounced = (watchData.activeConfirmed || []).some(function (s) { return s && s.category === 'CHECK_BOUNCED'; });
-      if (bounced) {
-        bouncedAlertHtml = '<div class="bp-customer-attention" style="margin:10px 0;"><span class="bp-attention-icon" aria-hidden="true"></span>' +
-          '<span>چک برگشتی فعال — ' + esc(typeof getRiskBadge === 'function' ? getRiskBadge('critical').label : 'اقدام فوری') + '</span></div>';
-      }
-    } catch (eBounced) { bouncedAlertHtml = ''; }
-
+    var recMatchesInvoice = !!(recommendedAction && recommendedAction.actionType === 'invoice');
+    var hasActionText = recommendedAction && hasKnownValue(recommendedAction.action) && String(recommendedAction.action).trim() !== '';
+    var recommendedHintHtml = hasActionText && ['visit','follow_up','payment_followup','invoice'].indexOf(recommendedAction.actionType) === -1
+      ? '<div class="bp-qv-action-hint"><span class="bp-qv-action-hint-label">پیشنهاد</span> ' + esc(recommendedAction.action) + '</div>' : '';
     function qvBtn(action, label) {
-      var primary;
-      if (recMatchesVisit) primary = (action === 'visit');
-      else if (recMatchesPayment) primary = (action === 'payment');
-      else primary = (action === 'visit');
+      var primary = recMatchesVisit ? action === 'visit' : recMatchesPayment ? action === 'payment' : recMatchesInvoice ? action === 'invoice' : action === 'visit';
       return '<button type="button" class="btn ' + (primary ? 'primary' : 'secondary') + '" data-action="' + action + '">' + label + '</button>';
     }
-
     var overlay = document.createElement('div');
     overlay.className = 'bp-qv-overlay';
     overlay.setAttribute('role', 'dialog');
     overlay.setAttribute('aria-modal', 'true');
-    overlay.innerHTML =
-      '<div class="bp-qv-card" role="document">' +
-        '<button type="button" class="bp-qv-close" aria-label="بستن">×</button>' +
-        '<div class="bp-qv-head">' +
-          '<div class="bp-qv-name">' + esc(c.name || 'مشتری') + '</div>' +
-          (c.ownerName ? '<div class="bp-qv-meta">' + esc(c.ownerName) + '</div>' : '') +
-          (c.phone ? '<div class="bp-qv-meta">' + esc(c.phone) + '</div>' : '') +
-          '<div class="bp-qv-balance is-prominent ' + (totals.balance > 0 ? 'is-debt' : '') + '">' +
-            '<span class="bp-qv-balance-label">' + esc(balanceStatusWord(totals.balance)) + '</span>' +
-            (totals.balance !== 0 ? '<span class="bp-qv-balance-amount">' + toman(Math.abs(totals.balance)) + ' ت</span>' : '') +
-          '</div>' +
-          '<div class="bp-qv-health radar-risk-' + esc(riskLevel || 'normal') + '">' + esc(health) + '</div>' +
-        '</div>' +
-        bouncedAlertHtml +
-        (story ? '<div class="bp-qv-story"><div class="bp-qv-section-label">خلاصه وضعیت</div><div>' + esc(story) + '</div></div>' : '') +
-        recommendedHintHtml +
-        '<div class="bp-qv-actions">' +
-          qvBtn('visit', 'ثبت ویزیت') +
-          qvBtn('invoice', 'ثبت فاکتور') +
-          qvBtn('payment', 'ثبت پرداخت') +
-        '</div>' +
-        '<button type="button" class="bp-qv-full">جزئیات بیشتر ›</button>' +
-      '</div>';
+    overlay.innerHTML = '<div class="bp-qv-card" role="document">' +
+      '<button type="button" class="bp-qv-close" aria-label="بستن">×</button><div class="bp-qv-drag-region" aria-label="برای بستن بکشید"><div class="bp-qv-drag-handle" aria-hidden="true"></div></div>' +
+      '<div class="bp-qv-head"><div class="bp-qv-name">' + esc(c.name || 'مشتری') + '</div>' +
+      (c.ownerName ? '<div class="bp-qv-meta">' + esc(c.ownerName) + '</div>' : '') +
+      (c.phone ? '<div class="bp-qv-meta">' + esc(c.phone) + '</div>' : '') +
+      '<div class="bp-qv-balance is-prominent ' + (balanceKnown && balance > 0 ? 'is-debt' : '') + '"><span class="bp-qv-balance-label">' + esc(balanceKnown ? balanceStatusWord(balance) : 'اطلاعات مالی نامشخص') + '</span>' + (balanceKnown && balance !== 0 ? '<span class="bp-qv-balance-amount">' + toman(Math.abs(balance)) + ' ت</span>' : '') + '</div>' +
+      '<div class="bp-qv-health radar-risk-' + esc(riskLevel || 'normal') + '">' + esc(health) + '</div></div>' +
+      renderVisitSummary(summary) + storyHtml + recommendedHintHtml +
+      '<div class="bp-qv-actions">' + qvBtn('visit', 'ثبت ویزیت') + qvBtn('invoice', 'ثبت فاکتور') + qvBtn('payment', 'ثبت پرداخت') + '</div>' +
+      '<button type="button" class="bp-qv-full">جزئیات بیشتر ›</button></div>';
     var modalRoot = document.getElementById('modalRoot');
     if (!modalRoot) return;
     modalRoot.innerHTML = '';
     modalRoot.appendChild(overlay);
-    try { document.body.classList.add('modal-open'); } catch(_e) {}
-
+    try { document.body.classList.add('modal-open'); } catch (_e) {}
     var card = overlay.querySelector('.bp-qv-card');
-    var previousFocus = document.activeElement;
-    var closed = false;
+    var previousFocus = document.activeElement, closed = false;
     function close() {
       if (closed) return;
       closed = true;
       overlay.classList.add('is-closing');
       setTimeout(function () {
-        try { document.body.classList.remove('modal-open'); } catch(_e) {}
+        try { document.body.classList.remove('modal-open'); } catch (_e) {}
         if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
         if (previousFocus && typeof previousFocus.focus === 'function') previousFocus.focus();
       }, 180);
@@ -1597,19 +1825,15 @@
       if (e.target === overlay || e.target.closest('.bp-qv-close')) { e.preventDefault(); close(); return; }
       var action = e.target.closest('[data-action]');
       if (action) {
-        e.preventDefault();
-        var type = action.getAttribute('data-action');
-        close();
+        e.preventDefault(); var type = action.getAttribute('data-action'); close();
         setTimeout(function () {
           if (type === 'visit' && typeof openAddVisit === 'function') openAddVisit(cid);
           else if (type === 'invoice' && typeof openAddInvoice === 'function') openAddInvoice(cid);
           else if (type === 'payment' && typeof openAddTransaction === 'function') openAddTransaction(cid);
-        }, 185);
-        return;
+        }, 185); return;
       }
-      if (e.target.closest('.bp-qv-full') || e.target.closest('.bp-topic')) {
-        e.preventDefault();
-        close();
+      if (e.target.closest('.bp-qv-full')) {
+        e.preventDefault(); close();
         setTimeout(function () { if (typeof AppRouter !== 'undefined' && AppRouter.navigate) AppRouter.navigate('/customer', { id: cid }); }, 185);
       }
     });
@@ -1617,16 +1841,11 @@
     requestAnimationFrame(function () { overlay.classList.add('is-open'); });
     var closeBtn = overlay.querySelector('.bp-qv-close');
     if (closeBtn) closeBtn.focus();
-
-    // Lightweight downward swipe-to-close; no document-level gesture handling.
     var startY = null;
-    if (card) {
-      card.addEventListener('touchstart', function (e) { if (e.touches && e.touches[0]) startY = e.touches[0].clientY; }, { passive: true });
-      card.addEventListener('touchend', function (e) {
-        if (startY == null || !e.changedTouches || !e.changedTouches[0]) return;
-        if (e.changedTouches[0].clientY - startY > 70) close();
-        startY = null;
-      }, { passive: true });
+    var dragHandle = overlay.querySelector('.bp-qv-drag-region');
+    if (dragHandle) {
+      dragHandle.addEventListener('touchstart', function (e) { if (e.touches && e.touches[0]) startY = e.touches[0].clientY; }, { passive: true });
+      dragHandle.addEventListener('touchend', function (e) { if (startY == null || !e.changedTouches || !e.changedTouches[0]) return; if (e.changedTouches[0].clientY - startY > 70) close(); startY = null; }, { passive: true });
     }
   }
 
@@ -1670,6 +1889,7 @@
 
   global.CustomerView = { mount: mount, unmount: function () {} };
   global.openCustomerQuickView = openCustomerQuickView;
+  global.buildCustomerVisitSummary = buildCustomerVisitSummary;
   // Test / settings seams for Product Rejection Insight (UI-only)
   global.getProductRejectionThreshold = getProductRejectionThreshold;
   global.setProductRejectionThreshold = setProductRejectionThreshold;
