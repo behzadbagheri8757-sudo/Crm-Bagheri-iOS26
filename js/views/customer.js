@@ -1924,8 +1924,8 @@
         (invoiceSubline ? '<div class="bp-qv-subline">' + esc(invoiceSubline) + '</div>' : '');
     }
 
-    var timingHtml = '<div class="bp-qv-line">' + esc(summary.purchaseTiming.text) + '</div>' +
-      (summary.purchaseTiming.detail ? '<div class="bp-qv-subline">' + esc(summary.purchaseTiming.detail) + '</div>' : '');
+    var timingHtml = '<div class="bp-qv-timing"><div class="bp-qv-line">' + esc(summary.purchaseTiming.text) + '</div>' +
+      (summary.purchaseTiming.detail ? '<div class="bp-qv-subline">' + esc(summary.purchaseTiming.detail) + '</div>' : '') + '</div>';
     function productRows(items, type) {
       if (summary.productsStatus === 'error') return '<div class="bp-qv-empty">اطلاعات پیشنهاد محصولات در دسترس نیست</div>';
       if (!items.length) return '<div class="bp-qv-empty">مورد قابل اتکایی ثبت نشده</div>';
@@ -1937,9 +1937,9 @@
       }).join('') + '</ul>';
     }
     var suggestionHtml =
-      '<section class="bp-qv-section"><div class="bp-qv-section-label">پیشنهاد محتمل</div>' +
+      '<section class="bp-qv-section bp-qv-products is-suggest"><div class="bp-qv-section-label">پیشنهاد محتمل</div>' +
       productRows(summary.suggestedProducts, 'suggest') + '</section>' +
-      '<section class="bp-qv-section"><div class="bp-qv-section-label">قبل از پیشنهاد بررسی کن</div>' +
+      '<section class="bp-qv-section bp-qv-products is-check"><div class="bp-qv-section-label">قبل از پیشنهاد بررسی کن</div>' +
       productRows(summary.productsToCheck, 'check') + '</section>';
     var storyHtml = summary.story
       ? '<div class="bp-qv-story"><div class="bp-qv-section-label">خلاصه وضعیت</div><div class="bp-qv-story-text">' + esc(summary.story) + '</div></div>' : '';
@@ -1968,7 +1968,7 @@
           '<div class="bp-qv-health radar-risk-' + esc(riskLevel || 'normal') + '">' + esc(health) + '</div>' +
         '</div>' +
         alertHtml +
-        '<section class="bp-qv-section"><div class="bp-qv-section-label">خرید و زمان‌بندی</div>' + lastHtml + timingHtml + '</section>' +
+        '<section class="bp-qv-section bp-qv-purchase"><div class="bp-qv-section-label">آخرین خرید و زمان خرید احتمالی</div>' + lastHtml + timingHtml + '</section>' +
         suggestionHtml + storyHtml + hintHtml +
         '<div class="bp-qv-actions">' +
           qvBtn('visit', 'ثبت ویزیت') + qvBtn('invoice', 'ثبت فاکتور') + qvBtn('payment', 'ثبت پرداخت') +
