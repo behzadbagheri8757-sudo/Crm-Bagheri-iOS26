@@ -127,6 +127,22 @@
   // .vg-route-* namespace by design — see css/visual-grammar.css. Only ever
   // touches these two class names on <html>, never anything else.
   var WHITE_CANVAS_ROUTES = ['/customers', '/products', '/invoices', '/suppliers', '/visits'];
+  var activeRouteClass = null;
+  function applyRouteClass(path) {
+    try {
+      var root = document.documentElement;
+      if (!root) return;
+      if (activeRouteClass) root.classList.remove(activeRouteClass);
+      // Supplier visual grammar is intentionally scoped; other legacy vg-route-*
+      // selectors remain dormant until their pages receive visual regression approval.
+      var supplierRoutes = ['/suppliers', '/supplier'];
+      var routeKey = supplierRoutes.indexOf(path) >= 0
+        ? String(path).replace(/^\//, '').replace(/[^a-z0-9-]/gi, '-')
+        : null;
+      activeRouteClass = routeKey ? 'vg-route-' + routeKey : null;
+      if (activeRouteClass) root.classList.add(activeRouteClass);
+    } catch (e) { /* ignore */ }
+  }
   function applyCanvasClass(path) {
     try {
       var root = document.documentElement;
@@ -148,6 +164,7 @@
       let prevCanvasWhite = false;
       try { prevCanvasWhite = document.documentElement.classList.contains('vg-canvas-white'); } catch (e) {}
       applyCanvasClass(path);
+      applyRouteClass(path);
       const handler = routes.get(path);
 
       /* --- Direction detection (Navigation Motion Patch) ---

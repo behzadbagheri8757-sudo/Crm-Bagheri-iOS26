@@ -817,7 +817,12 @@ function globalTotals(ctx, skipMemo){
   // همان منطق customerProfit برای همه مشتریان (فاکتور − حاشیه برگشت − تخفیف تراکنشی)
   const totalProfit = data.customers.reduce((s,c)=>s + customerProfit(c.id, ctx), 0);
   const totalReceived = data.payments.filter(p=>['cash','card','transfer'].includes(p.method)).reduce((s,p)=>s+p.amount,0);
-  const outstandingChecks = data.checks.filter(c=>c.status!=='cleared').reduce((s,c)=>s+c.amount,0);
+  const customerOutstandingChecks = (data.checks || []).filter(c=>c.status!=='cleared').reduce((s,c)=>s+(Number(c.amount)||0),0);
+  const supplierOutstandingChecks = (data.suppliers || []).reduce((sum, sp) => sum + (sp.payments || []).reduce((sub, p) => {
+    if (p.method !== 'check' || (p.status || 'pending') !== 'pending') return sub;
+    return sub + (Number(p.faceAmount != null ? p.faceAmount : p.amount) || 0);
+  }, 0), 0);
+  const outstandingChecks = customerOutstandingChecks + supplierOutstandingChecks;
   const customerDebt = data.customers.reduce((s,c)=>{
     const t = customerTotals(c.id, ctx);
     return s + Math.max(t.balance,0);
