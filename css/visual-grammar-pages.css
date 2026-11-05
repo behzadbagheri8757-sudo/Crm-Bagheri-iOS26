@@ -564,7 +564,49 @@ main .empty{margin:14px 0;}
 .vg-route-invoices .tx-list .tx-row-title{
   font-weight:var(--vg-weight-title);
 }
-
+.vg-route-suppliers .supplier-purchase-row{
+  cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+.vg-route-suppliers .supplier-purchase-row:active{
+  background:var(--vg-color-surface-soft);
+}
+.supplier-purchase-chevron{
+  flex:0 0 auto;
+  color:var(--vg-color-text-muted);
+  font-size:1.2rem;
+  line-height:1;
+  margin-inline-start:4px;
+}
+.supplier-purchase-detail-items{
+  background:var(--vg-color-surface);
+  border:1px solid var(--vg-color-border);
+  border-radius:var(--vg-radius-raised);
+  padding:0 14px;
+}
+.supplier-purchase-detail-line{
+  padding:12px 0;
+  min-height:52px;
+}
+.supplier-purchase-detail-line + .supplier-purchase-detail-line{
+  border-top:1px solid var(--vg-color-divider);
+}
+.supplier-purchase-detail-total{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-top:14px;
+  padding:14px 0 4px;
+  border-top:1px solid var(--vg-color-divider);
+  font-weight:var(--vg-weight-title);
+}
+.supplier-purchase-detail-total strong{
+  font-size:1.05rem;
+}
+.supplier-purchase-detail-actions{
+  margin-top:14px;
+}
 /* ---------- More (full page) — #/more ----------
    Full-page replacement for the old More bottom sheet. All selectors are
    scoped under .more-page and use only existing visual-grammar tokens.
