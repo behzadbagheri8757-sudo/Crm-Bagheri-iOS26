@@ -141,7 +141,86 @@
     });
   }
 
+  function openPurchaseDetailSheet(s, purchase) {
+    if (!purchase) return;
+    const returnedAmount = (purchase.returns || []).reduce((sum, ret) => sum + (Number(ret.amount) || 0), 0);
+    const remainingAmount = (typeof purchaseReturnRemainingAmount === 'function')
+      ? purchaseReturnRemainingAmount(purchase)
+      : Math.max(0, (Number(purchase.amount) || 0) - returnedAmount);
+    let canReturn = remainingAmount > 0;
+    if (canReturn && (purchase.productId || (purchase.items && purchase.items.length)) && typeof purchaseActualReturnableQty === 'function') {
+      canReturn = purchaseActualReturnableQty(purchase) > 0;
+    }
+    const canMutate = purchaseCanBeEditedOrDeleted(purchase);
+    const items = Array.isArray(purchase.items) && purchase.items.length
+      ? purchase.items.map(item => {
+          const product = (data.products || []).find(product => product.id === item.productId) || {};
+          const qty = Number(item.qty) || 0;
+          const unitCost = Number(item.unitCost) || 0;
+          return { name: item.name || product.name || 'کالا', qty, unitCost, total: qty * unitCost };
+        })
+      : (purchase.productId ? [{
+          name: ((data.products || []).find(product => product.id === purchase.productId) || {}).name || 'کالا',
+          qty: Number(purchase.qty) || 0,
+          unitCost: purchase.qty ? (Number(purchase.amount) || 0) / Number(purchase.qty) : 0,
+          total: Number(purchase.amount) || 0
+        }] : [{ name: purchase.desc || 'خرید', qty: null, unitCost: null, total: Number(purchase.amount) || 0 }]);
+    const itemRows = items.map(item => `
+      <div class="ledger-row supplier-purchase-detail-line">
+        <span class="name"><span class="tx-row-title">${esc(item.name)}</span>
+          ${item.qty === null ? '' : `<span class="sub">${enToFaDigits(String(item.qty))} × ${toman(item.unitCost)} ت</span>`}</span>
+        <span class="filler"></span>
+        <span class="amount tx-row-amount"><span class="tx-row-total">${toman(item.total)} ت</span></span>
+      </div>`).join('');
+    const returnRows = (purchase.returns || []).map(ret => {
+      const returnItems = Array.isArray(ret.items) && ret.items.length
+        ? ret.items.map(item => {
+            const product = (data.products || []).find(product => product.id === item.productId) || {};
+            return `${esc(product.name || item.name || 'کالا')} × ${enToFaDigits(String(item.qty || 0))}`;
+          }).join('، ')
+        : `${enToFaDigits(String(ret.qty || 0))} واحد`;
+      return `<div class="row-details-item">
+        <span class="row-details-name">${faDate(ret.date)} · ${returnItems}</span>
+        <span class="row-details-total">${toman(ret.amount || 0)} ت</span>
+        <span class="row-details-meta">${ret.returnReason ? 'علت: ' + esc(purchaseReturnReasonLabel(ret.returnReason)) : 'علت ثبت نشده'}</span>
+      </div>`;
+    }).join('');
+    const returnsDetails = returnRows
+      ? `<details class="row-details supplier-return-details" style="margin-top:12px;">
+          <summary>تاریخچه برگشت (${enToFaDigits(String((purchase.returns || []).length))})</summary>
+          <div class="row-details-list">${returnRows}</div>
+        </details>`
+      : '';
+    const actions = (canReturn || canMutate) ? `
+      <div class="btn-row supplier-purchase-detail-actions">
+        ${canReturn ? `<button type="button" class="btn secondary small" data-return-purchase="${esc(purchase.id)}">برگشت</button>` : ''}
+        ${canMutate ? `<button type="button" class="btn secondary small" data-edit-purchase="${esc(purchase.id)}">ویرایش</button>` : ''}
+        ${canMutate ? `<button type="button" class="btn danger small" data-del-purchase="${esc(purchase.id)}">حذف</button>` : ''}
+      </div>` : '';
+    openSheet(`
+      <div class="supplier-purchase-detail" data-purchase-detail="${esc(purchase.id)}">
+        <h3>${faDate(purchase.date)} — ${esc(s.name)}</h3>
+        <div class="empty supplier-purchase-detail-meta" style="padding:0 0 10px;text-align:right;">${items.length} قلم کالا</div>
+        <div class="supplier-purchase-detail-items">${itemRows}</div>
+        <div class="supplier-purchase-detail-total"><span>جمع کل خرید</span><strong>${toman(purchase.amount || 0)} ت</strong></div>
+        ${returnedAmount > 0 ? `<div class="sub" style="text-align:right;padding-top:8px;">برگشت ثبت‌شده: ${toman(returnedAmount)} ت</div>` : ''}
+        ${returnsDetails}
+        ${actions}
+      </div>
+    `);
+    // The shared renderer already owns all purchase action guards and handlers.
+    // Re-run it after the sheet replaces the generic sheet contents so nested
+    // actions keep the exact same validation and FIFO protections.
+    renderSupplierPurchaseReturn(s);
+  }
+
   function renderSupplierPurchaseReturn(s) {
+    document.querySelectorAll('[data-open-purchase]').forEach(row => {
+      row.addEventListener('click', function () {
+        const purchase = (s.purchases || []).find(p => p.id === this.getAttribute('data-open-purchase'));
+        if (purchase) openPurchaseDetailSheet(s, purchase);
+      });
+    });
     // Re-attach return buttons (single and multi-item) after re-render
     document.querySelectorAll('[data-edit-purchase]').forEach(btn => {
       btn.addEventListener('click', function (e) {
@@ -170,6 +249,7 @@
           s.purchases.splice(index, 1);
           try { await saveData(); }
           catch (saveErr) { restoreDataInPlace(previousData); throw saveErr; }
+          closeModal();
           drawSupplierPage(rootEl); showToast('خرید حذف شد');
         });
       });
@@ -763,78 +843,19 @@
     const payments = (s.payments || []).slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 
     const purchaseRows = purchases.length ? purchases.map(p => {
-      const ret = (p.returns || []).reduce((a, r) => a + (r.amount || 0), 0);
-      const net = (p.amount || 0) - ret;
-      const remainingAmount = (typeof purchaseReturnRemainingAmount === 'function')
-        ? purchaseReturnRemainingAmount(p)
-        : Math.max(0, (p.amount || 0) - ret);
-      // G4: for stocked purchases, only show return if FIFO/stock still allows return
-      let canReturn = remainingAmount > 0;
-      if (canReturn && (p.productId || (p.items && p.items.length)) && typeof purchaseActualReturnableQty === 'function') {
-        canReturn = purchaseActualReturnableQty(p) > 0;
-      }
       const lineItems = Array.isArray(p.items) ? p.items.filter(it => it) : [];
-      const itemsHint = lineItems.length
-        ? lineItems.slice(0, 2).map(it => it.name || ((data.products.find(x => x.id === it.productId) || {}).name) || 'کالا').join('، ') + (lineItems.length > 2 ? ' و ' + enToFaDigits(String(lineItems.length - 2)) + ' قلم دیگر' : '')
-        : (p.productId ? ((data.products.find(x => x.id === p.productId) || {}).name || 'کالا') : (p.desc || 'خرید'));
-      const retBtn = canReturn
-        ? '<button type="button" class="btn secondary small tx-status-btn" data-return-purchase="' + esc(p.id) + '">برگشت</button>'
-        : '';
-      const canMutatePurchase = purchaseCanBeEditedOrDeleted(p);
-      const editPurchaseBtn = canMutatePurchase
-        ? '<button type="button" class="btn small secondary tx-status-btn" data-edit-purchase="' + esc(p.id) + '">ویرایش</button>' : '';
-      const deletePurchaseBtn = canMutatePurchase
-        ? '<button type="button" class="btn small danger tx-status-btn" data-del-purchase="' + esc(p.id) + '">حذف</button>' : '';
-      const purchaseLockReason = (p.returns || []).length ? 'برگشت ثبت‌شده' : 'مصرف لایه FIFO';
-      const purchaseLockHint = !canMutatePurchase
-        ? '<span class="sub tx-row-meta">برای اصلاح، از «برگشت» استفاده کنید — این خرید ' + purchaseLockReason + ' دارد</span>' : '';
-      // Itemised purchases: expandable list of lines (name, qty + unit, unit price, line total).
-      // Display only — reads p.items / data.products, never writes. Legacy single-product
-      // and description-only purchases keep their previous title and have no details.
-      const itemsDetails = lineItems.length
-        ? '<details class="row-details"><summary>مشاهده اقلام</summary><div class="row-details-list">' +
-            lineItems.map(it => {
-              const prod = data.products.find(x => x.id === it.productId) || {};
-              const qty = Number(it.qty) || 0;
-              const unitCost = Number(it.unitCost) || 0;
-              const unit = prod.packageWeight ? 'بسته' : 'واحد';
-              const pkg = prod.packageWeight ? ' (وزن بسته ' + enToFaDigits(String(prod.packageWeight)) + ')' : '';
-              return '<div class="row-details-item">' +
-                '<span class="row-details-name">' + esc(it.name || prod.name || 'کالا') + '</span>' +
-                '<span class="row-details-total">' + toman(qty * unitCost) + ' ت</span>' +
-                '<span class="row-details-meta">' + enToFaDigits(String(qty)) + ' ' + unit + pkg +
-                  ' × ' + toman(unitCost) + ' ت</span>' +
-              '</div>';
-            }).join('') +
-          '</div></details>'
-        : '';
-      const returnRows = (p.returns || []).map((r, ri) => {
-        const returnItems = Array.isArray(r.items) ? r.items.map(x => {
-          const prod = data.products.find(z => z.id === x.productId) || {};
-          return (prod.name || 'کالا') + ' × ' + (x.qty || 0);
-        }).join('، ') : ((r.qty || 0) + ' واحد');
-        return '<div class="row-details-item"><span class="row-details-name">' + faDate(r.date) + ' · ' + esc(returnItems) + '</span>' +
-          '<span class="row-details-total">' + toman(r.amount || 0) + ' ت</span>' +
-          '<span class="row-details-meta">' + (r.returnReason ? 'علت: ' + esc(purchaseReturnReasonLabel(r.returnReason)) : 'علت ثبت نشده') + '</span></div>';
-      }).join('');
-      const returnsDetails = returnRows
-        ? '<details class="row-details supplier-return-details"><summary>تاریخچه برگشت (' + (p.returns || []).length + ')</summary><div class="row-details-list">' + returnRows + '</div></details>'
-        : '';
-      return `<div class="ledger-row tx-row${itemsDetails || returnsDetails ? ' row-details-wrap' : ''}">
+      const itemCount = lineItems.length || (p.productId ? 1 : (p.desc ? 1 : 0));
+      const itemLabel = itemCount > 0 ? 'قلم کالا' : 'کالا';
+      const ret = (p.returns || []).reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
+      const net = (Number(p.amount) || 0) - ret;
+      return `<div class="ledger-row tx-row supplier-purchase-row" data-open-purchase="${esc(p.id)}" role="button" tabindex="0">
         <span class="name">
-          <span class="tx-row-title">${esc(String(itemsHint))}</span>
-          <span class="sub">${faDate(p.date)}${ret ? ' · برگشت ' + toman(ret) + ' ت' : ''}</span>
-          ${purchaseLockHint}
+          <span class="tx-row-title">${faDate(p.date)}</span>
+          <span class="sub">${enToFaDigits(String(itemCount))} ${itemLabel}</span>
         </span>
         <span class="filler"></span>
-        <span class="amount tx-row-amount">
-          <span class="tx-row-total">${toman(net)} ت</span>
-          ${retBtn}
-          ${editPurchaseBtn}
-          ${deletePurchaseBtn}
-        </span>
-        ${itemsDetails}
-        ${returnsDetails}
+        <span class="amount tx-row-amount"><span class="tx-row-total">${toman(net)} ت</span></span>
+        <span class="supplier-purchase-chevron" aria-hidden="true">‹</span>
       </div>`;
     }).join('') : '<div class="empty" style="padding:12px 0;">خریدی ثبت نشده</div>';
 
