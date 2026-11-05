@@ -1467,9 +1467,10 @@ window.BagheriPresent = (function () {
     if (d === 1) return 'دیروز';
     return n0(d) + ' روز پیش';
   }
-  function lastOfferMap(cid) {
+  function lastOfferMap(cid, customer) {
     var map = Object.create(null);
-    var c = (data.customers || []).find(function (x) { return x && x.id === cid; });
+    // optional `customer` lets callers that already hold the record skip a second lookup
+    var c = customer || (data.customers || []).find(function (x) { return x && x.id === cid; });
     if (!c || !Array.isArray(c.visits)) return map;
     c.visits.forEach(function (v) {
       if (!v || !Array.isArray(v.offeredProducts)) return;
@@ -1601,7 +1602,7 @@ window.BagheriPresent = (function () {
     detailsHtml: detailsHtml, evidenceLines: evidenceLines, namesText: namesText,
     stockSentence: stockSentence, stockShort: stockShort, reasonLabel: reasonLabel,
     relDays: relDays, productHints: productHints, hintHtml: hintHtml,
-    lastPurchaseMap: lastPurchaseMap, productPurchaseCycle: productPurchaseCycle
+    lastPurchaseMap: lastPurchaseMap, lastOfferMap: lastOfferMap, productPurchaseCycle: productPurchaseCycle
   };
 })();
 
