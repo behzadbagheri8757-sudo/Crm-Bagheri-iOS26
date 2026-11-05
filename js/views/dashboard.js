@@ -267,6 +267,7 @@
     var att = { count: 0, totalBalance: 0, rows: [] };
     var overdueChecks = [];
     var dueSoonChecks = [];
+    var bouncedSupplierChecks = [];
     var followups = 0, lowStock = 0;
 
     try {
@@ -277,11 +278,16 @@
 
     try {
       var todayMs = new Date(todayISO() + 'T00:00:00').getTime();
-      var allChecks = (typeof data !== 'undefined' && Array.isArray(data.checks)) ? data.checks : [];
+      var allChecks = (typeof data !== 'undefined' && Array.isArray(data.checks)) ? data.checks.slice() : [];
+      (data.suppliers || []).forEach(function (sp) {
+        (sp.payments || []).forEach(function (p) {
+          if (p.method === 'check') allChecks.push(Object.assign({ supplierName: sp.name, supplierId: sp.id, isSupplierCheck: true }, p));
+        });
+      });
       allChecks.forEach(function (c) {
-        if (!c || !c.dueDate) return;
-        // همان تعریف checkStatusLabel در checks.js: فقط 'cleared' نادیده گرفته می‌شود
-        if (c.status === 'cleared') return;
+        if (!c) return;
+        if (c.isSupplierCheck && c.status === 'bounced') { bouncedSupplierChecks.push(c); return; }
+        if (c.status === 'cleared' || c.status === 'bounced' || !c.dueDate) return;
 
         var dueMs = new Date(c.dueDate + 'T00:00:00').getTime();
         if (!isFinite(dueMs)) return;
@@ -320,6 +326,7 @@
     if (att.count > 0) bits.push(row('#', att.count, 'مشتری نیازمند پیگیری', money(att.totalBalance), ' data-attention="1"'));
     if (overdueChecks.length > 0) bits.push(row('#/checks?filter=overdue', overdueChecks.length, 'چک سررسیدگذشته'));
     if (dueSoonChecks.length > 0) bits.push(row('#/checks?filter=dueSoon', dueSoonChecks.length, 'چک نزدیک سررسید'));
+    if (bouncedSupplierChecks.length > 0) bits.push(row('#/checks?filter=bounced', bouncedSupplierChecks.length, 'چک برگشتی تأمین‌کننده (از همین بدهی)'));
     if (followups) bits.push(row('#/watches?filter=followup', followups, 'پیگیری‌های باز'));
     if (lowStock) bits.push(row('#/inventory', lowStock, 'کالای کم‌موجودی'));
 

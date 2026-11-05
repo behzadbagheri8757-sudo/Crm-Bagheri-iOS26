@@ -1528,15 +1528,31 @@
       var productMap = new Map((data.products || []).map(function (p) { return [p.id, p]; }));
       productById = function (pid) { return productMap.get(pid) || null; };
     }
+    var lastPurchaseMap = (typeof P.lastPurchaseMap === 'function' ? P.lastPurchaseMap(cid) : null) || {};
+    // Same inputs the visit form feeds productPurchaseCycle: {buys, metrics}. Metrics are ctx-memoised.
+    var skuMetrics = [];
+    try { if (typeof _extractSkuRawMetrics === 'function') skuMetrics = _extractSkuRawMetrics(cid, ctx) || []; } catch (eM) { skuMetrics = []; }
+    var cycleInput = { buys: lastPurchaseMap, metrics: skuMetrics };
+    var cycleCache = new Map();
     return {
       ctx: ctx,
       customer: customer,
+      // Per-product cycle (BagheriPresent.productPurchaseCycle = same helper as the visit form), computed once per pid.
+      // null = helper unavailable → callers show nothing (no invented due dates).
+      cycleOf: function (pid) {
+        if (!cycleCache.has(pid)) {
+          cycleCache.set(pid, typeof P.productPurchaseCycle === 'function'
+            ? qvSafe(function () { return P.productPurchaseCycle(cid, pid, cycleInput); }, null)
+            : null);
+        }
+        return cycleCache.get(pid);
+      },
       behavior: customerBehavior(cid, ctx) || {},
       invoices: customerInvoices(cid, ctx) || [],
       checks: customerChecks(cid, ctx) || [],
       watchData: loadWatchData(cid, ctx),
       productById: productById,
-      lastPurchaseMap: (typeof P.lastPurchaseMap === 'function' ? P.lastPurchaseMap(cid) : null) || {},
+      lastPurchaseMap: lastPurchaseMap,
       lastOfferMap: (typeof P.lastOfferMap === 'function' ? P.lastOfferMap(cid, customer) : null) || {},
       today: todayISO()
     };
@@ -1643,40 +1659,80 @@
     var rows = [];
     Object.keys(pre.lastOfferMap).forEach(function (pid) {
       var of = pre.lastOfferMap[pid];                      // lastOfferMap = ONLY the latest reaction per product
-      if (!of || of.reaction !== 'rejected') return;       // deferred / accepted → not shown
+      if (!of || (of.reaction !== 'rejected' && of.reaction !== 'deferred')) return;   // accepted → not here
       var product = pre.productById(pid);
       if (!isOfferableProduct(product)) return;
       var bought = pre.lastPurchaseMap[pid];
-      // Resolved only when the purchase is strictly AFTER the rejection day. Same-day order is unknown
+      // Resolved only when the purchase is strictly AFTER the reaction day. Same-day order is unknown
       // (invoices carry no time), so it stays listed — we do not claim it was resolved.
       if (bought && String(bought).slice(0, 10) > String(of.date || '').slice(0, 10)) return;
       var when = rel(of.date);
+      var cy = pre.cycleOf(pid);
+      var detail = (when ? when + ' ' : '') + (of.reaction === 'deferred' ? 'گفت بعداً تصمیم می‌گیرد' : getRejectionText(of.reason, of.stockSource));
       rows.push({
         productId: pid,
         name: product.name || '',
+        kind: of.reaction,                                  // 'rejected' | 'deferred' (never merged)
+        // relevance to THIS visit: product's own cycle is due/overdue → first; then recency
+        relevance: (cy && (cy.state === 'due_today' || cy.state === 'overdue')) ? 0 : 1,
         sortKey: of.key || '',
-        text: (product.name || '') + ' — ' + (when ? when + ' ' : '') + getRejectionText(of.reason, of.stockSource)
+        detail: detail,
+        text: (product.name || '') + ' — ' + detail
       });
     });
-    rows.sort(function (a, b) { return a.sortKey < b.sortKey ? 1 : (a.sortKey > b.sortKey ? -1 : 0); });
-    // NOT capped here: eligibility is decided for every rejected product; the display cap is applied by the caller.
-    return rows.map(function (r) { return { productId: r.productId, name: r.name, text: r.text }; });
+    rows.sort(function (a, b) {
+      if (a.relevance !== b.relevance) return a.relevance - b.relevance;
+      return a.sortKey < b.sortKey ? 1 : (a.sortKey > b.sortKey ? -1 : 0);
+    });
+    // NOT capped here: eligibility is decided for every product; the display cap is applied by the caller.
+    return rows.map(function (r) { return { productId: r.productId, name: r.name, kind: r.kind, detail: r.detail, text: r.text }; });
   }
 
+  // «پیشنهاد محتمل» = the purchase cycle (productPurchaseCycle, same helper as the visit form) is due today or overdue.
+  // For a grouped product (analysisGroupId) cycle, count and last date are the GROUP's, so the due date belongs to the
+  // group: at most ONE suggestion per group. Rejections are per product (never spread to siblings); the representative
+  // is the first eligible member: aggregation's representative SKU (most recent purchase event), then latest own purchase.
+  // Candidates = every product the customer bought; not due / unknown / thin history → not suggested; slots never padded.
   function getSuggestedProducts(pre, excludePids) {
     var P = global.BagheriPresent || {};
     var rel = typeof P.relDays === 'function' ? P.relDays : function () { return ''; };
+    var n0 = typeof P.n0 === 'function' ? P.n0 : function (v) { return String(v); };
     var skip = Object.create(null);
     (excludePids || []).forEach(function (pid) { skip[pid] = true; });
-    var out = [];
-    var top = Array.isArray(pre.behavior.topProducts) ? pre.behavior.topProducts : [];   // already active + net qty > 0
-    for (var i = 0; i < top.length && out.length < QV_MAX_PRODUCTS; i++) {
-      var pid = top[i] && top[i].productId;
-      if (!pid || skip[pid]) continue;
+    var rows = [];
+    Object.keys(pre.lastPurchaseMap).forEach(function (pid) {
+      if (skip[pid]) return;
       var product = pre.productById(pid);
-      if (!isOfferableProduct(product)) continue;
+      if (!isOfferableProduct(product)) return;
+      var cy = pre.cycleOf(pid);
+      if (!cy || (cy.state !== 'due_today' && cy.state !== 'overdue')) return;
       var when = rel(pre.lastPurchaseMap[pid]);
-      out.push({ productId: pid, name: product.name || top[i].name || '', lastPurchaseText: when ? 'آخرین خرید: ' + when : '' });
+      var grouped = !!cy.familyLevel;
+      rows.push({
+        productId: pid,
+        name: product.name || '',
+        groupKey: grouped && cy.familyId != null ? 'g:' + cy.familyId : 'p:' + pid,
+        isRepresentative: cy.representativeProductId === pid ? 1 : 0,
+        skuLastDate: String(pre.lastPurchaseMap[pid] || ''),
+        behind: cy.typicalCycle > 0 ? cy.daysOverdue / cy.typicalCycle : 0,   // lateness relative to its OWN cycle
+        purchaseCount: cy.purchaseCount || 0,                                   // history quality: tie-breaker only
+        daysOverdue: cy.daysOverdue || 0,
+        reasonText: grouped
+          ? 'موعد گروه تحلیلی این محصول: ' + (cy.state === 'overdue' ? 'حدود ' + n0(cy.daysOverdue) + ' روز از موعد معمول گذشته' : 'امروز موعد معمول است')
+          : (cy.state === 'overdue' ? 'حدود ' + n0(cy.daysOverdue) + ' روز از موعد معمول خرید گذشته' : 'امروز موعد معمول خرید است'),
+        lastPurchaseText: when ? (grouped ? 'آخرین خرید همین محصول: ' : 'آخرین خرید: ') + when : ''
+      });
+    });
+    rows.sort(function (a, b) {
+      return (b.behind - a.behind) || (b.purchaseCount - a.purchaseCount) || (b.daysOverdue - a.daysOverdue) ||
+        (b.isRepresentative - a.isRepresentative) || (a.skuLastDate < b.skuLastDate ? 1 : (a.skuLastDate > b.skuLastDate ? -1 : 0)) ||
+        String(a.name).localeCompare(String(b.name));
+    });
+    var seen = Object.create(null), out = [];
+    for (var i = 0; i < rows.length && out.length < QV_MAX_PRODUCTS; i++) {
+      if (seen[rows[i].groupKey]) continue;     // one suggestion per group
+      seen[rows[i].groupKey] = true;
+      out.push({ productId: rows[i].productId, name: rows[i].name, reasonText: rows[i].reasonText, lastPurchaseText: rows[i].lastPurchaseText });
     }
     return out;
   }
@@ -1689,38 +1745,42 @@
     summary.purchaseTiming = qvSafe(function () { return getPurchaseTiming(pre, summary.lastPurchase); }, null);
     summary.priorityAlert = qvSafe(function () { return getPriorityAlert(pre); }, null);
     var allToCheck = qvSafe(function () { return getProductsToCheck(pre); }, []);
-    // A product lives in ONE list: every unresolved rejection (not just the 2 displayed) is kept out of «پیشنهاد».
+    // A product lives in ONE list: every unresolved rejection/deferral (not just the 2 displayed) is kept out of «پیشنهاد».
     var checkIds = allToCheck.map(function (p) { return p.productId; });
-    summary.productsToCheck = allToCheck.slice(0, QV_MAX_PRODUCTS);
+    summary.productsToCheck = allToCheck.slice(0, QV_MAX_PRODUCTS);   // display cap only; eligibility above used ALL
     summary.suggestedProducts = qvSafe(function () { return getSuggestedProducts(pre, checkIds); }, []);
     return summary;
   }
 
-  /* ---- rendering (existing bp-qv-* classes; a few additive ones in visual-grammar-pages.css) ---- */
+  /* ---- rendering (grouped boxes; tokens/rules in visual-grammar-pages.css) ---- */
   function qvPurchaseHtml(s) {
     var P = global.BagheriPresent || {};
     var lp = s.lastPurchase, t = s.purchaseTiming;
     if (!lp && !(t && t.state === 'none')) return '';
     var rel = lp && typeof P.relDays === 'function' ? P.relDays(lp.date) : '';
-    var line = lp
-      ? '<div class="bp-qv-line">' + esc(faDate(lp.date)) + ' · ' + toman(lp.amount) + ' ت' + (rel ? ' · ' + esc(rel) : '') + '</div>'
+    var main = lp ? '<div class="bp-qv-main">' + (rel ? esc(rel) + ' · ' : '') + toman(lp.amount) + ' ت</div>' : '';
+    var sub = lp
+      ? '<div class="bp-qv-sub">' + esc(faDate(lp.date)) + (lp.invoiceNumber ? ' · فاکتور ' + esc(lp.invoiceNumber) : '') + '</div>'
       : '';
-    var timing = t ? '<div class="bp-qv-sub is-' + esc(t.state) + '">' + esc(t.text) + '</div>' : '';
-    return '<div class="bp-qv-block"><div class="bp-qv-section-label">آخرین خرید</div>' + line + timing + '</div>';
+    var timing = t ? '<div class="bp-qv-timing is-' + esc(t.state) + '">' + esc(t.text) + '</div>' : '';
+    return '<section class="bp-qv-group"><div class="bp-qv-section-label">آخرین خرید</div>' + main + sub + timing + '</section>';
   }
   function qvProductsHtml(s) {
     var out = '';
     if (s.suggestedProducts.length) {
-      out += '<div class="bp-qv-section-label">پیشنهاد محتمل</div>' + s.suggestedProducts.map(function (p) {
-        return '<div class="bp-qv-line">' + esc(p.name) + (p.lastPurchaseText ? ' <span class="bp-qv-muted">· ' + esc(p.lastPurchaseText) + '</span>' : '') + '</div>';
-      }).join('');
+      out += '<section class="bp-qv-section"><div class="bp-qv-section-label">پیشنهاد محتمل</div>' + s.suggestedProducts.map(function (p) {
+        return '<div class="bp-qv-item"><div class="bp-qv-item-name">' + esc(p.name) + '</div>' +
+          '<div class="bp-qv-item-sub">' + esc(p.reasonText) + (p.lastPurchaseText ? ' · ' + esc(p.lastPurchaseText) : '') + '</div></div>';
+      }).join('') + '</section>';
     }
     if (s.productsToCheck.length) {
-      out += '<div class="bp-qv-section-label' + (out ? ' is-spaced' : '') + '">قبل از پیشنهاد بررسی کن</div>' + s.productsToCheck.map(function (p) {
-        return '<div class="bp-qv-line">' + esc(p.text) + '</div>';
-      }).join('');
+      out += '<section class="bp-qv-section"><div class="bp-qv-section-label">قبل از پیشنهاد بررسی کن</div>' + s.productsToCheck.map(function (p) {
+        return '<div class="bp-qv-item is-check is-' + esc(p.kind) + '"><div class="bp-qv-item-name">' + esc(p.name) +
+          (p.kind === 'deferred' ? '<span class="bp-qv-tag">پیگیری پیشنهاد قبلی</span>' : '') + '</div>' +
+          '<div class="bp-qv-item-sub">' + esc(p.detail) + '</div></div>';
+      }).join('') + '</section>';
     }
-    return out ? '<div class="bp-qv-block">' + out + '</div>' : '';
+    return out;
   }
 
   /* Central quick view for the Customers list. Presentation-only: it reuses
@@ -1761,7 +1821,7 @@
     var showStory = !!story;   // shown whenever it exists; CSS clamps it to 2 lines
 
     var alertHtml = summary.priorityAlert
-      ? '<div class="bp-qv-alert is-' + esc(summary.priorityAlert.level) + '" role="alert"><span class="bp-attention-icon" aria-hidden="true"></span><span>' + esc(summary.priorityAlert.text) + '</span></div>'
+      ? '<div class="bp-qv-alert is-' + esc(summary.priorityAlert.level) + '" role="alert">' + esc(summary.priorityAlert.text) + '</div>'
       : '';
 
     function qvBtn(action, label) {
@@ -1781,25 +1841,28 @@
         '<button type="button" class="bp-qv-close" aria-label="بستن">×</button>' +
         '<div class="bp-qv-head">' +
           '<div class="bp-qv-name">' + esc(c.name || 'مشتری') + '</div>' +
-          (c.ownerName ? '<div class="bp-qv-meta">' + esc(c.ownerName) + '</div>' : '') +
-          (c.phone ? '<div class="bp-qv-meta">' + esc(c.phone) + '</div>' : '') +
-          '<div class="bp-qv-balance is-prominent ' + (totals.balance > 0 ? 'is-debt' : '') + '">' +
-            '<span class="bp-qv-balance-label">' + esc(balanceStatusWord(totals.balance)) + '</span>' +
-            (totals.balance !== 0 ? '<span class="bp-qv-balance-amount">' + toman(Math.abs(totals.balance)) + ' ت</span>' : '') +
+          ((c.ownerName || c.phone) ? '<div class="bp-qv-meta">' + [c.ownerName, c.phone].filter(Boolean).map(esc).join(' · ') + '</div>' : '') +
+          '<div class="bp-qv-status">' +
+            '<div class="bp-qv-balance is-prominent ' + (totals.balance > 0 ? 'is-debt' : '') + '">' +
+              '<span class="bp-qv-balance-label">' + esc(balanceStatusWord(totals.balance)) + '</span>' +
+              (totals.balance !== 0 ? '<span class="bp-qv-balance-amount">' + toman(Math.abs(totals.balance)) + ' ت</span>' : '') +
+            '</div>' +
+            '<div class="bp-qv-health radar-risk-' + esc(riskLevel || 'normal') + '">' + esc(health) + '</div>' +
           '</div>' +
-          '<div class="bp-qv-health radar-risk-' + esc(riskLevel || 'normal') + '">' + esc(health) + '</div>' +
         '</div>' +
         alertHtml +
         qvPurchaseHtml(summary) +
         qvProductsHtml(summary) +
-        (showStory ? '<div class="bp-qv-story"><div class="bp-qv-section-label">خلاصه وضعیت</div><div>' + esc(story) + '</div></div>' : '') +
+        (showStory ? '<div class="bp-qv-story"><div class="bp-qv-section-label">خلاصه وضعیت</div><div class="bp-qv-story-text">' + esc(story) + '</div></div>' : '') +
         recommendedHintHtml +
-        '<div class="bp-qv-actions">' +
-          qvBtn('visit', 'ثبت ویزیت') +
-          qvBtn('invoice', 'ثبت فاکتور') +
-          qvBtn('payment', 'ثبت پرداخت') +
+        '<div class="bp-qv-footer">' +
+          '<div class="bp-qv-actions">' +
+            qvBtn('visit', 'ثبت ویزیت') +
+            qvBtn('invoice', 'ثبت فاکتور') +
+            qvBtn('payment', 'ثبت پرداخت') +
+          '</div>' +
+          '<button type="button" class="bp-qv-full">جزئیات بیشتر ›</button>' +
         '</div>' +
-        '<button type="button" class="bp-qv-full">جزئیات بیشتر ›</button>' +
       '</div>';
     var modalRoot = document.getElementById('modalRoot');
     if (!modalRoot) return;
@@ -1850,10 +1913,11 @@
     // Lightweight downward swipe-to-close; no document-level gesture handling.
     var startY = null;
     if (card) {
-      card.addEventListener('touchstart', function (e) { if (e.touches && e.touches[0]) startY = e.touches[0].clientY; }, { passive: true });
+      // Only a swipe that starts AND ends with the content at the top may close; scrolling back up must not.
+      card.addEventListener('touchstart', function (e) { startY = (e.touches && e.touches[0] && card.scrollTop <= 0) ? e.touches[0].clientY : null; }, { passive: true });
       card.addEventListener('touchend', function (e) {
         if (startY == null || !e.changedTouches || !e.changedTouches[0]) return;
-        if (e.changedTouches[0].clientY - startY > 70) close();
+        if (card.scrollTop <= 0 && e.changedTouches[0].clientY - startY > 70) close();
         startY = null;
       }, { passive: true });
     }

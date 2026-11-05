@@ -20,8 +20,160 @@
     AppRouter.navigate('/supplier', { id: sid });
   }
 
+  function purchaseLayers(purchase) {
+    return (data.inventoryLayers || []).filter(layer => layer.purchaseId === purchase.id);
+  }
+
+  var PURCHASE_RETURN_REASON_LABELS = {
+    defective: 'خرابی', deliveryError: 'اشتباه در ارسال', overstock: 'مازاد کالا',
+    changeMind: 'تغییر نظر', complaint: 'شکایت', other: 'سایر'
+  };
+  function purchaseReturnReasonLabel(code) {
+    if (!code) return '';
+    return PURCHASE_RETURN_REASON_LABELS[code] || String(code);
+  }
+
+  // Purchase edits/deletes are deliberately limited to untouched purchases.
+  // Any return or FIFO consumption makes an accounting-safe reversal non-trivial.
+  function purchaseCanBeEditedOrDeleted(purchase) {
+    if (!purchase || (purchase.returns || []).length) return false;
+    const layers = purchaseLayers(purchase);
+    const lines = purchaseLines(purchase);
+    if (lines.length && !layers.length) return false;
+    if (layers.some(layer => {
+      const consumed = (Number(layer.qtyOriginal) || 0) - (Number(layer.qtyRemaining) || 0);
+      return consumed > 1e-9 || layer.status === 'voided';
+    })) return false;
+    if (Array.isArray(purchase.items) && purchase.items.length) {
+      return layers.length === purchase.items.length && purchase.items.every(item => item && item.id &&
+        layers.filter(layer => layer.itemId === item.id && layer.productId === item.productId).length === 1);
+    }
+    if (purchase.productId) {
+      return layers.length === 1 && layers[0].productId === purchase.productId;
+    }
+    return true;
+  }
+
+  function openEditPurchaseSheet(s, purchase) {
+    if (!purchaseCanBeEditedOrDeleted(purchase)) {
+      showToast('این خرید برگشت یا مصرف FIFO دارد؛ ویرایش مستقیم برای جلوگیری از مغایرت مالی مسدود است.');
+      return;
+    }
+    const isMulti = Array.isArray(purchase.items) && purchase.items.length > 0;
+    const isStockedSingle = !!purchase.productId;
+    const hasOpenFifoLayer = purchaseLayers(purchase).some(layer => (Number(layer.qtyRemaining) || 0) > 0 && layer.status === 'open');
+    const fifoDateWarning = hasOpenFifoLayer
+      ? '<div class=\"empty\" style=\"padding:4px 0;text-align:right;font-size:.75rem;\">تغییر تاریخ خرید، ترتیب مصرف موجودی (FIFO) را برای فروش‌های آینده تغییر می‌دهد.</div>'
+      : '';
+    const lineFields = isMulti ? purchase.items.map((it, idx) => `
+      <div class="card supplier-edit-line" style="margin:8px 0;padding:10px;">
+        <strong>${esc(it.name || 'کالا')}</strong>
+        <div class="field"><label>تعداد</label><input class="edit-purchase-qty" data-index="${idx}" type="text" inputmode="decimal" value="${it.qty || ''}"></div>
+        <div class="field"><label>قیمت واحد (تومان)</label><input class="edit-purchase-cost" data-index="${idx}" type="text" inputmode="decimal" value="${it.unitCost || ''}"></div>
+      </div>`).join('') : '';
+    openSheet(`
+      <h3>ویرایش خرید</h3>
+      <div class="field"><label>تاریخ</label>${shamsiDateInputHTML('edit-purchase-date', purchase.date || todayISO())}</div>
+      ${isMulti ? lineFields : (isStockedSingle ? `
+        <div class="field"><label>تعداد</label><input id="edit-purchase-qty" type="text" inputmode="decimal" value="${purchase.qty || ''}"></div>
+        <div class="field"><label>مبلغ کل خرید (تومان)</label><input id="edit-purchase-amount" type="text" inputmode="decimal" value="${purchase.amount || ''}"></div>` : `
+        <div class="field"><label>مبلغ کل خرید (تومان)</label><input id="edit-purchase-amount" type="text" inputmode="decimal" value="${purchase.amount || ''}"></div>`)}
+      <div class="field"><label>توضیح</label><input id="edit-purchase-desc" value="${esc(purchase.desc || '')}"></div>
+      ${fifoDateWarning}
+      <div class="empty">ویرایش فقط برای خریدی فعال است که هنوز برگشت نخورده و هیچ بخشی از لایهٔ FIFO آن مصرف نشده باشد.</div>
+      <div class="btn-row"><button class="btn" id="save-purchase-edit">ذخیره تغییرات</button></div>
+    `, {dirtyCheck:true});
+    document.getElementById('save-purchase-edit').addEventListener('click', async function (ev) {
+      await withSubmitGuard(ev.currentTarget, async () => {
+        const date = document.getElementById('edit-purchase-date').value || purchase.date || todayISO();
+        const desc = (document.getElementById('edit-purchase-desc').value || '').trim();
+        const previousData = JSON.parse(JSON.stringify(data));
+        try {
+        if (isMulti) {
+          const qtyInputs = Array.from(document.querySelectorAll('.edit-purchase-qty'));
+          const costInputs = Array.from(document.querySelectorAll('.edit-purchase-cost'));
+          const edits = purchase.items.map((item, idx) => ({
+            item, qty: numVal(qtyInputs[idx]), unitCost: numVal(costInputs[idx])
+          }));
+          if (edits.some(x => !(x.qty > 0) || !(x.unitCost > 0))) {
+            showToast('تعداد و قیمت واحد تمام اقلام باید بیشتر از صفر باشد'); throw new Error('validation');
+          }
+          for (const edit of edits) {
+            const layers = purchaseLayers(purchase).filter(layer => layer.itemId === edit.item.id && layer.productId === edit.item.productId);
+            if (layers.length !== 1) { showToast('لایهٔ FIFO یکی از اقلام یکتا نیست؛ ویرایش متوقف شد'); throw new Error('validation'); }
+            const result = adjustPurchaseLayerQty(purchase.id, edit.item.productId, edit.qty, edit.item.id);
+            if (!result.ok) { showToast(result.error || 'ویرایش مقدار ممکن نشد'); throw new Error('validation'); }
+            result.layer.unitCost = edit.unitCost;
+            edit.item.unitCost = edit.unitCost;
+            // adjustPurchaseLayerQty writes lineAmount using the OLD unitCost; overwrite with the edited cost.
+            edit.item.lineAmount = edit.qty * edit.unitCost;
+          }
+          purchase.amount = edits.reduce((sum, edit) => sum + edit.qty * edit.unitCost, 0);
+        } else if (isStockedSingle) {
+          const qty = numVal(document.getElementById('edit-purchase-qty'));
+          const amount = numVal(document.getElementById('edit-purchase-amount'));
+          if (!(qty > 0) || !(amount > 0)) { showToast('تعداد و مبلغ باید بیشتر از صفر باشد'); throw new Error('validation'); }
+          const layers = purchaseLayers(purchase).filter(layer => layer.productId === purchase.productId);
+          if (layers.length !== 1) { showToast('لایهٔ FIFO این خرید یکتا نیست؛ ویرایش متوقف شد'); throw new Error('validation'); }
+          const result = adjustPurchaseLayerQty(purchase.id, purchase.productId, qty);
+          if (!result.ok) { showToast(result.error || 'ویرایش مقدار ممکن نشد'); throw new Error('validation'); }
+          result.layer.unitCost = amount / qty;
+          purchase.amount = amount;
+        } else {
+          const amount = numVal(document.getElementById('edit-purchase-amount'));
+          if (!(amount > 0)) { showToast('مبلغ باید بیشتر از صفر باشد'); throw new Error('validation'); }
+          purchase.amount = amount;
+        }
+        purchase.date = date;
+        purchase.desc = desc;
+        purchaseLayers(purchase).forEach(layer => { layer.date = date; });
+        (data.products || []).forEach(product => {
+          (product.stockLog || []).forEach(log => { if (log.purchaseId === purchase.id && String(log.note || '').indexOf('خرید از') === 0) log.date = date; });
+        });
+        } catch (mutationErr) {
+          restoreDataInPlace(previousData);
+          throw mutationErr;
+        }
+        try { await saveData(); }
+        catch (saveErr) { restoreDataInPlace(previousData); throw saveErr; }
+        closeModal(); drawSupplierPage(rootEl); showToast('خرید ویرایش شد');
+      });
+    });
+  }
+
   function renderSupplierPurchaseReturn(s) {
     // Re-attach return buttons (single and multi-item) after re-render
+    document.querySelectorAll('[data-edit-purchase]').forEach(btn => {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        const purchase = (s.purchases || []).find(p => p.id === this.getAttribute('data-edit-purchase'));
+        if (purchase) openEditPurchaseSheet(s, purchase);
+      });
+    });
+    document.querySelectorAll('[data-del-purchase]').forEach(btn => {
+      btn.addEventListener('click', async function (ev) {
+        ev.stopPropagation();
+        await withSubmitGuard(ev.currentTarget, async () => {
+          const purchase = (s.purchases || []).find(p => p.id === this.getAttribute('data-del-purchase'));
+          if (!purchase || !purchaseCanBeEditedOrDeleted(purchase)) {
+            showToast('حذف فقط برای خرید بدون برگشت و بدون مصرف FIFO مجاز است'); throw new Error('validation');
+          }
+          if (!(await appConfirm('این خرید به مبلغ ' + toman(purchase.amount || 0) + ' تومان حذف شود؟ موجودی و مانده تأمین‌کننده اصلاح خواهد شد.'))) throw new Error('validation');
+          const previousData = JSON.parse(JSON.stringify(data));
+          const layers = purchaseLayers(purchase);
+          if (layers.length) {
+            const result = hardDeletePurchaseLayers(purchase.id);
+            if (!result.ok) { showToast(result.error || 'حذف خرید ممکن نشد'); throw new Error('validation'); }
+          }
+          const index = (s.purchases || []).indexOf(purchase);
+          if (index < 0) { restoreDataInPlace(previousData); throw new Error('validation'); }
+          s.purchases.splice(index, 1);
+          try { await saveData(); }
+          catch (saveErr) { restoreDataInPlace(previousData); throw saveErr; }
+          drawSupplierPage(rootEl); showToast('خرید حذف شد');
+        });
+      });
+    });
     document.querySelectorAll('[data-return-purchase]').forEach(btn => {
       btn.addEventListener('click', function (e) {
         e.stopPropagation();
@@ -224,8 +376,10 @@
           if (realIdx < 0) throw new Error('validation');
           const label = p.method === 'check' ? ('چک' + (p.checkNumber ? (' #' + p.checkNumber) : '')) : 'پرداخت';
           if (!(await appConfirm('«' + label + '» به مبلغ ' + toman(p.method === 'check' ? (p.faceAmount || p.amount) : p.amount) + ' تومان حذف شود؟\nمانده حساب تامین‌کننده اصلاح می‌شود.'))) throw new Error('validation');
+          const previousData = JSON.parse(JSON.stringify(data));
           s.payments.splice(realIdx, 1);
-          await saveData();
+          try { await saveData(); }
+          catch (saveErr) { restoreDataInPlace(previousData); throw saveErr; }
           drawSupplierPage(rootEl);
           showToast('حذف شد');
         });
@@ -234,21 +388,29 @@
 
     // Re-attach check status toggle
     document.querySelectorAll('[data-sup-check-status]').forEach(btn => {
-      btn.addEventListener('click', async function () {
-        const pidx = parseInt(this.getAttribute('data-sup-check-status'), 10);
-        const payments = (s.payments || []).slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-        const p = payments[pidx];
-        if (!p || p.method !== 'check') return;
-        const order = ['pending', 'cleared', 'bounced'];
-        const cur = p.status || 'pending';
-        const next = order[(order.indexOf(cur) + 1) % order.length];
-        const face = typeof p.faceAmount === 'number' ? p.faceAmount : p.amount;
-        p.faceAmount = face;
-        p.status = next;
-        p.amount = (next === 'bounced') ? 0 : face;
-        await saveData();
-        drawSupplierPage(rootEl);
-        showToast(next === 'cleared' ? 'چک پرداخت‌شده شد' : (next === 'bounced' ? 'چک برگشتی شد — از مانده حذف شد' : 'چک در جریان شد'));
+      btn.addEventListener('click', async function (ev) {
+        await withSubmitGuard(ev.currentTarget, async () => {
+          const pidx = parseInt(this.getAttribute('data-sup-check-status'), 10);
+          const payments = (s.payments || []).slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+          const p = payments[pidx];
+          if (!p || p.method !== 'check') throw new Error('validation');
+          const cur = p.status || 'pending';
+          if (cur === 'bounced') { showToast('چک برگشتی وضعیت پایانی است؛ برای اصلاح از ویرایش چک استفاده کنید'); throw new Error('validation'); }
+          const next = cur === 'pending' ? 'cleared' : 'bounced';
+          const face = typeof p.faceAmount === 'number' ? p.faceAmount : p.amount;
+          const prompt = next === 'cleared'
+            ? 'آیا از ثبت پرداخت‌شدن این چک به مبلغ ' + toman(face) + ' تومان مطمئن هستید؟ مانده تأمین‌کننده کاهش می‌یابد.'
+            : 'آیا این چک واقعاً برگشت خورده است؟ با این تغییر، پرداخت از حساب تأمین‌کننده حذف و بدهی افزایش می‌یابد.';
+          if (!(await appConfirm(prompt))) throw new Error('validation');
+          const previousData = JSON.parse(JSON.stringify(data));
+          p.faceAmount = face;
+          p.status = next;
+          p.amount = next === 'bounced' ? 0 : face;
+          try { await saveData(); }
+          catch (saveErr) { restoreDataInPlace(previousData); throw saveErr; }
+          drawSupplierPage(rootEl);
+          showToast(next === 'cleared' ? 'چک پرداخت‌شده شد' : 'چک برگشتی شد');
+        });
       });
     });
 
@@ -278,23 +440,32 @@
           </div>
           <div class="btn-row"><button class="btn" id="save-sup-check-edit">ذخیره</button></div>
         `, {dirtyCheck:true});
-        document.getElementById('save-sup-check-edit').addEventListener('click', async function () {
-          const amount = numVal(document.getElementById('f-amount'));
-          if (amount <= 0) { showToast('مبلغ رو وارد کن'); return; }
-          const status = document.getElementById('f-status').value || 'pending';
-          p.faceAmount = amount;
-          p.amount = (status === 'bounced') ? 0 : amount;
-          p.status = status;
-          p.issueDate = document.getElementById('f-date').value || todayISO();
-          p.date = p.issueDate;
-          p.dueDate = document.getElementById('f-due').value || p.issueDate;
-          p.checkNumber = (document.getElementById('f-check-num').value || '').trim();
-          p.bank = (document.getElementById('f-bank').value || '').trim();
-          p.note = (document.getElementById('f-note').value || '').trim();
-          await saveData();
-          closeModal();
-          drawSupplierPage(rootEl);
-          showToast('چک ویرایش شد');
+        document.getElementById('save-sup-check-edit').addEventListener('click', async function (ev) {
+          await withSubmitGuard(ev.currentTarget, async () => {
+            const amount = numVal(document.getElementById('f-amount'));
+            if (amount <= 0) { showToast('مبلغ باید بیشتر از صفر باشد'); throw new Error('validation'); }
+            const status = document.getElementById('f-status').value || 'pending';
+            const oldStatus = p.status || 'pending';
+            if (status !== oldStatus) {
+              const statusText = status === 'bounced' ? 'برگشتی' : status === 'cleared' ? 'پرداخت‌شده' : 'در جریان';
+              if (!(await appConfirm('وضعیت چک از «' + (oldStatus === 'bounced' ? 'برگشتی' : oldStatus === 'cleared' ? 'پرداخت‌شده' : 'در جریان') + '» به «' + statusText + '» تغییر کند؟ مانده تأمین‌کننده اصلاح می‌شود.'))) throw new Error('validation');
+            }
+            const previousData = JSON.parse(JSON.stringify(data));
+            p.faceAmount = amount;
+            p.amount = status === 'bounced' ? 0 : amount;
+            p.status = status;
+            p.issueDate = document.getElementById('f-date').value || todayISO();
+            p.date = p.issueDate;
+            p.dueDate = document.getElementById('f-due').value || p.issueDate;
+            p.checkNumber = (document.getElementById('f-check-num').value || '').trim();
+            p.bank = (document.getElementById('f-bank').value || '').trim();
+            p.note = (document.getElementById('f-note').value || '').trim();
+            try { await saveData(); }
+            catch (saveErr) { restoreDataInPlace(previousData); throw saveErr; }
+            closeModal();
+            drawSupplierPage(rootEl);
+            showToast('چک ویرایش شد');
+          });
         });
       });
     });
@@ -333,8 +504,10 @@
             ? 'این تأمین‌کننده غیرفعال شود؟ اطلاعات و سوابق خرید و پرداخت حذف نخواهد شد.'
             : 'تامین‌کننده «' + s.name + '» دوباره فعال شود؟';
           if (!(await appConfirm(msg))) throw new Error('validation');
+          const previousData = JSON.parse(JSON.stringify(data));
           s.active = (s.active === false) ? true : false;
-          await saveData();
+          try { await saveData(); }
+          catch (saveErr) { restoreDataInPlace(previousData); throw saveErr; }
           drawSupplierPage(rootEl);
           showToast(s.active === false ? 'تأمین‌کننده غیرفعال شد' : 'تأمین‌کننده فعال شد');
         });
@@ -506,6 +679,7 @@
         const method = methodEl.value;
         const note = (document.getElementById('f-note').value || '').trim();
         if (amount <= 0) { showToast('مبلغ رو وارد کن'); throw new Error('validation'); }
+        const previousData = JSON.parse(JSON.stringify(data));
         s.payments = s.payments || [];
         if (method === 'check') {
           const dueDate = document.getElementById('f-due').value || date;
@@ -527,7 +701,8 @@
         } else {
           s.payments.push({ id: uid(), date: date, amount: amount, method: 'cash', note: note });
         }
-        await saveData();
+        try { await saveData(); }
+        catch (saveErr) { restoreDataInPlace(previousData); throw saveErr; }
         closeModal();
         drawSupplierPage(rootEl);
         showToast('پرداخت ثبت شد');
@@ -550,10 +725,12 @@
       await withSubmitGuard(ev.currentTarget, async () => {
         const name = document.getElementById('f-name').value.trim();
         if (!name) { showToast('نام رو وارد کن'); throw new Error('validation'); }
+        const previousData = JSON.parse(JSON.stringify(data));
         s.name = name;
         s.phone = document.getElementById('f-phone').value.trim();
         s.openingBalance = numVal(document.getElementById('f-opening'));
-        await saveData();
+        try { await saveData(); }
+        catch (saveErr) { restoreDataInPlace(previousData); throw saveErr; }
         closeModal();
         drawSupplierPage(rootEl);
         showToast('ذخیره شد');
@@ -596,15 +773,24 @@
       if (canReturn && (p.productId || (p.items && p.items.length)) && typeof purchaseActualReturnableQty === 'function') {
         canReturn = purchaseActualReturnableQty(p) > 0;
       }
-      const itemsHint = (p.items && p.items.length) ? (p.items.length + ' قلم') :
-        (p.productId ? ((data.products.find(x => x.id === p.productId) || {}).name || 'کالا') : (p.desc || 'خرید'));
+      const lineItems = Array.isArray(p.items) ? p.items.filter(it => it) : [];
+      const itemsHint = lineItems.length
+        ? lineItems.slice(0, 2).map(it => it.name || ((data.products.find(x => x.id === it.productId) || {}).name) || 'کالا').join('، ') + (lineItems.length > 2 ? ' و ' + enToFaDigits(String(lineItems.length - 2)) + ' قلم دیگر' : '')
+        : (p.productId ? ((data.products.find(x => x.id === p.productId) || {}).name || 'کالا') : (p.desc || 'خرید'));
       const retBtn = canReturn
         ? '<button type="button" class="btn secondary small tx-status-btn" data-return-purchase="' + esc(p.id) + '">برگشت</button>'
         : '';
+      const canMutatePurchase = purchaseCanBeEditedOrDeleted(p);
+      const editPurchaseBtn = canMutatePurchase
+        ? '<button type="button" class="btn small secondary tx-status-btn" data-edit-purchase="' + esc(p.id) + '">ویرایش</button>' : '';
+      const deletePurchaseBtn = canMutatePurchase
+        ? '<button type="button" class="btn small danger tx-status-btn" data-del-purchase="' + esc(p.id) + '">حذف</button>' : '';
+      const purchaseLockReason = (p.returns || []).length ? 'برگشت ثبت‌شده' : 'مصرف لایه FIFO';
+      const purchaseLockHint = !canMutatePurchase
+        ? '<span class="sub tx-row-meta">برای اصلاح، از «برگشت» استفاده کنید — این خرید ' + purchaseLockReason + ' دارد</span>' : '';
       // Itemised purchases: expandable list of lines (name, qty + unit, unit price, line total).
       // Display only — reads p.items / data.products, never writes. Legacy single-product
       // and description-only purchases keep their previous title and have no details.
-      const lineItems = Array.isArray(p.items) ? p.items.filter(it => it) : [];
       const itemsDetails = lineItems.length
         ? '<details class="row-details"><summary>مشاهده اقلام</summary><div class="row-details-list">' +
             lineItems.map(it => {
@@ -622,17 +808,33 @@
             }).join('') +
           '</div></details>'
         : '';
-      return `<div class="ledger-row tx-row${itemsDetails ? ' row-details-wrap' : ''}">
+      const returnRows = (p.returns || []).map((r, ri) => {
+        const returnItems = Array.isArray(r.items) ? r.items.map(x => {
+          const prod = data.products.find(z => z.id === x.productId) || {};
+          return (prod.name || 'کالا') + ' × ' + (x.qty || 0);
+        }).join('، ') : ((r.qty || 0) + ' واحد');
+        return '<div class="row-details-item"><span class="row-details-name">' + faDate(r.date) + ' · ' + esc(returnItems) + '</span>' +
+          '<span class="row-details-total">' + toman(r.amount || 0) + ' ت</span>' +
+          '<span class="row-details-meta">' + (r.returnReason ? 'علت: ' + esc(purchaseReturnReasonLabel(r.returnReason)) : 'علت ثبت نشده') + '</span></div>';
+      }).join('');
+      const returnsDetails = returnRows
+        ? '<details class="row-details supplier-return-details"><summary>تاریخچه برگشت (' + (p.returns || []).length + ')</summary><div class="row-details-list">' + returnRows + '</div></details>'
+        : '';
+      return `<div class="ledger-row tx-row${itemsDetails || returnsDetails ? ' row-details-wrap' : ''}">
         <span class="name">
           <span class="tx-row-title">${esc(String(itemsHint))}</span>
           <span class="sub">${faDate(p.date)}${ret ? ' · برگشت ' + toman(ret) + ' ت' : ''}</span>
+          ${purchaseLockHint}
         </span>
         <span class="filler"></span>
         <span class="amount tx-row-amount">
           <span class="tx-row-total">${toman(net)} ت</span>
           ${retBtn}
+          ${editPurchaseBtn}
+          ${deletePurchaseBtn}
         </span>
         ${itemsDetails}
+        ${returnsDetails}
       </div>`;
     }).join('') : '<div class="empty" style="padding:12px 0;">خریدی ثبت نشده</div>';
 
@@ -651,7 +853,9 @@
         : '';
       const delBtn = '<button type="button" class="btn small danger tx-status-btn" data-sup-pay-del="' + pidx + '">حذف</button>';
       const checkBtns = isCheck
-        ? ('<button type="button" class="btn small secondary tx-status-btn ' + stCls + '" data-sup-check-status="' + pidx + '">' + stLabel + '</button>' +
+        ? ((p.status === 'bounced'
+            ? '<span class="tx-row-meta accent-rust">وضعیت پایانی: برگشتی</span>'
+            : '<button type="button" class="btn small secondary tx-status-btn ' + stCls + '" data-sup-check-status="' + pidx + '">' + stLabel + '</button>') +
            '<button type="button" class="btn small secondary tx-status-btn" data-sup-check-edit="' + pidx + '">ویرایش</button>')
         : ('<span class="tx-row-meta">' + stLabel + '</span>');
       return `<div class="ledger-row tx-row" style="cursor:default;align-items:flex-start;">
@@ -668,14 +872,15 @@
       </div>`;
     }).join('') : '<div class="empty" style="padding:12px 0;">پرداختی ثبت نشده</div>';
 
+    root.classList.add('supplier-detail-view');
     root.innerHTML = `
       <div class="btn-row" style="margin-bottom:10px;">
         <a class="btn secondary small" href="${suppliersHref()}">← تامین‌کنندگان</a>
       </div>
 
       <!-- IDENTITY -->
-      <div class="tx-identity card">
-        <div class="tx-identity-title">${esc(s.name)}${s.active === false ? ' <span class="badge tone-muted">غیرفعال</span>' : ''}</div>
+      <div class="card supplier-identity-card">
+        <div class="supplier-identity-name">${esc(s.name)}${s.active === false ? ' <span class="badge tone-muted">غیرفعال</span>' : ''}</div>
         <div class="tx-identity-meta">
           ${s.phone ? '<span>تلفن: ' + esc(s.phone) + '</span>' : '<span class="sub">بدون تلفن</span>'}
         </div>
@@ -684,7 +889,7 @@
       <!-- FINANCIAL SUMMARY -->
       <div class="tx-finance cards">
         <div class="card wide">
-          <div class="label">مانده حساب</div>
+          <div class="label">${t.balance < 0 ? 'طلب ما از تأمین‌کننده' : (t.balance > 0 ? 'بدهی ما به تأمین‌کننده' : 'مانده حساب')}</div>
           <div class="value ${color}">${balanceLine}</div>
         </div>
         <div class="card"><div class="label">جمع خرید</div><div class="value">${toman(t.purchaseTotal)} ت</div></div>
@@ -702,12 +907,15 @@
       </div>
 
       <!-- PURCHASES -->
-      <h3 class="sub-title">خریدها (${purchases.length})</h3>
-      <div class="tx-list">${purchaseRows}</div>
+      <details class="cd-history-details supplier-history-details" open>
+        <summary class="customer-behavior-summary">خریدها (${purchases.length})</summary>
+        <div class="tx-list">${purchaseRows}</div>
+      </details>
 
-      <!-- PAYMENTS -->
-      <h3 class="sub-title">پرداخت‌ها (${payments.length})</h3>
-      <div class="tx-list">${payRows}</div>
+      <details class="cd-history-details supplier-history-details">
+        <summary class="customer-behavior-summary">پرداخت‌ها و چک‌ها (${payments.length})</summary>
+        <div class="tx-list">${payRows}</div>
+      </details>
     `;
 
     // Re-attach all dynamic buttons
@@ -732,6 +940,7 @@ drawSupplierPage(root);
       ViewHost.clearRefresh(refreshToken);
       refreshToken = null;
       currentSupplierId = null;
+      root.classList.remove('supplier-detail-view');
       root.innerHTML = '';
       rootEl = null;
     };
