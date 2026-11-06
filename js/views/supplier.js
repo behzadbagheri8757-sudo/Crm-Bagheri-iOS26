@@ -334,6 +334,7 @@
   function openPurchaseSheet(s, purchaseId) {
     const p = (s.purchases || []).find(x => x.id === purchaseId);
     if (!p) return;
+    const locked = !!purchaseCanBeEditedOrDeleted(p);
     const ret = purchaseReturnedTotal(p);
     const net = (p.amount || 0) - ret;
     const count = purchaseItemCount(p);
@@ -380,14 +381,15 @@
         </div>
         <div class="sup-sheet-actions">
           ${canReturn ? '<button type="button" class="btn secondary sup-act" data-return-purchase="' + esc(p.id) + '">برگشت خرید</button>' : ''}
-          <button type="button" class="btn secondary sup-act" id="sp-edit">ویرایش</button>
-          <button type="button" class="btn danger sup-act" id="sp-del">حذف خرید</button>
+          ${locked ? '' : '<button type="button" class="btn secondary sup-act" id="sp-edit">ویرایش</button><button type="button" class="btn danger sup-act" id="sp-del">حذف خرید</button>'}
         </div>
       </div>
     `);
     bindPurchaseReturnButtons(s);
-    document.getElementById('sp-edit').addEventListener('click', () => openPurchaseEditSheet(s, p.id));
-    document.getElementById('sp-del').addEventListener('click', ev => deletePurchase(s, p.id, ev.currentTarget));
+    if (!locked) {
+      document.getElementById('sp-edit').addEventListener('click', () => openPurchaseEditSheet(s, p.id));
+      document.getElementById('sp-del').addEventListener('click', ev => deletePurchase(s, p.id, ev.currentTarget));
+    }
   }
 
   async function deletePurchase(s, purchaseId, btn) {
@@ -403,8 +405,10 @@
     if (!(await appConfirm(msg))) return;
     await withSubmitGuard(btn, async () => {
       await commitWithRollback(() => {
-        const r = deleteOrVoidPurchase(p.id);
-        if (!r || !r.ok || r.mode !== 'hard-delete') { showToast((r && r.error) || 'حذف خرید ممکن نشد'); throw new Error('validation'); }
+        const r = hardDeletePurchaseLayers(p.id);
+        if (!r || !r.ok) { showToast((r && r.error) || 'حذف خرید ممکن نشد'); throw new Error('validation'); }
+        const idx = (s.purchases || []).findIndex(x => x.id === p.id);
+        if (idx >= 0) s.purchases.splice(idx, 1);
       });
       closeModal();
       drawSupplierPage(rootEl);
@@ -529,7 +533,7 @@
             p.amount = isItems
               ? p.items.reduce((a, it) => a + (Number(it.lineAmount) || (Number(it.qty) || 0) * (Number(it.unitCost) || 0)), 0)
               : Math.round(unitLegacy * (Number(p.qty) || 0));
-            if (p.amount < returned) throw new Error('validation');
+            if (p.amount < returned) { showToast('مبلغ خرید نمی‌تواند کمتر از جمع برگشت‌های ثبت‌شده باشد'); throw new Error('validation'); }
             p.desc = desc;
           });
         }
@@ -554,9 +558,42 @@
         </div>
         <div class="sup-totals"><div class="sup-total-row is-final"><span>مبلغ</span><span>${toman(p.amount)} ت</span></div></div>
         ${p.note ? '<div class="sup-group"><div class="sup-group-title">توضیح</div><div class="sup-line"><span class="sup-line-name">' + esc(p.note) + '</span></div></div>' : ''}
-        <div class="sup-sheet-actions"><button type="button" class="btn danger sup-act" id="sp-del">حذف پرداخت</button></div>
+        <div class="sup-sheet-actions">
+          <button type="button" class="btn secondary sup-act" id="sp-edit">ویرایش</button>
+          <button type="button" class="btn danger sup-act" id="sp-del">حذف پرداخت</button>
+        </div>
       </div>`);
     document.getElementById('sp-del').addEventListener('click', ev => deletePayment(s, key, ev.currentTarget));
+    document.getElementById('sp-edit').addEventListener('click', () => openEditSupplierPaymentSheet(s, key));
+  }
+
+  function openEditSupplierPaymentSheet(s, key) {
+    const f = findPayment(s, key);
+    if (!f || f.p.method === 'check') return;
+    const p = f.p;
+    openSheet(`
+      <h3>ویرایش پرداخت</h3>
+      <div class="field"><label>مبلغ (تومان)</label><input id="sep-amount" type="text" inputmode="decimal" value="${p.amount || ''}"></div>
+      <div class="field"><label>تاریخ پرداخت</label>${shamsiDateInputHTML('sep-date', p.date || todayISO())}</div>
+      <div class="field"><label>توضیح</label><input id="sep-note" value="${esc(p.note || '')}"></div>
+      <div class="btn-row"><button class="btn" id="save-sup-pay-edit">ذخیره</button></div>
+    `, { dirtyCheck: true });
+    document.getElementById('save-sup-pay-edit').addEventListener('click', async function (ev) {
+      await withSubmitGuard(ev.currentTarget, async () => {
+        const amount = numVal(document.getElementById('sep-amount'));
+        if (amount <= 0) { showToast('مبلغ را وارد کن'); throw new Error('validation'); }
+        await commitWithRollback(() => {
+          const again = findPayment(s, key);
+          if (!again) { showToast('پرداخت پیدا نشد'); throw new Error('validation'); }
+          again.p.amount = amount;
+          again.p.date = document.getElementById('sep-date').value || todayISO();
+          again.p.note = (document.getElementById('sep-note').value || '').trim();
+        });
+        closeModal();
+        drawSupplierPage(rootEl);
+        showToast('پرداخت ویرایش شد');
+      });
+    });
   }
 
   async function deletePayment(s, key, btn) {
@@ -564,12 +601,16 @@
     if (!f) return;
     const p = f.p;
     const isCheck = p.method === 'check';
+    const isBounced = isCheck && checkStatus(p) === 'bounced';
     const label = isCheck ? ('چک' + (p.checkNumber ? (' #' + p.checkNumber) : '')) : 'پرداخت';
-    if (!(await appConfirm('«' + label + '» به مبلغ ' + toman(isCheck ? checkFace(p) : p.amount) + ' تومان حذف شود؟\nمانده حساب تامین‌کننده اصلاح می‌شود.'))) return;
+    const msg = isBounced
+      ? '«' + label + '» برگشتی است و در محاسبه بدهی اثری ندارد؛ فقط سابقه حذف می‌شود. ادامه می‌دهید؟'
+      : '«' + label + '» به مبلغ ' + toman(isCheck ? checkFace(p) : p.amount) + ' تومان حذف شود؟\nمانده حساب تامین‌کننده اصلاح می‌شود.';
+    if (!(await appConfirm(msg))) return;
     await withSubmitGuard(btn, async () => {
       await commitWithRollback(() => {
         const again = findPayment(s, key);
-        if (!again) throw new Error('validation');
+        if (!again) { showToast('پرداخت پیدا نشد'); throw new Error('validation'); }
         s.payments.splice(again.index, 1);
       });
       closeModal();
@@ -620,7 +661,7 @@
     if (!f) return;
     const p = f.p;
     const cur = checkStatus(p);
-    if (CHECK_NEXT[cur].indexOf(to) < 0) return;
+    if (CHECK_NEXT[cur].indexOf(to) < 0) { showToast('این تغییر وضعیت مجاز نیست'); return; }
     const face = checkFace(p);
     const msg = to === 'cleared'
       ? 'این چک به مبلغ ' + toman(face) + ' تومان «پرداخت‌شده» ثبت شود؟'
@@ -631,7 +672,10 @@
     await withSubmitGuard(btn, async () => {
       await commitWithRollback(() => {
         const again = findPayment(s, key);
-        if (!again || CHECK_NEXT[checkStatus(again.p)].indexOf(to) < 0) throw new Error('validation');
+        if (!again || CHECK_NEXT[checkStatus(again.p)].indexOf(to) < 0) {
+          showToast('وضعیت این چک قابل تغییر به این حالت نیست');
+          throw new Error('validation');
+        }
         again.p.faceAmount = checkFace(again.p);
         again.p.status = to;
         again.p.amount = (to === 'bounced') ? 0 : again.p.faceAmount;   // bounced = not paid → back in the balance
@@ -661,15 +705,18 @@
       await withSubmitGuard(ev.currentTarget, async () => {
         const amount = numVal(document.getElementById('f-amount'));
         if (amount <= 0) { showToast('مبلغ رو وارد کن'); throw new Error('validation'); }
+        const _iss = document.getElementById('f-date').value || todayISO();
+        const _due = document.getElementById('f-due').value || _iss;
+        if (_due < _iss) { showToast('تاریخ سررسید نمی‌تواند قبل از تاریخ صدور باشد'); throw new Error('validation'); }
         await commitWithRollback(() => {
           const again = findPayment(s, key);
           if (!again) throw new Error('validation');
           const q = again.p;
           q.faceAmount = amount;
           q.amount = (checkStatus(q) === 'bounced') ? 0 : amount;   // status itself is NOT editable here
-          q.issueDate = document.getElementById('f-date').value || todayISO();
+          q.issueDate = _iss;
           q.date = q.issueDate;
-          q.dueDate = document.getElementById('f-due').value || q.issueDate;
+          q.dueDate = _due;
           q.checkNumber = (document.getElementById('f-check-num').value || '').trim();
           q.bank = (document.getElementById('f-bank').value || '').trim();
           q.note = (document.getElementById('f-note').value || '').trim();
@@ -807,8 +854,9 @@
       const i = Number(e.target.dataset.i);
       if (e.target.classList.contains('pf-qty') || e.target.classList.contains('pf-price')) {
         const l = model[i]; if (!l) return;
-        if (e.target.classList.contains('pf-qty')) l.qty = e.target.value;
-        else l.price = e.target.value;
+        const numeric = parseFloat(faToEnDigits(e.target.value)) || 0;
+        if (e.target.classList.contains('pf-qty')) l.qty = numeric;
+        else l.price = numeric;
         updateTotals();
         const row = e.target.closest('.inv-line');
         const prod = prodOf(l.productId);
@@ -945,11 +993,13 @@
         if (amount <= 0) { showToast('مبلغ رو وارد کن'); throw new Error('validation'); }
         let rec;
         if (method === 'check') {
+          const due = document.getElementById('f-due').value || date;
+          if (due < date) { showToast('تاریخ سررسید نمی‌تواند قبل از تاریخ صدور باشد'); throw new Error('validation'); }
           rec = {
             id: uid(), date: date, amount: amount, faceAmount: amount, method: 'check',
             checkNumber: (document.getElementById('f-check-num').value || '').trim(),
             bank: (document.getElementById('f-bank').value || '').trim(),
-            issueDate: date, dueDate: document.getElementById('f-due').value || date,
+            issueDate: date, dueDate: due,
             status: 'pending', note: note,
           };
         } else {
