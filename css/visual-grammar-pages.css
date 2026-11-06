@@ -2842,3 +2842,21 @@ html[data-theme="dark"] #main.supplier-detail-view .sup-identity{border-color:va
 .pf-row-input{flex:1;min-width:0;height:44px;padding:0 8px;border:0;background:transparent;text-align:start;font-size:15px;color:var(--vg-color-text);}
 .pf-sheet .inv-items-card [hidden]{display:none;}
 .pf-sheet .pf-summary .sup-totals{margin-top:0;}
+
+
+/* BAGHERI v105 — supplier purchase form uses the invoice row grammar. */
+.pf-sheet [hidden]{display:none!important;}
+.pf-sheet .inv-line-del{
+  color:var(--vg-color-danger)!important;
+  background:var(--vg-color-danger-soft)!important;
+}
+.pf-sheet .inv-line-del:active{color:var(--vg-color-danger)!important;}
+.pf-sheet .prod-drop{z-index:8;}
+.pf-sheet .prod-drop-panel{max-height:min(48vh,360px);overflow:hidden;}
+.pf-sheet .prod-drop-list{max-height:calc(min(48vh,360px) - 58px);overflow:auto;}
+.pf-sheet .inv-line-collapsed{cursor:pointer;}
+.pf-sheet .inv-line-view-active .row-product-search{width:100%;text-align:right;}
+
+.pf-sheet .inv-line-main{display:flex;flex-wrap:wrap;align-items:center;}
+.pf-sheet .prod-drop{position:relative;inset:auto;flex:0 0 100%;width:100%;max-height:none;}
+.pf-sheet .prod-drop-panel{width:100%;}
