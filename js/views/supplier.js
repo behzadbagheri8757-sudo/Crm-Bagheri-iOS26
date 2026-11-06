@@ -710,7 +710,7 @@
         if (_due < _iss) { showToast('تاریخ سررسید نمی‌تواند قبل از تاریخ صدور باشد'); throw new Error('validation'); }
         await commitWithRollback(() => {
           const again = findPayment(s, key);
-          if (!again) throw new Error('validation');
+          if (!again) { showToast('چک پیدا نشد'); throw new Error('validation'); }
           const q = again.p;
           q.faceAmount = amount;
           q.amount = (checkStatus(q) === 'bounced') ? 0 : amount;   // status itself is NOT editable here
@@ -850,6 +850,16 @@
       $('pf-mode').textContent = amountOnly ? 'ثبت با اقلام کالا' : 'فقط مبلغ کل (بدون کالا)';
       updateTotals();
     }
+    $('pf-lines').addEventListener('focusin', e => {
+      if (e.target.classList.contains('pf-qty') || e.target.classList.contains('pf-price')) {
+        const i = Number(e.target.dataset.i);
+        if (model[i] && model[i].queryOpen) {
+          model[i].queryOpen = false;
+          const drop = e.target.closest('.inv-line').querySelector('.prod-drop');
+          if (drop) { drop.hidden = true; drop.classList.remove('is-open'); }
+        }
+      }
+    });
     $('pf-lines').addEventListener('input', e => {
       const i = Number(e.target.dataset.i);
       if (e.target.classList.contains('pf-qty') || e.target.classList.contains('pf-price')) {
@@ -871,14 +881,6 @@
         const idx = Number(e.target.dataset.search); model[idx].query = e.target.value;
         const list = e.target.closest('.prod-drop-panel').querySelector('.prod-drop-list');
         list.innerHTML = productListHtml(idx, e.target.value);
-      }
-    });
-    $('pf-lines').addEventListener('change', e => {
-      if (e.target.classList.contains('pf-qty') || e.target.classList.contains('pf-price')) {
-        const i = Number(e.target.dataset.i), l = model[i];
-        if (l && l.productId && Number(l.qty)>0 && Number(l.price)>0) {
-          l.expanded = false; renderLines();
-        }
       }
     });
     $('pf-lines').addEventListener('click', e => {
@@ -906,6 +908,16 @@
         model[i].queryOpen = true; model.forEach((l,n)=>{if(n!==i)l.queryOpen=false;});
         renderLines({index:i}); return;
       }
+      const activeRow = e.target.closest('.inv-line.is-active');
+      if (activeRow && !e.target.closest('input, button, .prod-drop, .inv-line-qtyrate, .inv-line-del, .row-product-search')) {
+        const i = Number(activeRow.dataset.i);
+        if (model[i] && model[i].productId) {
+          model[i].expanded = false;
+          model[i].queryOpen = false;
+          renderLines();
+          return;
+        }
+      }
     });
     $('pf-lines').addEventListener('keydown', e => {
       if ((e.key === 'Enter' || e.key === ' ') && e.target.closest('[data-pick]')) { e.preventDefault(); e.target.closest('[data-pick]').click(); }
@@ -913,16 +925,17 @@
     });
     $('pf-amount').addEventListener('input', updateTotals);
     $('pf-add').addEventListener('click', () => {
-      const last = model[model.length - 1];
-      if (last && (!last.productId || !(Number(last.qty)>0) || !(Number(last.price)>0))) {
-        showToast('ابتدا کالای سطر آخر، تعداد و قیمت آن را کامل کن');
-        const row = $('pf-lines').querySelector(`.inv-line[data-i="${model.length-1}"]`);
-        const search = row && row.querySelector('.row-product-search');
-        if (search && !last.productId) search.click();
-        else if (row) (row.querySelector('.pf-qty') || row.querySelector('.pf-price')).focus();
+      const emptyIdx = model.findIndex(l => !l.productId);
+      if (emptyIdx >= 0) {
+        const i = emptyIdx;
+        model.forEach((l, n) => { l.expanded = n === i; l.queryOpen = n === i; });
+        renderLines({index: i});
+        const row = $('pf-lines').querySelector(`.inv-line[data-i="${i}"]`);
+        if (row) row.scrollIntoView({ block: 'center', behavior: 'smooth' });
         return;
       }
       model.push({ productId:'', qty:1, price:0, expanded:true, queryOpen:true });
+      model.forEach((l, n) => { if(n !== model.length-1) l.expanded = false; });
       renderLines({index:model.length-1});
       const rows = $('pf-lines').querySelectorAll('.inv-line');
       if (rows.length && rows[rows.length-1].scrollIntoView) rows[rows.length-1].scrollIntoView({block:'center',behavior:'smooth'});
@@ -951,6 +964,20 @@
         closeModal(); drawSupplierPage(rootEl); showToast('خرید ثبت شد');
       });
     });
+    if (!document._pfDropOutsideBound) {
+      document._pfDropOutsideBound = true;
+      document.addEventListener('pointerdown', function(e) {
+        if (e.target.closest('.prod-drop') || e.target.closest('.row-product-search')) return;
+        document.querySelectorAll('.prod-drop').forEach(d => {
+          d.hidden = true;
+          d.classList.remove('is-open');
+        });
+        if (document._activePurchaseModel) {
+          document._activePurchaseModel.forEach(l => { l.queryOpen = false; });
+        }
+      }, true);
+    }
+    document._activePurchaseModel = model;
     renderLines();
     applyMode();
     if (model[0]) { model[0].queryOpen = true; renderLines({index:0}); }
