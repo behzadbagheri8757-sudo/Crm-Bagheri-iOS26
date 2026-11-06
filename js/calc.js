@@ -725,6 +725,33 @@ function supplierTotals(sid){
   return { purchaseTotal, payTotal, returnTotal, openingBalance, balance: openingBalance + purchaseTotal - payTotal - returnTotal };
 }
 
+/* Read-only: every supplier check (supplier.payments[] with method 'check'), one shape for the supplier page,
+   /checks and the dashboard alert. status: pending | cleared | bounced. A bounced check keeps its face value in
+   faceAmount while amount is 0 (so supplierTotals counts it as unpaid). dueDiff: calendar days to due date
+   (negative = overdue, null = unknown) — same convention as checks.js dueDiffDays. */
+function supplierCheckDueDiff(p){
+  if(!p || !p.dueDate) return null;
+  const dueMs = new Date(String(p.dueDate).slice(0,10)+'T00:00:00').getTime();
+  if(!isFinite(dueMs)) return null;
+  const todayMs = new Date(todayISO()+'T00:00:00').getTime();
+  return Math.round((dueMs - todayMs) / 86400000);
+}
+function supplierCheckEntries(){
+  const out = [];
+  (data.suppliers||[]).forEach(s=>{
+    (s.payments||[]).forEach((p, index)=>{
+      if(!p || p.method!=='check') return;
+      out.push({
+        supplier: s, payment: p, index: index,
+        status: p.status==='cleared' ? 'cleared' : (p.status==='bounced' ? 'bounced' : 'pending'),
+        face: typeof p.faceAmount==='number' ? p.faceAmount : (p.amount||0),
+        dueDiff: supplierCheckDueDiff(p)
+      });
+    });
+  });
+  return out;
+}
+
 // قیمت خرید یک کالا به روش FIFO: میانگین وزنیِ لایه‌های باز (چیزی که واقعاً در انبار مانده و نوبت مصرفشه).
 // اگر کالا هیچ لایه‌ی بازی نداشته باشه (هنوز خریدی/ورودی ثبت نشده)، برمی‌گرده به فیلد دستی p.buy.
 function productFifoUnitCost(pid){
@@ -817,12 +844,7 @@ function globalTotals(ctx, skipMemo){
   // همان منطق customerProfit برای همه مشتریان (فاکتور − حاشیه برگشت − تخفیف تراکنشی)
   const totalProfit = data.customers.reduce((s,c)=>s + customerProfit(c.id, ctx), 0);
   const totalReceived = data.payments.filter(p=>['cash','card','transfer'].includes(p.method)).reduce((s,p)=>s+p.amount,0);
-  const customerOutstandingChecks = (data.checks || []).filter(c=>c.status!=='cleared').reduce((s,c)=>s+(Number(c.amount)||0),0);
-  const supplierOutstandingChecks = (data.suppliers || []).reduce((sum, sp) => sum + (sp.payments || []).reduce((sub, p) => {
-    if (p.method !== 'check' || (p.status || 'pending') !== 'pending') return sub;
-    return sub + (Number(p.faceAmount != null ? p.faceAmount : p.amount) || 0);
-  }, 0), 0);
-  const outstandingChecks = customerOutstandingChecks + supplierOutstandingChecks;
+  const outstandingChecks = data.checks.filter(c=>c.status!=='cleared').reduce((s,c)=>s+c.amount,0);
   const customerDebt = data.customers.reduce((s,c)=>{
     const t = customerTotals(c.id, ctx);
     return s + Math.max(t.balance,0);
