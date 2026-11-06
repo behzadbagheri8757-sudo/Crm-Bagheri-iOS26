@@ -296,7 +296,7 @@ function hardDeletePurchaseLayers(purchaseId){
   const layers = ensureInventoryLayers().filter(l=>l.purchaseId===purchaseId);
   for(const layer of layers){
     const consumed = (layer.qtyOriginal||0) - (layer.qtyRemaining||0);
-    if(consumed>0) return { ok:false, error:'خرید مصرف شده؛ از void استفاده کنید', consumed };
+    if(consumed>0) return { ok:false, error:'خرید مصرف شده و قابل حذف نیست', consumed };
   }
   layers.forEach(layer=>{
     const rem = layer.qtyRemaining||0;
