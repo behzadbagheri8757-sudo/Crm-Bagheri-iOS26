@@ -17,15 +17,6 @@
     AppRouter.navigate('/customer', { id: cid });
   }
 
-  function supplierPaymentLedgerAmount(p) {
-    if (!p) return 0;
-    if (p.method === 'check') {
-      // Pending checks are recorded against supplier balance; bounced checks are not.
-      return p.status === 'bounced' ? 0 : (Number(p.faceAmount != null ? p.faceAmount : p.amount) || 0);
-    }
-    return Number(p.amount) || 0;
-  }
-
   function paymentRows() {
     const rows = [];
 
@@ -40,7 +31,6 @@
         id: p.id,
         date: p.date || '',
         amount: p.amount || 0,
-        ledgerAmount: p.amount || 0,
         method: p.method || '',
         methodLabel: paymentMethodLabel(p.method),
         partyName: cust ? cust.name : '—',
@@ -58,12 +48,11 @@
           kind: 'supplier',
           id: 'suppay-' + s.id + '-' + idx,
           date: p.date || '',
-          amount: p.method === 'check' ? (Number(p.faceAmount != null ? p.faceAmount : p.amount) || 0) : (p.amount || 0),
-          ledgerAmount: supplierPaymentLedgerAmount(p),
-          method: p.method === 'check' ? 'check' : 'cash',
+          amount: p.amount || 0,
+          method: 'supplier',
           methodLabel: p.method === 'check'
-            ? ('چک تأمین‌کننده' + (p.status === 'bounced' ? ' · برگشتی' : p.status === 'cleared' ? ' · پرداخت‌شده' : ' · در جریان'))
-            : 'پرداخت نقدی به تأمین‌کننده',
+            ? ('چک به تامین‌کننده · ' + (p.status === 'cleared' ? 'پرداخت‌شده' : (p.status === 'bounced' ? 'برگشتی' : 'در جریان')))
+            : 'پرداخت نقدی به تامین‌کننده',
           partyName: s.name || '—',
           partyId: s.id,
           invoiceId: null,
@@ -122,7 +111,7 @@
     }
 
     const totalAmount = rows.reduce(
-      (s, r) => s + (Number(r.ledgerAmount) || 0),
+      (s, r) => s + (r.amount || 0),
       0
     );
 
@@ -133,7 +122,7 @@
         <div class="value">${enToFaDigits(String(rows.length))}</div>
       </div>
       <div class="card">
-        <div class="label">جمع مبالغ ثبت‌شده (بدون چک برگشتی)</div>
+        <div class="label">جمع مبالغ (فیلتر فعلی)</div>
         <div class="value">${toman(totalAmount)} ت</div>
       </div>
     `;
@@ -282,8 +271,7 @@
 
       <div class="chip-row" id="payment-chips">
         ${chip('all', 'همه')}
-        ${chip('cash', 'نقد / نقدی تأمین‌کننده')}
-        ${chip('check', 'چک')}
+        ${chip('cash', 'نقد')}
         ${chip('card', 'کارت')}
         ${chip('transfer', 'انتقال')}
         ${chip('return', 'برگشت')}
