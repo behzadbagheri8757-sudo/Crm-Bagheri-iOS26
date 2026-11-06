@@ -412,41 +412,111 @@
     });
   }
 
+
+  function purchaseCanBeEditedOrDeleted(p) {
+    if (!p) return 'خرید پیدا نشد.';
+    if ((p.returns || []).length) return 'این خرید برگشت‌خورده است و قابل ویرایش یا حذف نیست.';
+    if (purchaseStocked(p) && purchaseConsumed(p.id)) return 'بخشی از کالای این خرید مصرف یا فروخته شده است و قابل ویرایش یا حذف نیست.';
+    return '';
+  }
+
   function openPurchaseEditSheet(s, purchaseId) {
     const p = (s.purchases || []).find(x => x.id === purchaseId);
     if (!p) return;
+    const blocked = purchaseCanBeEditedOrDeleted(p);
+    if (blocked) { showToast(blocked); return; }
+
     const stocked = purchaseStocked(p);
     const lines = purchaseLinesView(p);
     const returned = purchaseReturnedTotal(p);
-
-    const body = stocked
-      ? `<div class="empty sup-edit-note">قیمت واحد ثابت می‌ماند و جمع خرید با تعداد جدید محاسبه می‌شود. تاریخ خریدِ دارای کالا قابل تغییر نیست (ترتیب مصرف FIFO).</div>` +
-        lines.map((l, i) => `<div class="field"><label>${esc(l.name)} — تعداد (${l.unit}) · قیمت واحد ${toman(l.unitCost)} ت</label>
-            <input type="text" inputmode="decimal" class="pe-qty" data-i="${i}" value="${l.qty}"></div>`).join('')
-      : `<div class="field"><label>تاریخ</label>${shamsiDateInputHTML('pe-date', p.date || todayISO())}</div>
-         <div class="field"><label>مبلغ کل (تومان)</label><input id="pe-amount" type="text" inputmode="decimal" value="${p.amount || ''}"></div>`;
+    let model = stocked ? lines.map(l => ({
+      id: l.id, productId: l.productId, name: l.name, qty: String(l.qty), price: l.unitCost, unit: l.unit, expanded: false
+    })) : [];
 
     openSheet(`
-      <h3>ویرایش خرید</h3>
-      ${body}
-      <div class="field"><label>توضیح (اختیاری)</label><input id="pe-desc" value="${esc(p.desc || '')}"></div>
-      <div class="btn-row"><button class="btn" id="pe-save">ذخیره</button></div>
+      <div class="inv-sheet-v2 pf-sheet">
+        <div class="inv-header">
+          <button type="button" class="inv-header-btn" id="pe-cancel">لغو</button>
+          <div class="inv-header-title">
+            <span class="inv-header-title-main">ویرایش خرید</span>
+            <span class="inv-header-title-sub">${esc(s.name)}</span>
+          </div>
+          <button type="button" class="btn inv-header-save" id="pe-save">ذخیره</button>
+        </div>
+        <div class="inv-body">
+          <div class="inv-total-chip"><span class="inv-total-chip-label">جمع خرید</span><strong class="inv-total-chip-value" id="pe-total">${toman(p.amount || 0)} ت</strong></div>
+          <div class="inv-section">
+            <h2 class="inv-section-title">مشخصات خرید</h2>
+            <div class="inv-rows">
+              ${stocked ? `<div class="inv-row"><span class="inv-row-label">تاریخ خرید</span><span class="inv-row-value">${faDate(p.date)}</span></div>` :
+                `<div class="inv-row inv-row-date"><span class="inv-row-label">تاریخ خرید</span>${shamsiDateInputHTML('pe-date', p.date || todayISO())}</div>`}
+              <div class="inv-row"><label class="inv-row-label" for="pe-desc">توضیح <small>(اختیاری)</small></label><input id="pe-desc" class="pf-row-input" value="${esc(p.desc || '')}"></div>
+            </div>
+          </div>
+          ${stocked ? `<div class="inv-section inv-items-section">
+            <h2 class="inv-section-title">اقلام خرید</h2>
+            <div class="inv-items-card"><div id="pe-lines"></div></div>
+            <div class="empty sup-edit-note">قیمت واحد ثابت می‌ماند؛ با تغییر تعداد، جمع خرید محاسبه می‌شود.</div>
+          </div>` : `<div class="inv-section">
+            <div class="inv-rows"><div class="inv-row"><label class="inv-row-label" for="pe-amount">مبلغ کل (تومان)</label><input id="pe-amount" type="text" inputmode="decimal" value="${p.amount || ''}"></div></div>
+          </div>`}
+        </div>
+      </div>
     `, { dirtyCheck: true });
+    hostFullSheet();
 
-    document.getElementById('pe-save').addEventListener('click', async function (ev) {
+    const $ = id => document.getElementById(id);
+    const lineHtml = (l, i) => {
+      const qty = numVal({ value: l.qty });
+      const amount = qty * (Number(l.price) || 0);
+      return `<div class="inv-line${l.expanded ? ' is-active' : ''}" data-i="${i}">
+        <div class="inv-line-collapsed" role="button" tabindex="0" aria-label="ویرایش ${esc(l.name)}" ${l.expanded ? 'hidden' : ''}>
+          <div class="inv-line-body"><span class="inv-line-name">${esc(l.name)}</span></div>
+          <div class="inv-line-figures"><span class="inv-line-amount">${toman(amount)} ت</span><span class="inv-line-calc">${fa(qty)} × ${toman(l.price)} ت</span></div>
+        </div>
+        <div class="inv-line-view-active" ${l.expanded ? '' : 'hidden'}>
+          <div class="inv-line-main"><div class="row-product-search inv-line-name">${esc(l.name)}</div></div>
+          <div class="inv-line-sub" style="display:flex"><span class="inv-line-qtyrate">
+            <input type="text" inputmode="decimal" class="pe-qty inv-mini-input" value="${esc(l.qty)}" data-i="${i}" aria-label="تعداد">
+            <span class="inv-line-x">×</span><span class="inv-mini-input">${toman(l.price)} ت</span>
+          </span></div>
+        </div>
+      </div>`;
+    };
+    function renderEditLines() {
+      $('pe-lines').innerHTML = model.map(lineHtml).join('');
+      $('pe-total').textContent = toman(model.reduce((sum, l) => sum + numVal({value:l.qty}) * (Number(l.price)||0), 0)) + ' ت';
+      $('pe-lines').querySelectorAll('.pe-qty').forEach(el => el.addEventListener('input', () => {
+        const i = Number(el.dataset.i);
+        model[i].qty = el.value;
+        const row = el.closest('.inv-line');
+        const qty = numVal(el), price = Number(model[i].price) || 0;
+        const summary = row && row.querySelector('.inv-line-collapsed');
+        if (summary) {
+          summary.querySelector('.inv-line-amount').textContent = toman(qty * price) + ' ت';
+          summary.querySelector('.inv-line-calc').textContent = fa(qty) + ' × ' + toman(price) + ' ت';
+        }
+        $('pe-total').textContent = toman(model.reduce((sum, l) => sum + numVal({value:l.qty}) * (Number(l.price)||0), 0)) + ' ت';
+      }));
+      $('pe-lines').querySelectorAll('.inv-line-collapsed').forEach(el => {
+        const activate = () => { const i = Number(el.closest('.inv-line').dataset.i); model.forEach((l, n) => l.expanded = n === i); renderEditLines(); };
+        el.addEventListener('click', activate);
+        el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activate(); } });
+      });
+    }
+    if (stocked) renderEditLines();
+
+    $('pe-cancel').addEventListener('click', async () => { if (await window.__requestAppExit('purchase-edit-cancel')) closeModal(); });
+    $('pe-save').addEventListener('click', async function (ev) {
       await withSubmitGuard(ev.currentTarget, async () => {
-        const desc = (document.getElementById('pe-desc').value || '').trim();
+        const desc = ($('pe-desc').value || '').trim();
         if (!stocked) {
-          const amount = numVal(document.getElementById('pe-amount'));
+          const amount = numVal($('pe-amount'));
           if (!(amount > 0)) { showToast('مبلغ رو وارد کن'); throw new Error('validation'); }
-          if (amount < returned) { showToast('مبلغ خرید نمی‌تواند کمتر از جمع برگشت‌های ثبت‌شده (' + toman(returned) + ' ت) باشد'); throw new Error('validation'); }
-          await commitWithRollback(() => {
-            p.amount = amount;
-            p.date = document.getElementById('pe-date').value || p.date || todayISO();
-            p.desc = desc;
-          });
+          if (amount < returned) { showToast('مبلغ خرید نمی‌تواند کمتر از جمع برگشت‌های ثبت‌شده باشد'); throw new Error('validation'); }
+          await commitWithRollback(() => { p.amount = amount; p.date = $('pe-date').value || p.date || todayISO(); p.desc = desc; });
         } else {
-          const qtys = Array.from(document.querySelectorAll('.pe-qty')).map(el => numVal(el));
+          const qtys = model.map(l => numVal({value:l.qty}));
           if (qtys.some(q => !(q > 0))) { showToast('تعداد همه اقلام باید بیشتر از صفر باشد'); throw new Error('validation'); }
           await commitWithRollback(() => {
             const isItems = Array.isArray(p.items) && p.items.length;
@@ -456,20 +526,18 @@
               const r = adjustPurchaseLayerQty(p.id, l.productId, qtys[i], l.id);
               if (!r || !r.ok) { showToast((r && r.error) || 'ویرایش تعداد ممکن نشد'); throw new Error('validation'); }
             });
-            // total follows the (unchanged) unit prices
             p.amount = isItems
               ? p.items.reduce((a, it) => a + (Number(it.lineAmount) || (Number(it.qty) || 0) * (Number(it.unitCost) || 0)), 0)
               : Math.round(unitLegacy * (Number(p.qty) || 0));
-            if (p.amount < returned) { showToast('جمع خرید نمی‌تواند کمتر از جمع برگشت‌های ثبت‌شده (' + toman(returned) + ' ت) باشد'); throw new Error('validation'); }
+            if (p.amount < returned) throw new Error('validation');
             p.desc = desc;
           });
         }
-        closeModal();
-        drawSupplierPage(rootEl);
-        showToast('خرید ویرایش شد');
+        closeModal(); drawSupplierPage(rootEl); showToast('خرید ویرایش شد');
       });
     });
   }
+
 
   /* ======================================================================
      Payment + check sheets
@@ -617,29 +685,22 @@
      Purchase form — invoice-style full sheet: header (لغو · title · ثبت) → floating total →
      supplier → items card (product · qty · unit price · line total) → details → summary
      ====================================================================== */
+
   function openAddPurchaseSheet(s) {
     const products = (data.products || []).filter(p => p && p.active !== false)
       .slice().sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'fa'));
-    const optionsHtml = '<option value="">انتخاب کالا…</option>' + products.map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');
-    let mode = 'items';                       // 'items' | 'amount' (amount-only purchase, no stock)
-    let model = [{ productId: '', qty: '', price: '' }];
+    let mode = 'items';
+    let model = [{ productId: '', qty: 1, price: 0, expanded: true, queryOpen: false }];
 
     openSheet(`
       <div class="inv-sheet-v2 pf-sheet">
         <div class="inv-header">
           <button type="button" class="inv-header-btn" id="pf-cancel">لغو</button>
-          <div class="inv-header-title">
-            <span class="inv-header-title-main">خرید جدید</span>
-            <span class="inv-header-title-sub">${esc(s.name)}</span>
-          </div>
+          <div class="inv-header-title"><span class="inv-header-title-main">خرید جدید</span><span class="inv-header-title-sub">${esc(s.name)}</span></div>
           <button type="button" class="btn inv-header-save" id="pf-save">ثبت</button>
         </div>
         <div class="inv-body">
-          <div class="inv-total-chip" role="status" aria-live="polite">
-            <span class="inv-total-chip-label">جمع این خرید</span>
-            <strong class="inv-total-chip-value" id="pf-total">۰ ت</strong>
-          </div>
-
+          <div class="inv-total-chip" role="status" aria-live="polite"><span class="inv-total-chip-label">جمع این خرید</span><strong class="inv-total-chip-value" id="pf-total">۰ ت</strong></div>
           <div class="inv-section">
             <h2 class="inv-section-title">تأمین‌کننده</h2>
             <div class="inv-rows">
@@ -647,7 +708,13 @@
               ${s.phone ? '<div class="inv-row"><span class="inv-row-label">تلفن</span><span class="inv-row-value">' + esc(s.phone) + '</span></div>' : ''}
             </div>
           </div>
-
+          <div class="inv-section">
+            <h2 class="inv-section-title">مشخصات خرید</h2>
+            <div class="inv-rows">
+              <div class="inv-row inv-row-date"><span class="inv-row-label">تاریخ خرید</span>${shamsiDateInputHTML('f-date', todayISO())}</div>
+              <div class="inv-row"><label class="inv-row-label" for="f-desc">توضیح <small>(اختیاری)</small></label><input id="f-desc" class="pf-row-input" placeholder="مثلاً شماره بار"></div>
+            </div>
+          </div>
           <div class="inv-section inv-items-section">
             <div class="inv-items-card-head pf-items-head">
               <span class="inv-items-card-label" id="pf-items-label">اقلام خرید</span>
@@ -663,156 +730,184 @@
               <button type="button" class="inv-add-line" id="pf-add"><span class="inv-add-line-icon" aria-hidden="true">+</span> افزودن قلم جدید</button>
             </div>
           </div>
-
-          <div class="inv-section">
-            <h2 class="inv-section-title">مشخصات خرید</h2>
-            <div class="inv-rows">
-              <div class="inv-row inv-row-date"><span class="inv-row-label">تاریخ خرید</span>${shamsiDateInputHTML('f-date', todayISO())}</div>
-              <div class="inv-row"><label class="inv-row-label" for="f-desc">توضیح <small>(اختیاری)</small></label><input id="f-desc" class="pf-row-input" placeholder="مثلاً شمارهٔ بار"></div>
-            </div>
-          </div>
-
-          <div class="inv-section pf-summary">
-            <div class="sup-totals">
-              <div class="sup-total-row"><span>تعداد اقلام</span><span id="pf-count">۰</span></div>
-              <div class="sup-total-row is-final"><span>جمع کل خرید</span><span id="pf-sum">۰ ت</span></div>
-            </div>
-          </div>
+          <div class="inv-section pf-summary"><div class="sup-totals">
+            <div class="sup-total-row"><span>تعداد اقلام</span><span id="pf-count">۰</span></div>
+            <div class="sup-total-row is-final"><span>جمع کل خرید</span><span id="pf-sum">۰ ت</span></div>
+          </div></div>
         </div>
       </div>
     `, { dirtyCheck: true });
     hostFullSheet();
 
     const $ = id => document.getElementById(id);
-    function readLines() {
-      return Array.from(document.querySelectorAll('#pf-lines .pf-line')).map(row => ({
-        row,
-        productId: row.querySelector('.pf-select').value,
-        qty: numVal(row.querySelector('.pf-qty')),
-        price: numVal(row.querySelector('.pf-price'))
-      }));
-    }
-    function syncModel() {
-      model = Array.from(document.querySelectorAll('#pf-lines .pf-line')).map(row => ({
-        productId: row.querySelector('.pf-select').value,
-        qty: row.querySelector('.pf-qty').value,
-        price: row.querySelector('.pf-price').value
-      }));
-    }
-    function lineHtml(l, i) {
-      return `<div class="pf-line" data-i="${i}">
-        <div class="pf-line-top">
-          <select class="pf-select" aria-label="کالا">${optionsHtml}</select>
-          ${model.length > 1 ? `<button type="button" class="pf-del" data-del="${i}" aria-label="حذف این قلم">×</button>` : ''}
+    const prodOf = id => products.find(p => p.id === id);
+    const lineHtml = (l, i) => {
+      const prod = prodOf(l.productId);
+      const amount = (Number(l.qty)||0) * (Number(l.price)||0);
+      const complete = !!(prod && Number(l.qty)>0 && Number(l.price)>0);
+      return `<div class="inv-line${complete && !l.expanded ? '' : ' is-active'}${prod ? '' : ' inv-line-empty'}" data-i="${i}">
+        ${complete ? `<div class="inv-line-collapsed" role="button" tabindex="0" aria-label="ویرایش ${esc(prod.name)}" ${l.expanded ? 'hidden' : ''}>
+          <div class="inv-line-body"><span class="inv-line-name">${esc(prod.name)}</span></div>
+          <div class="inv-line-figures"><span class="inv-line-amount">${toman(amount)} ت</span><span class="inv-line-calc">${fa(l.qty)} × ${toman(l.price)} ت</span></div>
+        </div>` : ''}
+        <div class="inv-line-view-active" ${complete && !l.expanded ? 'hidden' : ''}>
+          <div class="inv-line-main">
+            <input type="text" class="row-product-search inv-line-name" readonly inputmode="none" autocomplete="off" placeholder="انتخاب کالا..." value="${prod ? esc(prod.name) : ''}" aria-label="انتخاب کالا">
+            ${model.length > 1 ? `<button type="button" class="inv-line-del row-del" data-del="${i}" aria-label="حذف این قلم">×</button>` : ''}
+            <span class="inv-line-chevron" aria-hidden="true">›</span>
+            <div class="prod-drop" ${l.queryOpen ? '' : 'hidden'}>
+              <div class="prod-drop-panel">
+                <div class="prod-drop-search-wrap"><input type="search" class="prod-drop-search" data-search="${i}" placeholder="جستجوی کالا..." value="${esc(l.query || '')}" autocomplete="off"></div>
+                <div class="prod-drop-list">${productListHtml(i, l.query || '')}</div>
+              </div>
+            </div>
+          </div>
+          <div class="inv-line-sub" style="${prod ? 'display:flex' : 'display:none'}">
+            <span class="inv-line-qtyrate">
+              <input type="text" inputmode="decimal" class="pf-qty inv-mini-input" data-i="${i}" aria-label="تعداد" value="${esc(String(l.qty))}">
+              <span class="inv-line-x">×</span>
+              <input type="text" inputmode="decimal" class="pf-price inv-mini-input inv-mini-input-price" data-i="${i}" aria-label="قیمت واحد" value="${esc(String(l.price))}">
+              <span class="inv-line-unit">ت</span>
+            </span>
+          </div>
+          ${prod ? `<div class="inv-line-avg-cost">موجودی فعلی: ${fa(prod.stockQty||0)} ${unitOf(prod)}</div>` : ''}
         </div>
-        <div class="pf-line-fields">
-          <label class="pf-field"><span class="pf-unit" data-unit>تعداد</span><input type="text" inputmode="decimal" class="pf-qty" value="${esc(l.qty)}" placeholder="۰"></label>
-          <label class="pf-field"><span>قیمت واحد (ت)</span><input type="text" inputmode="decimal" class="pf-price" value="${esc(l.price)}" placeholder="۰"></label>
-          <div class="pf-line-total"><span>جمع قلم</span><strong data-line-total>۰ ت</strong></div>
-        </div>
-        <div class="pf-line-hint" data-hint hidden></div>
       </div>`;
-    }
-    function refreshProductMeta(row) {
-      const prod = productOf(row.querySelector('.pf-select').value);
-      row.querySelector('[data-unit]').textContent = prod ? 'تعداد (' + unitOf(prod) + ')' : 'تعداد';
-      const hint = row.querySelector('[data-hint]');
-      if (prod) { hint.hidden = false; hint.textContent = 'موجودی فعلی: ' + fa(prod.stockQty || 0) + ' ' + unitOf(prod); } else { hint.hidden = true; hint.textContent = ''; }
-    }
-    function renderLines() {
-      $('pf-lines').innerHTML = model.map(lineHtml).join('');
-      Array.from(document.querySelectorAll('#pf-lines .pf-line')).forEach((row, i) => {
-        row.querySelector('.pf-select').value = model[i].productId || '';
-        refreshProductMeta(row);
-      });
-      updateTotals();
+    };
+    function productListHtml(i, query) {
+      const q = String(query || '').trim();
+      const matches = products.filter(p => !q || String(p.name || '').toLocaleLowerCase().includes(q.toLocaleLowerCase())).slice(0, 50);
+      return matches.length ? matches.map(p => `<div class="prod-drop-item" data-pick="${i}" data-pid="${esc(p.id)}" role="button" tabindex="0">
+        <span class="prod-drop-ico" aria-hidden="true">◈</span><span class="prod-drop-main"><span class="prod-drop-name">${esc(p.name)}</span></span>
+        <span class="prod-drop-stock">${fa(p.stockQty||0)}</span><span class="prod-drop-chevron">›</span></div>`).join('') : '<div class="prod-drop-empty">کالایی پیدا نشد</div>';
     }
     function updateTotals() {
-      let total, count;
-      if (mode === 'amount') { total = numVal($('pf-amount')); count = 0; }
-      else {
-        const ls = readLines();
-        ls.forEach(l => { l.row.querySelector('[data-line-total]').textContent = toman(l.qty * l.price) + ' ت'; });
-        total = ls.reduce((a, l) => a + l.qty * l.price, 0);
-        count = ls.filter(l => l.productId).length;
-      }
+      const total = mode === 'amount' ? numVal($('pf-amount')) : model.reduce((sum,l)=>sum+(Number(l.qty)||0)*(Number(l.price)||0),0);
+      const count = mode === 'amount' ? 0 : model.filter(l => l.productId).length;
       $('pf-total').textContent = toman(total) + ' ت';
       $('pf-sum').textContent = toman(total) + ' ت';
       $('pf-count').textContent = mode === 'amount' ? 'بدون کالا' : fa(count);
     }
+    function renderLines(focusSearch) {
+      $('pf-lines').innerHTML = model.map(lineHtml).join('');
+      updateTotals();
+      if (focusSearch) {
+        const input = $('pf-lines').querySelector(`.prod-drop-search[data-search="${focusSearch.index}"]`);
+        if (input) input.focus();
+      }
+    }
     function applyMode() {
       const amountOnly = mode === 'amount';
-      $('pf-lines').hidden = amountOnly;
-      $('pf-add').hidden = amountOnly;
-      $('pf-amount-wrap').hidden = !amountOnly;
+      $('pf-lines').hidden = amountOnly; $('pf-add').hidden = amountOnly; $('pf-amount-wrap').hidden = !amountOnly;
       $('pf-items-label').textContent = amountOnly ? 'مبلغ کل' : 'اقلام خرید';
       $('pf-mode').textContent = amountOnly ? 'ثبت با اقلام کالا' : 'فقط مبلغ کل (بدون کالا)';
       updateTotals();
     }
-
-    $('pf-lines').addEventListener('input', updateTotals);
+    $('pf-lines').addEventListener('input', e => {
+      const i = Number(e.target.dataset.i);
+      if (e.target.classList.contains('pf-qty') || e.target.classList.contains('pf-price')) {
+        const l = model[i]; if (!l) return;
+        if (e.target.classList.contains('pf-qty')) l.qty = e.target.value;
+        else l.price = e.target.value;
+        updateTotals();
+        const row = e.target.closest('.inv-line');
+        const prod = prodOf(l.productId);
+        if (prod && Number(l.qty)>0 && Number(l.price)>0) {
+          const summary = row.querySelector('.inv-line-collapsed');
+          if (summary) {
+            summary.querySelector('.inv-line-amount').textContent = toman(Number(l.qty)*Number(l.price)) + ' ت';
+            summary.querySelector('.inv-line-calc').textContent = fa(Number(l.qty)) + ' × ' + toman(Number(l.price)) + ' ت';
+          }
+        }
+      } else if (e.target.classList.contains('prod-drop-search')) {
+        const idx = Number(e.target.dataset.search); model[idx].query = e.target.value;
+        const list = e.target.closest('.prod-drop-panel').querySelector('.prod-drop-list');
+        list.innerHTML = productListHtml(idx, e.target.value);
+      }
+    });
     $('pf-lines').addEventListener('change', e => {
-      if (e.target.classList.contains('pf-select')) refreshProductMeta(e.target.closest('.pf-line'));
-      updateTotals();
+      if (e.target.classList.contains('pf-qty') || e.target.classList.contains('pf-price')) {
+        const i = Number(e.target.dataset.i), l = model[i];
+        if (l && l.productId && Number(l.qty)>0 && Number(l.price)>0) {
+          l.expanded = false; renderLines();
+        }
+      }
     });
     $('pf-lines').addEventListener('click', e => {
+      const pick = e.target.closest('[data-pick]');
+      if (pick) {
+        const i = Number(pick.dataset.pick), l = model[i];
+        l.productId = pick.dataset.pid; l.queryOpen = false; l.query = '';
+        l.expanded = true; renderLines();
+        const qty = $('pf-lines').querySelector(`.pf-qty[data-i="${i}"]`);
+        if (qty) qty.focus();
+        return;
+      }
       const del = e.target.closest('[data-del]');
-      if (!del) return;
-      syncModel();
-      model.splice(parseInt(del.getAttribute('data-del'), 10), 1);
-      renderLines();
+      if (del) {
+        model.splice(Number(del.dataset.del), 1); renderLines(); return;
+      }
+      const collapsed = e.target.closest('.inv-line-collapsed');
+      if (collapsed) {
+        const i = Number(collapsed.closest('.inv-line').dataset.i);
+        model.forEach((l,n)=>l.expanded=n===i); renderLines(); return;
+      }
+      const productInput = e.target.closest('.row-product-search');
+      if (productInput) {
+        const i = Number(productInput.closest('.inv-line').dataset.i);
+        model[i].queryOpen = true; model.forEach((l,n)=>{if(n!==i)l.queryOpen=false;});
+        renderLines({index:i}); return;
+      }
+    });
+    $('pf-lines').addEventListener('keydown', e => {
+      if ((e.key === 'Enter' || e.key === ' ') && e.target.closest('[data-pick]')) { e.preventDefault(); e.target.closest('[data-pick]').click(); }
+      if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('inv-line-collapsed')) { e.preventDefault(); e.target.click(); }
     });
     $('pf-amount').addEventListener('input', updateTotals);
     $('pf-add').addEventListener('click', () => {
-      syncModel();
-      model.push({ productId: '', qty: '', price: '' });
-      renderLines();
-      const rows = document.querySelectorAll('#pf-lines .pf-line');
-      const last = rows[rows.length - 1];
-      if (last && last.scrollIntoView) last.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      const last = model[model.length - 1];
+      if (last && (!last.productId || !(Number(last.qty)>0) || !(Number(last.price)>0))) {
+        showToast('ابتدا کالای سطر آخر، تعداد و قیمت آن را کامل کن');
+        const row = $('pf-lines').querySelector(`.inv-line[data-i="${model.length-1}"]`);
+        const search = row && row.querySelector('.row-product-search');
+        if (search && !last.productId) search.click();
+        else if (row) (row.querySelector('.pf-qty') || row.querySelector('.pf-price')).focus();
+        return;
+      }
+      model.push({ productId:'', qty:1, price:0, expanded:true, queryOpen:true });
+      renderLines({index:model.length-1});
+      const rows = $('pf-lines').querySelectorAll('.inv-line');
+      if (rows.length && rows[rows.length-1].scrollIntoView) rows[rows.length-1].scrollIntoView({block:'center',behavior:'smooth'});
     });
     $('pf-mode').addEventListener('click', () => { mode = mode === 'items' ? 'amount' : 'items'; applyMode(); });
-
     $('pf-save').addEventListener('click', async function (ev) {
       await withSubmitGuard(ev.currentTarget, async () => {
         const date = $('f-date').value || todayISO();
         const desc = ($('f-desc').value || '').trim();
         let purchase;
         if (mode === 'items') {
-          const ls = readLines();
-          if (!ls.length) { showToast('حداقل یک قلم کالا اضافه کن'); throw new Error('validation'); }
-          for (const l of ls) {
-            if (!l.productId || !productOf(l.productId)) { showToast('برای همهٔ اقلام کالا را انتخاب کن'); l.row.querySelector('.pf-select').focus(); throw new Error('validation'); }
-            if (!(l.qty > 0)) { showToast('تعداد همه اقلام باید بیشتر از صفر باشد'); l.row.querySelector('.pf-qty').focus(); throw new Error('validation'); }
-            if (!(l.price > 0)) { showToast('قیمت واحد همه اقلام باید بیشتر از صفر باشد'); l.row.querySelector('.pf-price').focus(); throw new Error('validation'); }
+          if (!model.length) { showToast('حداقل یک قلم کالا اضافه کن'); throw new Error('validation'); }
+          for (const l of model) {
+            if (!l.productId || !prodOf(l.productId)) { showToast('برای همهٔ اقلام کالا را انتخاب کن'); throw new Error('validation'); }
+            if (!(Number(l.qty)>0)) { showToast('تعداد همه اقلام باید بیشتر از صفر باشد'); throw new Error('validation'); }
+            if (!(Number(l.price)>0)) { showToast('قیمت واحد همه اقلام باید بیشتر از صفر باشد'); throw new Error('validation'); }
           }
-          const usedIds = new Set();
-          const items = ls.map(l => {
-            let id = uid();
-            while (usedIds.has(id)) id = uid();
-            usedIds.add(id);
-            return { id, productId: l.productId, name: productOf(l.productId).name || '', qty: l.qty, unitCost: l.price, lineAmount: l.qty * l.price };
-          });
-          purchase = { id: uid(), date, amount: items.reduce((a, it) => a + it.lineAmount, 0), desc, productId: '', qty: 0, items };
+          const items = model.map(l => ({ id:uid(), productId:l.productId, name:prodOf(l.productId).name||'', qty:Number(l.qty), unitCost:Number(l.price), lineAmount:Number(l.qty)*Number(l.price) }));
+          purchase = { id:uid(), date, amount:items.reduce((a,it)=>a+it.lineAmount,0), desc, productId:'', qty:0, items };
         } else {
           const amount = numVal($('pf-amount'));
-          if (!(amount > 0)) { showToast('مبلغ رو وارد کن'); $('pf-amount').focus(); throw new Error('validation'); }
-          purchase = { id: uid(), date, amount, desc, productId: '', qty: 0 };
+          if (!(amount>0)) { showToast('مبلغ رو وارد کن'); $('pf-amount').focus(); throw new Error('validation'); }
+          purchase = { id:uid(), date, amount, desc, productId:'', qty:0 };
         }
-        await commitWithRollback(() => {
-          s.purchases = s.purchases || [];
-          s.purchases.push(purchase);
-          applyPurchaseStockEffects(purchase, s.name);
-        });
-        closeModal();
-        drawSupplierPage(rootEl);
-        showToast('خرید ثبت شد');
+        await commitWithRollback(() => { s.purchases=s.purchases||[]; s.purchases.push(purchase); applyPurchaseStockEffects(purchase,s.name); });
+        closeModal(); drawSupplierPage(rootEl); showToast('خرید ثبت شد');
       });
     });
-
     renderLines();
     applyMode();
+    if (model[0]) { model[0].queryOpen = true; renderLines({index:0}); }
   }
+
 
   function openAddPaymentSheet(s) {
     openSheet(`
@@ -953,8 +1048,8 @@
       const n = purchaseItemCount(p);
       return `<div class="ledger-row tx-row sup-row" role="button" tabindex="0" data-open-purchase="${esc(p.id)}">
         <span class="name">
-          <span class="tx-row-title">${esc(purchaseTitle(p))}</span>
-          <span class="sub">${faDate(p.date)}${n ? ' · ' + fa(n) + ' قلم' : ''}${ret ? ' · برگشت ' + toman(ret) + ' ت' : ''}</span>
+          <span class="tx-row-title">${faDate(p.date)}</span>
+          <span class="sub">${n ? fa(n) + ' قلم کالا' : 'بدون کالا'}${ret ? ' · برگشت ' + toman(ret) + ' ت' : ''}</span>
         </span>
         <span class="filler"></span>
         <span class="amount tx-row-amount"><span class="tx-row-total">${toman(net)} ت</span>${chev}</span>
