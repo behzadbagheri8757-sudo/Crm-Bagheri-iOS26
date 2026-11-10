@@ -742,10 +742,180 @@ const TX_METHOD_CHIPS = [
   { value:'discount', label:'تخفیف' },
   { value:'return', label:'برگشت از فروش' },
 ];
-function openAddTransaction(cid){
+
+/* ============================================================
+   Payment Promises — device-local reminders only.
+   Deliberately independent from data/IndexedDB/backup/accounting.
+   ============================================================ */
+const PROMISES_KEY = 'baqeri_payment_promises_v1';
+
+function promiseTodayPlusDays(days){
+  const d = new Date();
+  d.setHours(12,0,0,0);
+  d.setDate(d.getDate() + Number(days || 0));
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function promiseNow(){ return new Date().toISOString(); }
+function promiseDaysDiff(a,b){
+  const aa = new Date(String(a).slice(0,10)+'T00:00:00').getTime();
+  const bb = new Date(String(b).slice(0,10)+'T00:00:00').getTime();
+  return Number.isFinite(aa) && Number.isFinite(bb) ? Math.round((aa-bb)/86400000) : null;
+}
+function promiseStorage(){
+  try { return (typeof localStorage !== 'undefined' && localStorage) ? localStorage : null; }
+  catch(e){ return null; }
+}
+function promiseRecordValid(p){
+  return !!(p && p.id && p.customerId && p.date && p.dueDate &&
+    ['pending','completed','broken','superseded'].indexOf(p.status) >= 0);
+}
+function purgeOldPromises(list){
+  const now = new Date();
+  return (Array.isArray(list) ? list : []).filter(function(p){
+    if(!promiseRecordValid(p)) return false;
+    if(p.status === 'pending') return true;
+    const stamp = p.completedAt || p.brokenAt || p.supersededAt || p.createdAt || p.date;
+    const age = new Date(String(stamp)).getTime();
+    if(!Number.isFinite(age)) return true;
+    const days = (now.getTime() - age) / 86400000;
+    const keepDays = p.status === 'superseded' ? 7 : 30;
+    return days <= keepDays;
+  });
+}
+function loadPaymentPromises(){
+  const st = promiseStorage();
+  if(!st) return [];
+  try{
+    const raw = st.getItem(PROMISES_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    const cleaned = purgeOldPromises(parsed);
+    if(JSON.stringify(cleaned) !== JSON.stringify(parsed)) st.setItem(PROMISES_KEY, JSON.stringify(cleaned));
+    return cleaned;
+  }catch(e){ return []; }
+}
+function savePaymentPromises(list){
+  const cleaned = purgeOldPromises(list);
+  const st = promiseStorage();
+  if(!st){ showToast('مرورگر شما ذخیرهٔ محلی را محدود کرده — وعده ذخیره نشد'); return false; }
+  try{ st.setItem(PROMISES_KEY, JSON.stringify(cleaned)); return true; }
+  catch(e){ showToast('یادآوری ذخیره نشد'); return false; }
+}
+function getPromisesForCustomer(cid){
+  return loadPaymentPromises().filter(function(p){ return p.customerId === cid; }).sort(function(a,b){
+    return String(a.dueDate).localeCompare(String(b.dueDate)) || String(b.createdAt||'').localeCompare(String(a.createdAt||''));
+  });
+}
+function getPendingPromisesDue(){
+  const today = todayISO();
+  return loadPaymentPromises().filter(function(p){ return p.status === 'pending' && String(p.dueDate) <= today; })
+    .sort(function(a,b){ return String(a.dueDate).localeCompare(String(b.dueDate)) || String(b.createdAt||'').localeCompare(String(a.createdAt||'')); });
+}
+function promiseAmountText(amount){ return Number(amount) > 0 ? toman(Number(amount)) + ' ت' : 'مبلغ مشخص نیست'; }
+function promiseStatusText(p){
+  if(p.status === 'completed') return 'انجام شد';
+  if(p.status === 'broken') return 'انجام نشد';
+  if(p.status === 'superseded') return 'جایگزین شد';
+  const d = promiseDaysDiff(p.dueDate, todayISO());
+  if(d === 0) return 'امروز';
+  if(d > 0) return enToFaDigits(String(d)) + ' روز مانده';
+  return enToFaDigits(String(Math.abs(d))) + ' روز از موعد';
+}
+function promiseStatusClass(p){ return p.status === 'pending' ? (String(p.dueDate) < todayISO() ? 'is-overdue' : 'is-pending') : 'is-'+p.status; }
+function markPaymentPromiseStatus(id, status){
+  const allowed = ['completed','broken','superseded'];
+  if(allowed.indexOf(status) < 0) return false;
+  const list = loadPaymentPromises();
+  const p = list.find(function(x){ return x.id === id; });
+  if(!p) return false;
+  p.status = status;
+  const stamp = promiseNow();
+  if(status === 'completed') p.completedAt = stamp;
+  if(status === 'broken') p.brokenAt = stamp;
+  if(status === 'superseded') p.supersededAt = stamp;
+  return savePaymentPromises(list);
+}
+function deletePaymentPromise(id){ return savePaymentPromises(loadPaymentPromises().filter(function(p){ return p.id !== id; })); }
+function openAddPromiseSheet(cid){
+  const existing = getPromisesForCustomer(cid).filter(function(p){ return p.status === 'pending'; });
+  const defaultDate = promiseTodayPlusDays(3);
+  openSheet(
+    '<h3>وعدهٔ پرداخت</h3>' +
+    '<div class="form-hint promise-form-intro">این فقط یک یادآور شخصی روی همین گوشی است و روی مانده حساب اثر ندارد.</div>' +
+    '<div class="field"><label>مبلغ (تومان، اختیاری)</label><input id="promise-amount" type="text" inputmode="decimal" placeholder="اگر مبلغ مشخص نیست، خالی بگذار"></div>' +
+    '<div class="field"><label>تاریخ وعده</label>' + shamsiDateInputHTML('promise-due', defaultDate) + '</div>' +
+    '<div class="field"><label>یادداشت (اختیاری)</label><textarea id="promise-note" placeholder="مثلاً بعد از هماهنگی با شریک"></textarea></div>' +
+    (existing.length ? '<label class="promise-replace-option"><input type="checkbox" id="promise-replace" checked> ' + (existing.length === 1 ? 'جایگزین وعدهٔ قبلی (' + esc(promiseAmountText(existing[0].amount)) + ' — ' + esc(faDate(existing[0].dueDate)) + ')' : 'جایگزین ' + enToFaDigits(String(existing.length)) + ' وعدهٔ قبلی') + '</label>' : '') +
+    '<div class="btn-row"><button class="btn" id="save-promise">ثبت یادآوری</button></div>', {dirtyCheck:true}
+  );
+  const due = document.getElementById('promise-due');
+  const amount = document.getElementById('promise-amount');
+  const note = document.getElementById('promise-note');
+  const save = document.getElementById('save-promise');
+  function validate(){
+    const d = due && due.value ? due.value : '';
+    const n = amount ? numVal(amount) : 0;
+    const okDate = !!(d && parseISODateParts(d) && d >= todayISO());
+    const okAmount = !amount || !String(amount.value||'').trim() || n > 0;
+    if(save) save.disabled = !(okDate && okAmount);
+    return {d:d,n:n,okDate:okDate,okAmount:okAmount};
+  }
+  [due,amount].forEach(function(el){ if(el){ el.addEventListener('input', validate); el.addEventListener('change', validate); } });
+  validate();
+  save.addEventListener('click', async function(e){
+    await withSubmitGuard(e.currentTarget, async function(){
+      const v = validate();
+      if(!v.okDate){ showToast('تاریخ وعده نمی‌تواند گذشته باشد'); throw new Error('validation'); }
+      if(!v.okAmount){ showToast('مبلغ باید بیشتر از صفر باشد'); throw new Error('validation'); }
+      const list = loadPaymentPromises();
+      const replace = document.getElementById('promise-replace');
+      if(replace && replace.checked){
+        list.forEach(function(p){ if(p.customerId === cid && p.status === 'pending'){ p.status='superseded'; p.supersededAt=promiseNow(); } });
+      }
+      list.push({id:uid(), customerId:cid, date:todayISO(), dueDate:v.d, amount:v.n || 0,
+        note:note ? String(note.value||'').trim() : '', status:'pending', completedAt:null, brokenAt:null,
+        supersededAt:null, createdAt:promiseNow()});
+      if(!savePaymentPromises(list)) throw new Error('validation');
+      closeModal(); render(); showToast('یادآوری پرداخت ثبت شد');
+    });
+  });
+}
+function openPaymentPromiseDetailSheet(p, onDone){
+  if(!p) return;
+  const cid = p.customerId;
+  openSheet('<h3>یادآوری پرداخت</h3>' +
+    '<div class="promise-detail-summary"><strong>' + esc(promiseAmountText(p.amount)) + '</strong><span>' + esc(faDate(p.dueDate)) + ' · ' + esc(promiseStatusText(p)) + '</span>' + (p.note ? '<small>' + esc(p.note) + '</small>' : '') + '</div>' +
+    '<div class="btn-row promise-detail-actions">' +
+    (p.status === 'pending' ? '<button class="btn" id="promise-received">دریافت شد</button><button class="btn secondary" id="promise-complete-no-payment">بستن بدون پرداخت</button><button class="btn secondary" id="promise-broken">انجام نشد</button>' : '') +
+    '<button class="btn danger secondary" id="promise-delete">حذف</button><button class="btn secondary" id="promise-cancel">بستن</button></div>');
+  const cancel = document.getElementById('promise-cancel'); if(cancel) cancel.onclick = closeModal;
+  const del = document.getElementById('promise-delete'); if(del) del.onclick = async function(){
+    if(!(await appConfirm('این یادآوری حذف شود؟'))) return;
+    deletePaymentPromise(p.id); closeModal(); if(onDone) onDone();
+  };
+  const broken = document.getElementById('promise-broken'); if(broken) broken.onclick = function(){
+    markPaymentPromiseStatus(p.id,'broken'); closeModal(); if(onDone) onDone(); showToast('یادآوری به‌عنوان انجام‌نشده بسته شد');
+  };
+  const completeNoPayment = document.getElementById('promise-complete-no-payment'); if(completeNoPayment) completeNoPayment.onclick = function(){
+    markPaymentPromiseStatus(p.id,'completed'); closeModal(); if(onDone) onDone(); showToast('یادآوری بسته شد');
+  };
+  const received = document.getElementById('promise-received'); if(received) received.onclick = function(){
+    closeModal(); setTimeout(function(){ openAddTransaction(cid, {promiseId:p.id, prefilledAmount:Number(p.amount)||0}); }, 190);
+  };
+}
+function openPaymentPromiseListSheet(){
+  const list = getPendingPromisesDue();
+  openSheet('<h3>همهٔ یادآورهای سررسیدشده</h3>' + (list.length ? '<div class="promise-dashboard-list">' + list.map(function(p){
+    const c=(data.customers||[]).find(function(x){return x.id===p.customerId;});
+    return '<button type="button" class="promise-dashboard-row" data-promise-id="'+esc(p.id)+'"><span><strong>'+esc(c?c.name:'—')+'</strong><small>'+esc(promiseAmountText(p.amount))+' · '+esc(promiseStatusText(p))+'</small></span><b>دریافت شد</b></button>';
+  }).join('') + '</div>' : '<div class="empty">یادآوری سررسیدشده‌ای نیست.</div>'));
+  document.querySelectorAll('[data-promise-id]').forEach(function(btn){ btn.onclick=function(){ const p=getPendingPromisesDue().find(function(x){return x.id===btn.getAttribute('data-promise-id');}); if(!p)return; closeModal(); setTimeout(function(){openAddTransaction(p.customerId,{promiseId:p.id,prefilledAmount:Number(p.amount)||0});},190); }; });
+}
+
+function openAddTransaction(cid, promiseOpts){
+  promiseOpts = promiseOpts || {};
   // وضعیت فرم بین رندرهای مجدد شیت نگه داشته می‌شود.
   let method = '';
-  let amountStr = '';
+  let amountStr = promiseOpts.prefilledAmount > 0 ? String(promiseOpts.prefilledAmount) : '';
   let dateStr = todayISO();
   let noteStr = '';
   let selectedInvoiceId = '';
@@ -1003,6 +1173,11 @@ function openAddTransaction(cid){
           } catch (e) {
             console.warn('Game hook failed:', e);
           }
+        }
+        let closePromise = true;
+        if (promiseOpts.promiseId && ['cash','card','transfer'].includes(method)) {
+          closePromise = await appConfirm('یادآوری بسته شود؟');
+          if (closePromise) markPaymentPromiseStatus(promiseOpts.promiseId, 'completed');
         }
         closeModal();
         openCustomerDetail(cid); showToast('ثبت شد');
@@ -4803,4 +4978,3 @@ function openSupplierDetail(sid){
     setTimeout(ensureQAUI, 0);
   }
 })();
-
