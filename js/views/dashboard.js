@@ -626,6 +626,7 @@
       '<div class="dashboard-eyebrow">مرکز فرماندهی روزانه</div>' +
       alertBar +
       (typeof PromiseUI !== 'undefined' ? PromiseUI.dashboardHtml() : '') +
+      (typeof DeliveryUI !== 'undefined' ? DeliveryUI.dashboardHtml() : '') +
       todaySnapshot +
       targetHtml(metrics) +
 
@@ -657,6 +658,7 @@
     bindQuickActions(root);
     bindAttentionLink(root, ctx);
     if (typeof PromiseUI !== 'undefined') PromiseUI.bindDashboard(root);
+    if (typeof DeliveryUI !== 'undefined') DeliveryUI.bindDashboard(root);
   }
 
   function mount(root, params) {

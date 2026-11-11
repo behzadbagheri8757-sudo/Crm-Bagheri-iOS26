@@ -1359,8 +1359,11 @@
       '<summary class="customer-behavior-summary">چک‌ها (' + chks.length + ')</summary>' +
       '<div class="customer-tx-list customer-check-list">' + chkRows + '</div></details>';
     // Payment promise: ONE slot under the top alert (active promise card, or «ثبت وعدهٔ پرداخت» when there is debt).
-    var promiseCardHtml = (typeof PromiseUI !== 'undefined') ? PromiseUI.cardHtml(c.id, t.balance) : '';
-    var promiseHistoryHtml = (typeof PromiseUI !== 'undefined') ? PromiseUI.historyHtml(c.id) : '';
+    // Commitments slot: payment promise + delivery promises (DeliveryUI composes both; PromiseUI alone as fallback).
+    var promiseCardHtml = (typeof DeliveryUI !== 'undefined') ? DeliveryUI.slotHtml(c.id, t.balance)
+      : ((typeof PromiseUI !== 'undefined') ? PromiseUI.cardHtml(c.id, t.balance) : '');
+    var promiseHistoryHtml = ((typeof PromiseUI !== 'undefined') ? PromiseUI.historyHtml(c.id) : '') +
+      ((typeof DeliveryUI !== 'undefined') ? DeliveryUI.historyHtml(c.id) : '');
     var visitDetailsHtml = '<details class="cd-history-details">' +
       '<summary class="customer-behavior-summary">ویزیت‌ها و ارزیابی‌ها (' + visits.length + ')</summary>' +
       '<div class="btn-row" style="margin-bottom:8px;">' +
@@ -1442,6 +1445,7 @@
       visitDetailsHtml;
 
     if (typeof PromiseUI !== 'undefined') PromiseUI.bind(root, c.id);
+    if (typeof DeliveryUI !== 'undefined') DeliveryUI.bind(root, c.id);
 
     document.getElementById('act-invoice').onclick = function () {
       openAddInvoice(c.id);

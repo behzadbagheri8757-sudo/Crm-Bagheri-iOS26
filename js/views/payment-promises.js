@@ -25,13 +25,14 @@
 
   /* ---------- customer page ---------- */
 
+  function addButtonHtml(cid) {
+    return '<button type="button" class="pp-add-row" data-pp-add="' + esc(cid) + '">' +
+      '<span class="pp-add-plus" aria-hidden="true">+</span><span>وعدهٔ پرداخت</span></button>';
+  }
+
   function cardHtml(cid, balance) {
     var p = PP.active(cid);
-    if (!p) {
-      if (!(balance > 0)) return '';
-      return '<button type="button" class="pp-add-row" data-pp-add="' + esc(cid) + '">' +
-        '<span class="pp-add-plus" aria-hidden="true">+</span><span>ثبت وعدهٔ پرداخت</span></button>';
-    }
+    if (!p) return balance > 0 ? addButtonHtml(cid) : '';
     return '<div class="card pp-card pp-card-' + PP.badge(p).tone + '">' +
       '<button type="button" class="pp-card-main" data-pp-open="' + esc(p.id) + '">' +
         '<span class="pp-card-head"><span class="pp-card-title">وعدهٔ پرداخت</span>' + badgeHtml(p) + '</span>' +
@@ -274,7 +275,7 @@
   }
 
   global.PromiseUI = {
-    cardHtml: cardHtml, historyHtml: historyHtml, bind: bind,
+    cardHtml: cardHtml, addButtonHtml: addButtonHtml, historyHtml: historyHtml, bind: bind,
     dashboardHtml: dashboardHtml, bindDashboard: bindDashboard,
     openAddSheet: openAddSheet, openDetailSheet: openDetailSheet, openListSheet: openListSheet, receive: receive,
   };
