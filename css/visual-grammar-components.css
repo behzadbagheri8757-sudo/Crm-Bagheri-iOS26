@@ -283,6 +283,7 @@ input[placeholder*="جستجو"]{
    ============================================================ */
 
 .btn{
+  font-family:inherit;
   min-height:var(--vg-control-height);
   padding:12px 16px;
   background:var(--vg-color-primary);
@@ -333,6 +334,7 @@ input[placeholder*="جستجو"]{
 
 .chip,
 .chip-opt{
+  font-family:inherit;
   min-height:40px;
   padding:8px 12px;
   background:var(--vg-color-surface);
