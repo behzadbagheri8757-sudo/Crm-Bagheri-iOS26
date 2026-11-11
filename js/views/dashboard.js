@@ -263,44 +263,6 @@
       '</div>';
   }
 
-  function paymentPromiseReminderRow(p){
-    var c = (data.customers || []).find(function(x){ return x && x.id === p.customerId; });
-    var overdue = String(p.dueDate) < todayISO();
-    var diff = Math.abs(promiseDaysDiff(p.dueDate, todayISO()));
-    var meta = promiseAmountText(p.amount) + ' · ' + (overdue ? enToFaDigits(String(diff)) + ' روز از موعد' : 'امروز');
-    return '<div class="promise-dashboard-row" data-promise-row="' + esc(p.id) + '">' +
-      '<a href="#/customer?id=' + encodeURIComponent(p.customerId) + '" class="promise-dashboard-customer"><strong>' + esc(c ? c.name : '—') + '</strong><small>' + esc(meta) + '</small></a>' +
-      '<button type="button" class="btn small secondary promise-dashboard-received" data-promise-received="' + esc(p.id) + '">دریافت شد</button>' +
-    '</div>';
-  }
-  function paymentPromiseRemindersHtml(){
-    var due = typeof getPendingPromisesDue === 'function' ? getPendingPromisesDue() : [];
-    var overdue = due.filter(function(p){ return String(p.dueDate) < todayISO(); });
-    var today = due.filter(function(p){ return String(p.dueDate) === todayISO(); });
-    if(!overdue.length && !today.length) return '';
-    var shownOverdue = overdue.slice(0,5);
-    var html = '';
-    if(overdue.length){
-      html += '<div class="dashboard-block promise-reminders-block promise-reminders-overdue"><div class="dashboard-block-head"><div class="dash-section-label"><span>یادآورهای سررسیدشده</span></div>' + (overdue.length > 5 ? '<button type="button" class="section-action promise-all-link" data-promise-all>همه</button>' : '') + '</div><div class="promise-dashboard-list">' + shownOverdue.map(paymentPromiseReminderRow).join('') + '</div></div>';
-    }
-    if(today.length){
-      html += '<div class="dashboard-block promise-reminders-block promise-reminders-today"><div class="dashboard-block-head"><div class="dash-section-label"><span>یادآورهای امروز</span></div></div><div class="promise-dashboard-list">' + today.map(paymentPromiseReminderRow).join('') + '</div></div>';
-    }
-    return html;
-  }
-  function bindPaymentPromiseReminders(root){
-    if(!root) return;
-    root.querySelectorAll('[data-promise-received]').forEach(function(btn){
-      btn.addEventListener('click', function(e){
-        e.preventDefault(); e.stopPropagation();
-        var p = (typeof getPendingPromisesDue === 'function' ? getPendingPromisesDue() : []).find(function(x){ return x.id === btn.getAttribute('data-promise-received'); });
-        if(!p){ showToast('این وعده دیگر موجود نیست'); return; }
-        if(typeof openAddTransaction === 'function') openAddTransaction(p.customerId, {promiseId:p.id, prefilledAmount:Number(p.amount)||0});
-      });
-    });
-    var all = root.querySelector('[data-promise-all]');
-    if(all) all.addEventListener('click', function(){ if(typeof openPaymentPromiseListSheet === 'function') openPaymentPromiseListSheet(); });
-  }
   function dashboardAlertBar(ctx) {
     var att = { count: 0, totalBalance: 0, rows: [] };
     var overdueChecks = [];
@@ -646,7 +608,6 @@
          D. Recent Activity — invoices + visits (one activity surface)
          Data sources, helpers, IDs, and event bindings are unchanged. */
      const alertBar = dashboardAlertBar(ctx);
-    const promiseReminders = paymentPromiseRemindersHtml();
     const todaySnapshot = todaySnapshotHtml(ctx);
     const focusActions = todaysActionsHtml(ctx);
     const watchSummary = watchSummaryHtml(ctx);
@@ -664,7 +625,7 @@
       '<div class="dashboard-shell">' +
       '<div class="dashboard-eyebrow">مرکز فرماندهی روزانه</div>' +
       alertBar +
-      promiseReminders +
+      (typeof PromiseUI !== 'undefined' ? PromiseUI.dashboardHtml() : '') +
       todaySnapshot +
       targetHtml(metrics) +
 
@@ -695,7 +656,7 @@
     bindActionQueueToggle(root);
     bindQuickActions(root);
     bindAttentionLink(root, ctx);
-    bindPaymentPromiseReminders(root);
+    if (typeof PromiseUI !== 'undefined') PromiseUI.bindDashboard(root);
   }
 
   function mount(root, params) {
