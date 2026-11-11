@@ -419,13 +419,20 @@ input[placeholder*="جستجو"]{
   width:100%;
   min-height:var(--vg-control-height);
   padding:11px 14px;
-  background:var(--vg-color-surface);
+  background:var(--vg-color-surface-soft);
   color:var(--vg-color-text);
-  border:1px solid var(--vg-color-border);
+  border:1px solid transparent;
+  border-bottom:1px solid var(--vg-color-divider); /* خط جداکننده بین فیلدها */
   font-size:16px;
   font-family:inherit;
   box-shadow:none;
   transition:border-color .15s,box-shadow .15s;
+  border-radius:0; /* حذف گوشه‌های گرد از خود فیلد */
+}
+.field input:last-child,
+.field select:last-child,
+.field textarea:last-child {
+  border-bottom:0;
 }
 
 .field input:focus,
@@ -693,8 +700,8 @@ button[data-toggle-check]{
   content:'';
   position:absolute;
   top:0;
-  inset-inline-start:0;
-  inset-inline-end:20px;
+  inset-inline-start:16px; /* تورفتگی ۱۶ پیکسل */
+  inset-inline-end:16px;
   height:1px;
   background:var(--vg-color-divider);
   pointer-events:none;
