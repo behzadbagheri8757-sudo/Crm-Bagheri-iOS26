@@ -1324,16 +1324,6 @@
     function cdMeta(label, value) {
       return '<div class="cd-meta-row"><span class="cd-meta-k">' + label + '</span><span class="cd-meta-v" title="' + esc(String(value)) + '">' + esc(String(value)) + '</span></div>';
     }
-    var customerPromises = typeof getPromisesForCustomer === 'function' ? getPromisesForCustomer(c.id) : [];
-    var promiseRowsHtml = customerPromises.map(function (p) {
-      return '<button type="button" class="promise-customer-row" data-promise-id="' + esc(p.id) + '">' +
-        '<span class="promise-customer-main"><strong>' + esc(promiseAmountText(p.amount)) + '</strong>' +
-        (p.note ? '<small>' + esc(p.note) + '</small>' : '') + '</span>' +
-        '<span class="promise-customer-meta"><span>' + esc(faDate(p.dueDate)) + '</span><b class="promise-status-badge ' + esc(promiseStatusClass(p)) + '">' + esc(promiseStatusText(p)) + '</b></span>' +
-      '</button>';
-    }).join('');
-    var promiseDetailsHtml = customerPromises.length ?
-      '<details class="customer-promise-details"><summary class="customer-behavior-summary">یادآورهای پرداخت (' + enToFaDigits(String(customerPromises.length)) + ')</summary><div class="customer-promise-list">' + promiseRowsHtml + '</div></details>' : '';
 
     var recMatchesVisitDetail = !!(recommendedAction && (recommendedAction.actionType === 'visit' || recommendedAction.actionType === 'follow_up'));
     var recMatchesPaymentDetail = !!(recommendedAction && recommendedAction.actionType === 'payment_followup');
@@ -1368,6 +1358,9 @@
     var checkDetailsHtml = '<details class="cd-history-details">' +
       '<summary class="customer-behavior-summary">چک‌ها (' + chks.length + ')</summary>' +
       '<div class="customer-tx-list customer-check-list">' + chkRows + '</div></details>';
+    // Payment promise: ONE slot under the top alert (active promise card, or «ثبت وعدهٔ پرداخت» when there is debt).
+    var promiseCardHtml = (typeof PromiseUI !== 'undefined') ? PromiseUI.cardHtml(c.id, t.balance) : '';
+    var promiseHistoryHtml = (typeof PromiseUI !== 'undefined') ? PromiseUI.historyHtml(c.id) : '';
     var visitDetailsHtml = '<details class="cd-history-details">' +
       '<summary class="customer-behavior-summary">ویزیت‌ها و ارزیابی‌ها (' + visits.length + ')</summary>' +
       '<div class="btn-row" style="margin-bottom:8px;">' +
@@ -1408,13 +1401,13 @@
       '</div>' +
 
       topAlertHtml +
+      promiseCardHtml +
       storyHtml +
 
       detailHintHtml +
       '<div class="btn-row cust-actions-primary" style="margin-bottom:8px;">' +
         detailBtn('invoice', 'ثبت فاکتور', 'act-invoice') +
         detailBtn('payment', 'ثبت پرداخت', 'act-pay') +
-        '<button type="button" class="btn secondary" id="act-promise">وعدهٔ پرداخت</button>' +
         detailBtn('visit', 'ثبت ویزیت', 'act-visit') +
       '</div>' +
       '<details class="bp-customer-secondary-actions"><summary>سایر عملیات</summary>' +
@@ -1445,7 +1438,10 @@
       invoiceDetailsHtml +
       paymentDetailsHtml +
       checkDetailsHtml +
+      promiseHistoryHtml +
       visitDetailsHtml;
+
+    if (typeof PromiseUI !== 'undefined') PromiseUI.bind(root, c.id);
 
     document.getElementById('act-invoice').onclick = function () {
       openAddInvoice(c.id);
@@ -1454,17 +1450,6 @@
     document.getElementById('act-pay').onclick = function () {
       openAddTransaction(c.id);
     };
-    document.getElementById('act-promise').onclick = function () {
-      if (typeof openAddPromiseSheet === 'function') openAddPromiseSheet(c.id);
-    };
-    root.querySelectorAll('[data-promise-id]').forEach(function (el) {
-      el.addEventListener('click', function () {
-        var promise = (typeof getPromisesForCustomer === 'function' ? getPromisesForCustomer(c.id) : []).find(function (x) { return x.id === el.getAttribute('data-promise-id'); });
-        if (promise && typeof openPaymentPromiseDetailSheet === 'function') {
-          openPaymentPromiseDetailSheet(promise, function () { drawCustomerPage(rootEl || root, ctx); });
-        }
-      });
-    });
     document.getElementById('act-visit').onclick = function () {
       openAddVisit(c.id);
     };
