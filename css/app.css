@@ -1415,22 +1415,6 @@ details[open] > .customer-behavior-summary::after{
   min-height:0;
   border-bottom:1px solid var(--vg-color-divider);
 }
-.action-row::after{
-  content:"";
-  position:absolute;
-  inset-inline-start:-11px;
-  top:9px;
-  bottom:9px;
-  width:3px;
-  border-radius:2px;
-  background:rgba(31,41,55,.08);
-}
-.action-row-critical::after{
-  background:#FA3946;
-}
-.action-row-high::after{
-  background:#F5A131;
-}
 /* Suggested actions hierarchy: name > action > reason > meta */
 .action-person{
   display:inline;
@@ -1698,17 +1682,20 @@ details[open] > .customer-behavior-summary::after{
 }
 .inv-header-btn{
   flex:0 0 auto;
-  min-height:36px;
+  min-height:44px;
   padding:6px 12px;
   border:0;
-  border-radius:999px;
-  background:rgba(31,41,55,.05);
-  color:var(--vg-color-text-muted);
+  border-radius:0;
+  background:transparent;
+  color:var(--vg-color-primary);
   font-family:inherit;
-  font-size:.84rem;
-  font-weight:600;
+  font-size:.95rem;
+  font-weight:500;
   cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+  transition:opacity 140ms ease;
 }
+.inv-header-btn:active{opacity:.55;}
 .inv-header-title{
   flex:1 1 auto;
   display:flex;
@@ -1727,14 +1714,19 @@ details[open] > .customer-behavior-summary::after{
 }
 button.inv-header-save.btn{
   flex:0 0 auto;
-  min-height:36px;
-  padding:7px 16px;
-  border-radius:999px;
-  font-size:.86rem;
+  min-height:44px;
+  padding:6px 12px;
+  border-radius:0;
+  font-size:.95rem;
   font-weight:700;
-  background:#0070D2;
-  color:#fff;
+  background:transparent;
+  color:var(--vg-color-primary);
+  border:0;
+  box-shadow:none;
+  -webkit-tap-highlight-color:transparent;
+  transition:opacity 140ms ease;
 }
+button.inv-header-save.btn:active{opacity:.55;}
 .inv-body{
   flex:1 1 auto;
   min-height:0;
@@ -2892,7 +2884,7 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   border:1px solid var(--vg-color-border);
   border-radius:var(--vg-radius-raised);
   padding:14px;
-  box-shadow:var(--vg-shadow-group);
+  box-shadow:none;
 }
 /* Avoid a "card inside a card" look: a couple of settings sections wrap
    their content in a plain .card (as a content box, not a second surface) —
@@ -3913,25 +3905,32 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
    -------------------------------------------------------------------------- */
 .fab{
   position:fixed;
-  inset-inline-end:16px;
-  bottom:calc(88px + env(safe-area-inset-bottom,0px));
-  width:56px;
-  height:56px;
+  top:calc(env(safe-area-inset-top,0px) + 4px);
+  inset-inline-end:6px;
+  inset-inline-start:auto;
+  bottom:auto;
+  width:44px;
+  height:44px;
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
   border-radius:50%;
-  background:#00A068;
-  color:#fff;
-  font-size:1.75rem;
+  background:rgba(0,112,210,.10);
+  color:var(--vg-color-primary);
+  font-size:1.3rem;
+  font-weight:400;
+  line-height:44px;
+  text-align:center;
   border:none;
-  box-shadow:0 8px 22px rgba(47,107,69,.28);
+  box-shadow:none;
   cursor:pointer;
-  z-index:41;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  line-height:1;
+  z-index:35;
+  -webkit-tap-highlight-color:transparent;
+  transition:background-color 140ms ease,transform 140ms ease;
 }
 .fab:active{
-  transform:scale(.94);
+  transform:scale(.92);
+  background:rgba(0,112,210,.18);
 }
 
 /* --------------------------------------------------------------------------
@@ -4256,7 +4255,6 @@ input[placeholder*="جستجو"]:focus{
 .close-x,
 .icon-btn,
 .icon-button,
-.fab,
 button.app-back,
 .prospect-daily-target .pdt-edit{
   transition:transform var(--ios-touch) var(--ios-ease-out),
@@ -4267,7 +4265,6 @@ button.app-back,
 .close-x:active,
 .icon-btn:active,
 .icon-button:active,
-.fab:active,
 button.app-back:active,
 .prospect-daily-target .pdt-edit:active{
   transform:scale(.95);

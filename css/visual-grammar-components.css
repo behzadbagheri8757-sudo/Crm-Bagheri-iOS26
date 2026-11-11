@@ -12,13 +12,16 @@
 .btn.secondary,
 .btn.danger,
 .chip,
-.chip-opt,
+.chip-opt{
+  border-radius:var(--vg-radius-control);
+}
+
 .field input,
 .field select,
 .tx-toolbar-select,
 input[type="search"],
 input[placeholder*="جستجو"]{
-  border-radius:var(--vg-radius-control);
+  border-radius:12px;
 }
 
 /* Native checkbox/radio controls must not inherit text-field geometry. */
@@ -283,7 +286,6 @@ input[placeholder*="جستجو"]{
    ============================================================ */
 
 .btn{
-  font-family:inherit;
   min-height:var(--vg-control-height);
   padding:12px 16px;
   background:var(--vg-color-primary);
@@ -292,14 +294,14 @@ input[placeholder*="جستجو"]{
   border:1px solid var(--vg-color-primary);
   font-size:var(--vg-type-action);
   font-weight:var(--vg-weight-title);
-  box-shadow:0 3px 10px rgba(0,112,210,.14);
+  box-shadow:0 1px 2px rgba(0,0,0,.06);
   cursor:pointer;
   transition:transform .1s,box-shadow .1s;
 }
 
 .btn:active{
   transform:scale(.98);
-  box-shadow:0 1px 4px rgba(0,0,0,.1);
+  box-shadow:0 1px 2px rgba(0,0,0,.06);
 }
 
 .btn.secondary{
@@ -334,7 +336,6 @@ input[placeholder*="جستجو"]{
 
 .chip,
 .chip-opt{
-  font-family:inherit;
   min-height:40px;
   padding:8px 12px;
   background:var(--vg-color-surface);
@@ -781,7 +782,7 @@ a.ledger-row:active{
   bottom:calc(84px + env(safe-area-inset-bottom,0px) + var(--keyboard-height,0px));
   left:50%;
   transform:translateX(-50%) translateY(10px);
-  background:var(--vg-color-primary);
+  background:rgba(28,28,30,.95);
   color:#fff;
   padding:11px 18px;
   white-space:pre-wrap;

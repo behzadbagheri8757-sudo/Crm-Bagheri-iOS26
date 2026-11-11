@@ -91,7 +91,7 @@ html{
 
 body{
   margin:0;
-  font-family:'Vazirmatn',-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display','Helvetica Neue',Arial,sans-serif;
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display','Helvetica Neue',Arial,sans-serif;
   background:var(--vg-color-bg);
   color:var(--vg-color-text);
   font-size:16px;
@@ -107,7 +107,6 @@ body{
 
 /* ---------- Typography hierarchy ---------- */
 h1,h2,h3,h4,h5,h6{
-  font-family:'Vazirmatn',-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display','Helvetica Neue',Arial,sans-serif;
   margin:0;
   font-weight:var(--vg-weight-title);
   color:var(--vg-color-text);
