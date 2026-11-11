@@ -39,8 +39,9 @@
    configured, so it is boot-critical, not merely a nice-to-have precache
    entry. It was already in PRECACHE_URLS; no asset list, route, or business
    logic otherwise changed.) */
+/* CHANGED: v99 -> v100 (Quick View pre-visit summary: customer.js, app.js BagheriPresent.lastOfferMap export, additive CSS. No asset list or route changed.) */
 /* CHANGED: v98 -> v99 (Soft iOS look: CSS-only visual refresh — tokens in visual-grammar.css and a new layer at the end of visual-grammar-pages.css. No asset list, route or business logic changed.) */
-const CACHE_NAME = 'baqeri-shell-v112';
+const CACHE_NAME = 'baqeri-shell-v106';
 
 /** App Shell — paths relative to this SW (same directory as index.html). */
 const PRECACHE_URLS = [
@@ -56,6 +57,7 @@ const PRECACHE_URLS = [
   './js/db.js',
   './js/location.js',
   './js/calc.js',
+  './js/payment-promises.js',
   './js/computation-bank.js',
   './js/stock.js',
   './js/backup.js',
@@ -76,6 +78,7 @@ const PRECACHE_URLS = [
   './js/views/products.js',
   './js/views/inventory.js',
   './js/views/customers.js',
+  './js/views/payment-promises.js',
   './js/views/customer.js',
   './js/views/payments.js',
   './js/views/invoices.js',
