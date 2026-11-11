@@ -2947,3 +2947,24 @@ html[data-theme="dark"] #main.supplier-detail-view .sup-identity{border-color:va
 .pp-receive{flex:none;min-height:36px;padding:0 14px;border:0;border-radius:var(--vg-radius-pill);background:var(--vg-color-primary-soft);color:var(--vg-color-primary);
   font:inherit;font-size:.78rem;font-weight:var(--vg-weight-title);white-space:nowrap;-webkit-tap-highlight-color:transparent;}
 .pp-receive:active{opacity:.6;transform:scale(.97);}
+
+/* Delivery promises (قول تحویل) — reuses the .pp-* grammar above */
+.pp-dash-primary{color:var(--vg-color-primary);}
+.pp-dash-primary span{background:var(--vg-color-primary-soft);}
+.pp-head-actions{display:flex;align-items:center;gap:14px;}
+.pp-add-pair{display:flex;gap:var(--vg-space-related);margin:0 0 var(--vg-space-group);}
+.pp-add-pair .pp-add-row{margin:0;flex:1;min-width:0;}
+.pp-link-btn{border:0;background:transparent;padding:6px 2px;font:inherit;font-size:.8rem;font-weight:var(--vg-weight-label);color:var(--vg-color-primary);-webkit-tap-highlight-color:transparent;}
+.pp-link-btn:active{opacity:.5;}
+.dp-card{padding:0;}
+.dp-card-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px 4px;}
+.dp-card-list .pp-row{width:100%;padding:9px 16px;}
+.dp-items{display:flex;flex-direction:column;gap:var(--vg-space-related);margin-bottom:6px;}
+.dp-item{display:flex;align-items:center;gap:8px;}
+.dp-item .dp-prod{flex:1;min-width:0;min-height:44px;}
+.dp-item .dp-qty{width:84px;flex:none;min-height:44px;text-align:center;}
+.dp-del{flex:none;width:36px;height:36px;border:0;border-radius:var(--vg-radius-pill);background:var(--vg-color-neutral-soft);color:var(--vg-color-text-muted);font-size:1.1rem;line-height:1;}
+.dp-add-item{display:block;margin:0 0 var(--vg-space-group);}
+.pp-load-row{cursor:default;}
+.pp-load-row:active{opacity:1;}
+.pp-load-qty{flex:none;font-size:.9rem;font-weight:var(--vg-weight-title);color:var(--vg-color-text);}
