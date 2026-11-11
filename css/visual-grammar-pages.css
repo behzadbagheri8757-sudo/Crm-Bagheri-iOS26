@@ -2862,39 +2862,88 @@ html[data-theme="dark"] #main.supplier-detail-view .sup-identity{border-color:va
 .pf-sheet .prod-drop-panel{width:100%;}
 
 
-/* Payment promises — device-local reminder UI. */
-#main.customer-detail-view .promise-form-intro{margin:0 0 12px;padding:9px 11px;border-radius:10px;background:var(--vg-color-surface-soft);font-size:.76rem;line-height:1.7;color:var(--vg-color-text-muted);}
-#main.customer-detail-view .promise-replace-option{display:flex;align-items:center;gap:8px;margin:10px 0 14px;font-size:.78rem;line-height:1.7;color:var(--vg-color-text-secondary);}
-#main.customer-detail-view .promise-replace-option input{width:18px;height:18px;accent-color:var(--vg-color-primary);}
-#main.customer-detail-view .customer-promise-details{margin:0 0 14px;border:1px solid var(--vg-color-divider);border-radius:12px;background:var(--vg-color-surface);overflow:hidden;}
-#main.customer-detail-view .customer-promise-details summary{padding:11px 12px;cursor:pointer;}
-#main.customer-detail-view .customer-promise-list{padding:0 10px 6px;}
-#main.customer-detail-view .promise-customer-row{display:flex;width:100%;align-items:center;justify-content:space-between;gap:10px;padding:11px 2px;border:0;border-top:1px solid var(--vg-color-divider);background:transparent;color:inherit;text-align:right;cursor:pointer;}
-#main.customer-detail-view .promise-customer-main{display:flex;min-width:0;flex:1;flex-direction:column;align-items:flex-start;gap:2px;}
-#main.customer-detail-view .promise-customer-main strong{font-size:.82rem;}
-#main.customer-detail-view .promise-customer-main small{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--vg-color-text-muted);font-size:.7rem;}
-#main.customer-detail-view .promise-customer-meta{display:flex;flex-direction:column;align-items:flex-end;gap:4px;white-space:nowrap;color:var(--vg-color-text-muted);font-size:.7rem;}
-.promise-status-badge{padding:2px 7px;border-radius:999px;font-size:.66rem;font-weight:700;}
-.promise-status-badge.is-pending{background:rgba(194,143,28,.12);color:var(--vg-color-warning,#a76c00);}
-.promise-status-badge.is-overdue{background:rgba(189,53,57,.12);color:var(--vg-color-danger,#b22f36);}
-.promise-status-badge.is-completed{background:rgba(54,126,75,.12);color:var(--vg-color-success,#367e4b);}
-.promise-status-badge.is-broken{background:rgba(189,53,57,.12);color:var(--vg-color-danger,#b22f36);}
-.promise-status-badge.is-superseded{background:var(--vg-color-surface-soft);color:var(--vg-color-text-muted);}
-.promise-detail-summary{display:flex;flex-direction:column;gap:6px;padding:12px;border:1px solid var(--vg-color-divider);border-radius:11px;background:var(--vg-color-surface-soft);}
-.promise-detail-summary strong{font-size:1rem;}
-.promise-detail-summary span,.promise-detail-summary small{color:var(--vg-color-text-muted);font-size:.78rem;line-height:1.7;}
-.promise-detail-actions{margin-top:14px;display:flex;flex-wrap:wrap;gap:8px;}
-.promise-reminders-block{border-radius:14px;padding:12px 12px 8px;}
-.promise-reminders-overdue{background:rgba(189,53,57,.065);border:1px solid rgba(189,53,57,.18);}
-.promise-reminders-today{background:rgba(194,143,28,.08);border:1px solid rgba(194,143,28,.2);}
-.promise-reminders-block .dashboard-block-head{margin-bottom:5px;}
-.promise-dashboard-list{display:flex;flex-direction:column;gap:0;}
-.promise-dashboard-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid var(--vg-color-divider);}
-.promise-dashboard-row:first-child{border-top:0;}
-.promise-dashboard-customer{display:flex;min-width:0;flex:1;flex-direction:column;gap:2px;color:inherit;text-decoration:none;}
-.promise-dashboard-customer strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.82rem;}
-.promise-dashboard-customer small{color:var(--vg-color-text-muted);font-size:.7rem;}
-.promise-dashboard-received{flex:none;white-space:nowrap;}
-.promise-dashboard-list .promise-dashboard-row > b{font-size:.75rem;color:var(--vg-color-danger);}
-html[data-theme="dark"] .promise-reminders-overdue{background:rgba(189,53,57,.13);}
-html[data-theme="dark"] .promise-reminders-today{background:rgba(194,143,28,.14);}
+/* ============================================================
+   PAYMENT PROMISES (وعدهٔ پرداخت) — tokens only, so Dark Mode follows automatically.
+   ============================================================ */
+.pp-badge{display:inline-flex;align-items:center;padding:2px 9px;border-radius:var(--vg-radius-pill);font-size:.68rem;font-weight:var(--vg-weight-title);white-space:nowrap;vertical-align:middle;}
+.pp-primary{background:var(--vg-color-primary-soft);color:var(--vg-color-primary);}
+.pp-warning{background:var(--vg-color-warning-soft);color:var(--vg-color-warning);}
+.pp-danger{background:var(--vg-color-danger-soft);color:var(--vg-color-danger);}
+.pp-success{background:var(--vg-color-success-soft);color:var(--vg-color-success);}
+.pp-neutral{background:var(--vg-color-neutral-soft);color:var(--vg-color-neutral);}
+.pp-muted{background:var(--vg-color-neutral-soft);color:var(--vg-color-text-muted);opacity:.8;}
+
+/* customer page: empty-state row */
+.pp-add-row{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:44px;margin:0 0 var(--vg-space-group);
+  border:1px dashed var(--vg-color-border);border-radius:var(--vg-radius-soft);background:transparent;color:var(--vg-color-primary);
+  font:inherit;font-size:.84rem;font-weight:var(--vg-weight-title);-webkit-tap-highlight-color:transparent;}
+.pp-add-row:active{opacity:.55;}
+.pp-add-plus{font-size:1.1rem;line-height:1;}
+
+/* customer page: active promise card */
+.pp-card{padding:0;margin:0 0 var(--vg-space-group);overflow:hidden;}
+.pp-card-main{display:flex;flex-direction:column;gap:4px;width:100%;padding:14px 16px 10px;border:0;background:transparent;text-align:start;font:inherit;color:inherit;-webkit-tap-highlight-color:transparent;}
+.pp-card-main:active{opacity:.6;}
+.pp-card-head{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.pp-card-title{font-size:var(--vg-type-label);color:var(--vg-color-text-muted);font-weight:var(--vg-weight-label);}
+.pp-card-amount{font-size:var(--vg-type-primary);font-weight:var(--vg-weight-value);color:var(--vg-color-text);}
+.pp-card-sub{font-size:.76rem;color:var(--vg-color-text-muted);}
+.pp-card-danger{border-inline-start:3px solid var(--vg-color-danger);}
+.pp-card-warning{border-inline-start:3px solid var(--vg-color-warning);}
+.pp-card-actions{padding:0 16px 14px;margin:0;}
+
+/* lists (dashboard sheet, history) — iOS grouped rows */
+.pp-list{display:flex;flex-direction:column;border:1px solid var(--vg-color-divider);border-radius:var(--vg-radius-soft);background:var(--vg-color-surface);overflow:hidden;margin-bottom:var(--vg-space-group);}
+.pp-row{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:48px;padding:9px 14px;border:0;border-top:1px solid var(--vg-color-divider);background:transparent;text-align:start;font:inherit;color:inherit;-webkit-tap-highlight-color:transparent;}
+.pp-row:first-child{border-top:0;}
+.pp-row:active{opacity:.55;}
+.pp-row-main{display:flex;flex-direction:column;gap:2px;min-width:0;}
+.pp-row-main strong{font-size:.86rem;font-weight:var(--vg-weight-title);color:var(--vg-color-text);}
+.pp-row-main small{font-size:.72rem;color:var(--vg-color-text-muted);}
+.pp-section-title{margin:var(--vg-space-related) 4px 6px;font-size:var(--vg-type-label);font-weight:var(--vg-weight-label);color:var(--vg-color-text-muted);}
+
+/* add / detail sheets */
+.pp-hint{margin:-4px 0 var(--vg-space-related);font-size:.78rem;color:var(--vg-color-text-muted);}
+.pp-amount-echo{min-height:1.2em;margin-top:4px;font-size:.76rem;color:var(--vg-color-text-muted);}
+.pp-error{margin-top:6px;font-size:.76rem;color:var(--vg-color-danger);}
+.pp-detail{display:flex;flex-direction:column;border:1px solid var(--vg-color-divider);border-radius:var(--vg-radius-soft);background:var(--vg-color-surface);margin-bottom:var(--vg-space-group);}
+.pp-kv{display:flex;justify-content:space-between;gap:12px;padding:11px 14px;border-top:1px solid var(--vg-color-divider);font-size:.84rem;}
+.pp-kv:first-child{border-top:0;}
+.pp-kv span{color:var(--vg-color-text-muted);}
+.pp-kv strong{font-weight:var(--vg-weight-title);color:var(--vg-color-text);text-align:end;}
+.pp-actions{display:flex;flex-direction:column;gap:var(--vg-space-related);}
+.pp-actions > .btn{width:100%;text-align:center;}
+/* iOS-style grouped action list (secondary actions of the detail sheet) */
+.pp-action-list{display:flex;flex-direction:column;border:1px solid var(--vg-color-divider);border-radius:var(--vg-radius-soft);background:var(--vg-color-surface);overflow:hidden;}
+.pp-action{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:1px;min-height:48px;padding:9px 14px;border:0;border-top:1px solid var(--vg-color-divider);background:transparent;
+  font:inherit;font-size:.88rem;color:var(--vg-color-primary);text-align:start;text-decoration:none;-webkit-tap-highlight-color:transparent;}
+.pp-action:first-child{border-top:0;}
+.pp-action:active{background:var(--vg-color-neutral-soft);}
+.pp-action small{font-size:.72rem;color:var(--vg-color-text-muted);}
+.pp-action.is-danger{color:var(--vg-color-danger);}
+
+/* payment sheet: promise link */
+.pp-tx-toggle{display:flex;align-items:flex-start;gap:10px;margin:0 0 var(--vg-space-related);padding:11px 14px;border-radius:var(--vg-radius-soft);background:var(--vg-color-primary-soft);font-size:.82rem;color:var(--vg-color-text);}
+.pp-tx-toggle input{margin-top:3px;flex:none;}
+.pp-tx-toggle small{display:block;margin-top:2px;font-size:.72rem;color:var(--vg-color-text-muted);}
+.pp-tx-note{margin:0 0 var(--vg-space-related);padding:11px 14px;border-radius:var(--vg-radius-soft);background:var(--vg-color-primary-soft);font-size:.82rem;color:var(--vg-color-text);}
+
+/* Dashboard: payment promises — one calm grouped card, 1-tap «دریافت شد» per row */
+.pp-dash-card{border:1px solid var(--vg-color-divider);border-radius:var(--vg-radius-soft);background:var(--vg-color-surface);overflow:hidden;}
+.pp-dash-group{display:flex;align-items:center;gap:6px;padding:9px 14px 7px;font-size:.72rem;font-weight:var(--vg-weight-label);background:var(--vg-color-neutral-soft);border-top:1px solid var(--vg-color-divider);}
+.pp-dash-group:first-child{border-top:0;}
+.pp-dash-group span{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:var(--vg-radius-pill);font-size:.66rem;}
+.pp-dash-danger{color:var(--vg-color-danger);}
+.pp-dash-danger span{background:var(--vg-color-danger-soft);}
+.pp-dash-warning{color:var(--vg-color-warning);}
+.pp-dash-warning span{background:var(--vg-color-warning-soft);}
+.pp-dash-row{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:56px;padding:8px 14px;border-top:1px solid var(--vg-color-divider);}
+.pp-dash-group + .pp-dash-row{border-top:0;}
+.pp-dash-who{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0;color:inherit;text-decoration:none;-webkit-tap-highlight-color:transparent;}
+.pp-dash-who:active{opacity:.55;}
+.pp-dash-who strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.86rem;font-weight:var(--vg-weight-title);color:var(--vg-color-text);}
+.pp-dash-who small{font-size:.72rem;color:var(--vg-color-text-muted);}
+.pp-dash-late{color:var(--vg-color-danger);font-weight:var(--vg-weight-label);}
+.pp-receive{flex:none;min-height:36px;padding:0 14px;border:0;border-radius:var(--vg-radius-pill);background:var(--vg-color-primary-soft);color:var(--vg-color-primary);
+  font:inherit;font-size:.78rem;font-weight:var(--vg-weight-title);white-space:nowrap;-webkit-tap-highlight-color:transparent;}
+.pp-receive:active{opacity:.6;transform:scale(.97);}
