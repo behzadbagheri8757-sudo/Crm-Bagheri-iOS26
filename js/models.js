@@ -66,9 +66,12 @@ function emptyData(){
   // { id, purchaseId, productId, itemId?, qtyOriginal, qtyRemaining, unitCost,
   //   status:'open'|'depleted'|'voided', source:'purchase'|'manual-in'|'manual-adjust'|'sale-return'|'sale-revert',
   //   date?, note? }
+  // paymentPromises: oral payment promises {id, customerId, date, promiseDate, amount(0=unspecified), note,
+  //   status:'pending'|'kept'|'broken'|'superseded', keptAmount, keptAt, createdAt}. Promise is NOT money:
+  //   it never touches payments/balance (see js/payment-promises.js).
   // regions/routes/neighborhoods: shared Location System (see js/location.js).
   // Kept as plain arrays on the same data blob — new, additive, empty by
   // default, and automatically covered by the existing backup/restore.
-  return { products: [], customers: [], invoices: [], payments: [], checks: [], suppliers: [], inventoryLayers: [], invoiceSeq: 1000, schemaVersion: CURRENT_SCHEMA_VERSION, regions: [], routes: [], neighborhoods: [], analysisGroups: [] };
+  return { products: [], customers: [], invoices: [], payments: [], checks: [], paymentPromises: [], suppliers: [], inventoryLayers: [], invoiceSeq: 1000, schemaVersion: CURRENT_SCHEMA_VERSION, regions: [], routes: [], neighborhoods: [], analysisGroups: [] };
 }
 

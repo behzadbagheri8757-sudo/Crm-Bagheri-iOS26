@@ -793,6 +793,18 @@ function validateBackupShape(parsed){
       if(!linked || String(linked.customerId)!==String(chk.customerId)){ validateBackupShape.lastError='چک به فاکتور مشتری دیگری متصل شده است.'; return false; }
     }
   }
+  // Payment promises — presence-triggered: absent on older backups (valid; normalizeData() defaults to []).
+  if(parsed.paymentPromises != null){
+    if(!Array.isArray(parsed.paymentPromises) || !_uniqueIds(parsed.paymentPromises)) return false;
+    for(const pp of parsed.paymentPromises){
+      if(!customerIds.has(String(pp.customerId))) return false;
+      if(!_isIsoDateOnly(pp.date) || !_isIsoDateOnly(pp.promiseDate)) return false;
+      if(typeof pp.amount !== 'number' || !Number.isFinite(pp.amount) || pp.amount < 0) return false;
+      if(!['pending','kept','broken','superseded'].includes(pp.status)) return false;
+      if(pp.keptAmount != null && (typeof pp.keptAmount !== 'number' || !Number.isFinite(pp.keptAmount) || pp.keptAmount < 0)) return false;
+      if(pp.keptAt != null && !_isIsoTimestamp(pp.keptAt)) return false;
+    }
+  }
   if(schema>=3){
     const layerIds=new Set();
     for(const l of parsed.inventoryLayers){

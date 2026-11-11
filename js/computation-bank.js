@@ -55,6 +55,18 @@ var RECEIVABLE_ATTENTION_DEFAULTS = {
           });
         });
       },
+      /* Pending payment promise of a customer (js/payment-promises.js). A customer with an active
+         promise is handled by the promise flow, not by the generic receivable follow-up. */
+      activePromise: function (cid) {
+        return memo('activePromise', cid, function () {
+          var best = null;
+          (source.paymentPromises || []).forEach(function (p) {
+            if (!p || p.customerId !== cid || p.status !== 'pending') return;
+            if (!best || String(p.promiseDate) < String(best.promiseDate)) best = p;
+          });
+          return best;
+        });
+      },
       customerById: function (cid) {
         return memo('customerById', cid, function () {
           return (source.customers || []).find(function (row) {
@@ -80,7 +92,7 @@ var RECEIVABLE_ATTENTION_DEFAULTS = {
         var memoKey = amountFloor + '|' + daysFloor;
 
         return memo('receivableAttention', memoKey, function () {
-          var out = { count: 0, totalBalance: 0, rows: [], byCustomerId: {}, legacyByCustomerId: {} };
+          var out = { count: 0, totalBalance: 0, rows: [], byCustomerId: {}, legacyByCustomerId: {}, promisedByCustomerId: {} };
           var customers = Array.isArray(source.customers) ? source.customers : [];
 
           for (var i = 0; i < customers.length; i++) {
@@ -118,6 +130,9 @@ var RECEIVABLE_ATTENTION_DEFAULTS = {
                 daysSince: Math.round(dsc), invoiceId: cycle.invoice.id,
                 legacyBalance: cycle.legacyBalance || 0, totalBalance: t.balance
               };
+              // Active payment promise => follow-up belongs to the promise (snoozed until it is resolved).
+              var promisedC = ctx.activePromise(c.id);
+              if (promisedC) { out.promisedByCustomerId[c.id] = promisedC; continue; }
               out.rows.push(rowC);
               out.byCustomerId[c.id] = rowC;
               continue;
@@ -159,6 +174,8 @@ var RECEIVABLE_ATTENTION_DEFAULTS = {
             var days = (typeof daysAgo === 'function') ? daysAgo(lastDate) : null;
             if (days == null || !isFinite(days) || days < daysFloor) continue;
 
+            var promised = ctx.activePromise(c.id);
+            if (promised) { out.promisedByCustomerId[c.id] = promised; continue; }
             var row = {
               customerId: c.id,
               name: c.name || '—',

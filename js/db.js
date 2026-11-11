@@ -521,6 +521,20 @@ function normalizeData(parsed){
       type: a.type, invoiceId: a.invoiceId, amount: num(a.amount),
     })) : undefined,
   }));
+  d.paymentPromises = (Array.isArray(parsed.paymentPromises) ? parsed.paymentPromises : [])
+    .filter(p=>p && p.customerId && /^\d{4}-\d{2}-\d{2}$/.test(String(p.promiseDate||'')))
+    .map(p=>({
+      id: p.id||uid(),
+      customerId: p.customerId,
+      date: (typeof p.date==='string' && /^\d{4}-\d{2}-\d{2}$/.test(p.date)) ? p.date : String(p.promiseDate),
+      promiseDate: String(p.promiseDate),
+      amount: Math.max(0, num(p.amount)),
+      note: p.note||'',
+      status: ['pending','kept','broken','superseded'].includes(p.status) ? p.status : 'pending',
+      keptAmount: p.keptAmount != null ? num(p.keptAmount) : null,
+      keptAt: p.keptAt || null,
+      createdAt: p.createdAt || new Date().toISOString(),
+    }));
   d.suppliers = (parsed.suppliers||[]).map(s=>({
     id:s.id||uid(), name:s.name||'', phone:s.phone||'',
     openingBalance: num(s.openingBalance),
