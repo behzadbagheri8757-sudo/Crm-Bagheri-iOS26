@@ -805,6 +805,23 @@ function validateBackupShape(parsed){
       if(pp.keptAt != null && !_isIsoTimestamp(pp.keptAt)) return false;
     }
   }
+  // Delivery promises — presence-triggered like paymentPromises. productId/invoiceId are NOT FKs here on purpose:
+  // items carry a name snapshot, and a later-deleted product/invoice must not make a backup unrestorable.
+  if(parsed.deliveryPromises != null){
+    if(!Array.isArray(parsed.deliveryPromises) || !_uniqueIds(parsed.deliveryPromises)) return false;
+    for(const dp of parsed.deliveryPromises){
+      if(!customerIds.has(String(dp.customerId))) return false;
+      if(!_isIsoDateOnly(dp.date) || !_isIsoDateOnly(dp.deliveryDate)) return false;
+      if(!['pending','done','cancelled'].includes(dp.status)) return false;
+      if(!Array.isArray(dp.items)) return false;
+      for(const it of dp.items){
+        if(!it || typeof it !== 'object' || !it.productId) return false;
+        if(typeof it.qty !== 'number' || !Number.isFinite(it.qty) || it.qty < 0) return false;
+      }
+      if(dp.invoiceId != null && typeof dp.invoiceId !== 'string') return false; // metadata only (an invoice may be deleted later)
+      if(dp.doneAt != null && !_isIsoTimestamp(dp.doneAt)) return false;
+    }
+  }
   if(schema>=3){
     const layerIds=new Set();
     for(const l of parsed.inventoryLayers){

@@ -2517,9 +2517,25 @@ function openInvoiceForm(cid, editInv, opts){
     return out;
   }
   const visitRows = (!editInv && opts && opts.visitId) ? visitAcceptedRows(opts.visitId) : [];
+  // قول تحویل → فاکتور («تحویل شد»): اقلام قول مثل انتخاب دستی هر ردیف می‌شوند (qty قول یا ۱، قیمت retail||sell).
+  // فقط‌خواندنی روی قول؛ اقلام حذف‌شده/غیرفعال رد می‌شوند. قول در همین saveData فاکتور «تحویل شد» می‌شود.
+  let deliverySkipped = 0;
+  function deliveryPrefillRows(deliveryId){
+    const dp = (typeof DeliveryPromises !== 'undefined') ? DeliveryPromises.byId(deliveryId) : null;
+    if(!dp || dp.status!=='pending' || dp.customerId!==cid) return [];
+    const out = [];
+    dp.items.forEach(it=>{
+      const prod = invoiceProduct(it.productId);
+      if(!prod || prod.active===false){ deliverySkipped++; return; }
+      out.push({productId:it.productId, qty:(it.qty>0 ? it.qty : 1), price:prod.retail||prod.sell||0, discount:0});
+    });
+    return out;
+  }
+  const deliveryRows = (!editInv && opts && opts.deliveryId) ? deliveryPrefillRows(opts.deliveryId) : [];
+  if(deliverySkipped) showToast('بعضی اقلام قول دیگر موجود/فعال نیستند و در فاکتور نیامدند');
   let rows = editInv
     ? editInv.items.map(it=>({productId:it.productId, qty:it.qty, price:it.price, discount:it.discount||0, buyPrice:it.buyPrice}))
-    : (visitRows.length ? visitRows : [{productId:'', qty:1, price:0, discount:0}]);
+    : (deliveryRows.length ? deliveryRows : (visitRows.length ? visitRows : [{productId:'', qty:1, price:0, discount:0}]));
   const cust = data.customers.find(c=>c.id===cid); // presentation only: Customer Context header
   // Presentation only: one-time per-sheet context map (last offer/reject, stock source,
   // relevant active watch, last purchase). Reads existing facts; never writes or recalculates.
@@ -3720,6 +3736,12 @@ function openInvoiceForm(cid, editInv, opts){
       }
       data.invoices.push(newInv);
       pushInvoicePayments(cid, newInv, cashPaid, cardPaid, transferPaid, checkAmount, checkDue, null);
+      // قول تحویل: فقط همراه فاکتور واقعی و در همین saveData «تحویل شد» می‌شود (rollback بالا شامل آن هم هست).
+      let deliveriesDone = 0;
+      if(typeof DeliveryPromises !== 'undefined'){
+        if(opts.deliveryId && DeliveryPromises.complete(data, opts.deliveryId, newInv).ok) deliveriesDone++;
+        deliveriesDone += DeliveryPromises.autoCompleteForInvoice(data, newInv).length;
+      }
       try{
         await saveData();
       }catch(e){
@@ -3746,7 +3768,7 @@ function openInvoiceForm(cid, editInv, opts){
           console.warn('Game hook failed:', e);
         }
       }
-      render(); showToast('فاکتور ثبت شد');
+      render(); showToast('فاکتور ثبت شد' + (deliveriesDone ? ' · قول تحویل انجام شد' : ''));
       openSheet(`
         <h3>فاکتور ثبت و توی حساب مشتری ذخیره شد</h3>
         <div class="empty">حالا می‌خوای همین فاکتور رو چاپ کنی، تصویرش رو بگیری یا فقط ذخیره بمونه؟</div>
