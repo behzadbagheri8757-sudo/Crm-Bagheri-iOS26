@@ -15,7 +15,7 @@ header{
   padding-inline:16px;
   padding-block-start:calc(env(safe-area-inset-top,0px) + 48px - (30px * var(--header-progress)));
   padding-block-end:calc(10px + (24px * (1 - var(--header-progress))));
-  min-height:calc(48px + env(safe-area-inset-top,0px));
+  min-height:calc(56px + env(safe-area-inset-top,0px)); /* compact row always contains the 44px glass circles */
   text-align:start;
   color:var(--vg-color-text);
   background:rgba(242,242,247,.72);
@@ -70,7 +70,7 @@ header .header-date{
 /* ---- Shared glass circle for header buttons ---- */
 .hdr-btn{
   position:absolute;
-  top:calc(env(safe-area-inset-top,0px) + 4px);
+  top:calc(env(safe-area-inset-top,0px) + 6px);
   z-index:12;
   box-sizing:border-box;
   width:44px;
