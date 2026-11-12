@@ -619,7 +619,7 @@
 
     root.innerHTML =
       '<div class="dashboard-shell">' +
-      '<div class="dashboard-eyebrow">مرکز فرماندهی روزانه</div>' +
+      '<div class="dashboard-eyebrow">امروز چه کار کنم؟</div>' +
       alertBar +
       (typeof PromiseUI !== 'undefined' ? PromiseUI.dashboardHtml() : '') +
       (typeof DeliveryUI !== 'undefined' ? DeliveryUI.dashboardHtml() : '') +
