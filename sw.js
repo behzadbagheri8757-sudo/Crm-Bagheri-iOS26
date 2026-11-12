@@ -41,7 +41,7 @@
    logic otherwise changed.) */
 /* CHANGED: v99 -> v100 (Quick View pre-visit summary: customer.js, app.js BagheriPresent.lastOfferMap export, additive CSS. No asset list or route changed.) */
 /* CHANGED: v98 -> v99 (Soft iOS look: CSS-only visual refresh — tokens in visual-grammar.css and a new layer at the end of visual-grammar-pages.css. No asset list, route or business logic changed.) */
-const CACHE_NAME = 'baqeri-shell-v106';
+const CACHE_NAME = 'baqeri-shell-v110';
 
 /** App Shell — paths relative to this SW (same directory as index.html). */
 const PRECACHE_URLS = [
@@ -58,6 +58,8 @@ const PRECACHE_URLS = [
   './js/location.js',
   './js/calc.js',
   './js/payment-promises.js',
+  './js/delivery-promises.js',
+  './js/visit-plan.js',
   './js/computation-bank.js',
   './js/stock.js',
   './js/backup.js',
@@ -79,6 +81,8 @@ const PRECACHE_URLS = [
   './js/views/inventory.js',
   './js/views/customers.js',
   './js/views/payment-promises.js',
+  './js/views/delivery-promises.js',
+  './js/views/visit-plan.js',
   './js/views/customer.js',
   './js/views/payments.js',
   './js/views/invoices.js',
