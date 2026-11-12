@@ -1,10 +1,10 @@
 /* ==========================================================================
    TEST/css/app.css — FINAL RECONSTRUCTED + COMPOSITION RECOVERED
-   Legacy/base styles + protected systems + view-specific layout.
-   Ownership contract: visual-grammar.css owns tokens/base typography;
-   visual-grammar-components.css owns shared component geometry;
-   visual-grammar-pages.css owns the page frame and page composition.
-   This file retains legacy foundations and view-specific layout only.
+   View-specific composition + protected systems + floating glass nav.
+   Visual Grammar (VG) owns shared component geometry: the three vg-*.css
+   files are linked after this one in index.html, so on shared selectors
+   their rules win the cascade tie-break over this file's, by design.
+   This file owns page composition, containers, spacing, grouping, and view-specific layout.
    ========================================================================== */
 
 /* --------------------------------------------------------------------------
@@ -45,24 +45,47 @@
   box-sizing:border-box;
   -webkit-tap-highlight-color:transparent;
 }
-/* Base environment (html/body paint, typography and interaction defaults)
-   is owned by visual-grammar.css. Keep only the legacy minimum-height
-   constraint here because it is not defined by the foundation layer. */
+html{
+  -webkit-text-size-adjust:100%;
+  background:var(--vg-color-bg);
+}
 body{
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display','Helvetica Neue',Arial,sans-serif;
+  background:var(--vg-color-bg);
+  color:var(--vg-color-text);
   min-height:100vh;
+  font-size:16px;
+  line-height:1.55;
+  font-variant-numeric:tabular-nums;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+  max-width:100vw;
+  overscroll-behavior-y:contain;
+  touch-action:manipulation;
+  -webkit-overflow-scrolling:touch;
 }
 img{
   max-width:100%;
   height:auto;
 }
+a{
+  color:inherit;
+  text-decoration:none;
+}
+
 /* --------------------------------------------------------------------------
    03. TYPOGRAPHY (View-specific hierarchy)
    -------------------------------------------------------------------------- */
 h2.section-title{
   margin:4px 0 14px;
+  font-size:1.05rem;
+  font-weight:600;
+  color:var(--vg-color-text);
   display:flex;
   align-items:center;
   gap:8px;
+  letter-spacing:-.2px;
 }
 h2.section-title::after{
   content:"";
@@ -70,7 +93,10 @@ h2.section-title::after{
   border-bottom:1px solid rgba(31,41,55,.08);
 }
 h3.sub-title{
+  font-size:.88rem;
   margin:16px 0 10px;
+  color:var(--vg-color-text);
+  font-weight:600;
 }
 
 /* Shared card typography hierarchy (used across list/detail/report cards) */
@@ -101,15 +127,15 @@ header{
   position:sticky;
   top:0;
   z-index:30;
-  --header-progress:0;
+  --header-progress:0; /* 0 = fully expanded (top of page), 1 = fully condensed — set directly from scrollY every frame, not animated, so it never fights the scroll gesture */
   padding-inline:16px;
   padding-block-start:calc(env(safe-area-inset-top,0px) + 10px);
   padding-block-end:calc(10px + (24px * (1 - var(--header-progress))));
   text-align:start;
-  background:rgba(255,255,255,.72); /* شفاف‌تر شد */
+  background:rgba(255,255,255,.86);
   backdrop-filter:saturate(180%) blur(20px);
   -webkit-backdrop-filter:saturate(180%) blur(20px);
-  border-bottom:none; /* خط حذف شد */
+  border-bottom:1px solid rgba(31,41,55,.08);
   color:var(--vg-color-text);
 }
 /* Large Title (Phase 6): resting state is the big iOS-style title, leading-
@@ -258,8 +284,43 @@ header.has-back .header-date{
    before the VG files, so anything defined here for these selectors is
    dead weight that only wins for properties VG doesn't set. */
 
-/* Page frame and shared page composition are owned by
-   css/visual-grammar-pages.css. Keep view-specific layout below. */
+/* Main page frame (base mobile composition) */
+main{
+  position:relative;
+  z-index:1;
+  max-width:720px;
+  margin:0 auto;
+  padding:14px 14px calc(88px + env(safe-area-inset-bottom,0px));
+}
+
+/* Shared page composition (recovered from old app.css) */
+main > *:first-child{
+  margin-top:0;
+}
+main .section-title{
+  position:relative;
+  margin-bottom:14px;
+}
+main .tx-hint,
+main > p.tx-hint{
+  margin-top:-6px;
+  margin-bottom:16px;
+}
+main > .field{
+  margin-bottom:12px;
+}
+main > .chip-row{
+  margin-bottom:12px;
+}
+main > .tx-toolbar{
+  margin:0 0 14px;
+}
+main > .btn-row{
+  margin-bottom:12px;
+}
+main .empty{
+  margin:14px 0;
+}
 
 /* Cards grid (composition) */
 .cards{
@@ -272,21 +333,34 @@ header.has-back .header-date{
   grid-column:1/-1;
 }
 
-/* Toolbars / action groups: geometry is owned by
-   css/visual-grammar-components.css. Keep only view composition here. */
+/* Toolbars / action groups (composition, not geometry) */
+.btn-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:12px;
+}
 .tx-toolbar{
+  display:flex;
+  align-items:center;
   justify-content:flex-start;
+  gap:8px;
+  margin:12px 0 14px;
   min-height:44px;
 }
 .tx-toolbar-select{
   width:auto;
   min-width:112px;
   max-width:150px;
+  min-height:44px;
   margin:0;
   flex:0 0 auto;
 }
 .tx-toolbar-label{
   flex:0 0 auto;
+  font-size:.72rem;
+  font-weight:600;
+  color:var(--vg-color-text-muted);
   line-height:1.2;
 }
 
@@ -1341,6 +1415,22 @@ details[open] > .customer-behavior-summary::after{
   min-height:0;
   border-bottom:1px solid var(--vg-color-divider);
 }
+.action-row::after{
+  content:"";
+  position:absolute;
+  inset-inline-start:-11px;
+  top:9px;
+  bottom:9px;
+  width:3px;
+  border-radius:2px;
+  background:rgba(31,41,55,.08);
+}
+.action-row-critical::after{
+  background:#FA3946;
+}
+.action-row-high::after{
+  background:#F5A131;
+}
 /* Suggested actions hierarchy: name > action > reason > meta */
 .action-person{
   display:inline;
@@ -1608,20 +1698,17 @@ details[open] > .customer-behavior-summary::after{
 }
 .inv-header-btn{
   flex:0 0 auto;
-  min-height:44px;
+  min-height:36px;
   padding:6px 12px;
   border:0;
-  border-radius:0;
-  background:transparent;
-  color:var(--vg-color-primary);
+  border-radius:999px;
+  background:rgba(31,41,55,.05);
+  color:var(--vg-color-text-muted);
   font-family:inherit;
-  font-size:.95rem;
-  font-weight:500;
+  font-size:.84rem;
+  font-weight:600;
   cursor:pointer;
-  -webkit-tap-highlight-color:transparent;
-  transition:opacity 140ms ease;
 }
-.inv-header-btn:active{opacity:.55;}
 .inv-header-title{
   flex:1 1 auto;
   display:flex;
@@ -1640,19 +1727,14 @@ details[open] > .customer-behavior-summary::after{
 }
 button.inv-header-save.btn{
   flex:0 0 auto;
-  min-height:44px;
-  padding:6px 12px;
-  border-radius:0;
-  font-size:.95rem;
+  min-height:36px;
+  padding:7px 16px;
+  border-radius:999px;
+  font-size:.86rem;
   font-weight:700;
-  background:transparent;
-  color:var(--vg-color-primary);
-  border:0;
-  box-shadow:none;
-  -webkit-tap-highlight-color:transparent;
-  transition:opacity 140ms ease;
+  background:#0070D2;
+  color:#fff;
 }
-button.inv-header-save.btn:active{opacity:.55;}
 .inv-body{
   flex:1 1 auto;
   min-height:0;
@@ -1759,27 +1841,35 @@ button.inv-header-save.btn:active{opacity:.55;}
   inset:0;
 }
 .inv-row-date::after{
-  display:none; /* حذف فلش چپ از کانتینر تاریخ چون فیلد خودش شکل قرص گرفته */
+  content:"";
+  position:absolute;
+  inset-inline-end:16px;
+  top:50%;
+  width:16px;
+  height:16px;
+  margin-top:-8px;
+  background-color:var(--vg-color-text-muted);
+  opacity:.55;
+  pointer-events:none;
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m15 6-6 6 6 6'/%3E%3C/svg%3E") center/contain no-repeat;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m15 6-6 6 6 6'/%3E%3C/svg%3E") center/contain no-repeat;
 }
 html .inv-sheet-v2 .inv-row-date input.shamsi-date-field{
-  width:auto;
-  min-width:120px;
-  height:36px;
-  min-height:36px;
+  width:100%;
+  height:100%;
+  min-height:0;
   box-sizing:border-box;
-  padding:0 12px;
-  margin:8px 0;
+  padding:0 16px;
+  padding-inline-end:44px;
   border:0;
-  border-radius:999px; /* کپسولی */
+  border-radius:0;
   box-shadow:none;
-  background:var(--vg-color-neutral-soft); /* خاکستری ملایم */
-  color:var(--vg-color-text);
+  background:transparent;
+  color:var(--vg-color-primary);
   font:inherit;
-  font-size:.88rem;
-  font-weight:500;
-  text-align:center;
+  font-size:var(--vg-type-secondary);
+  text-align:end;
   cursor:pointer;
-  margin-inline-start:auto;
 }
 html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   outline:0;
@@ -2802,7 +2892,7 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
   border:1px solid var(--vg-color-border);
   border-radius:var(--vg-radius-raised);
   padding:14px;
-  box-shadow:none;
+  box-shadow:var(--vg-shadow-group);
 }
 /* Avoid a "card inside a card" look: a couple of settings sections wrap
    their content in a plain .card (as a content box, not a second surface) —
@@ -3823,32 +3913,25 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{
    -------------------------------------------------------------------------- */
 .fab{
   position:fixed;
-  top:calc(env(safe-area-inset-top,0px) + 4px);
-  inset-inline-end:6px;
-  inset-inline-start:auto;
-  bottom:auto;
-  width:44px;
-  height:44px;
-  margin:0;
-  padding:0;
-  box-sizing:border-box;
+  inset-inline-end:16px;
+  bottom:calc(88px + env(safe-area-inset-bottom,0px));
+  width:56px;
+  height:56px;
   border-radius:50%;
-  background:rgba(0,112,210,.10);
-  color:var(--vg-color-primary);
-  font-size:1.3rem;
-  font-weight:400;
-  line-height:44px;
-  text-align:center;
+  background:#00A068;
+  color:#fff;
+  font-size:1.75rem;
   border:none;
-  box-shadow:none;
+  box-shadow:0 8px 22px rgba(47,107,69,.28);
   cursor:pointer;
-  z-index:35;
-  -webkit-tap-highlight-color:transparent;
-  transition:background-color 140ms ease,transform 140ms ease;
+  z-index:41;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  line-height:1;
 }
 .fab:active{
-  transform:scale(.92);
-  background:rgba(0,112,210,.18);
+  transform:scale(.94);
 }
 
 /* --------------------------------------------------------------------------
@@ -4173,6 +4256,7 @@ input[placeholder*="جستجو"]:focus{
 .close-x,
 .icon-btn,
 .icon-button,
+.fab,
 button.app-back,
 .prospect-daily-target .pdt-edit{
   transition:transform var(--ios-touch) var(--ios-ease-out),
@@ -4183,6 +4267,7 @@ button.app-back,
 .close-x:active,
 .icon-btn:active,
 .icon-button:active,
+.fab:active,
 button.app-back:active,
 .prospect-daily-target .pdt-edit:active{
   transform:scale(.95);

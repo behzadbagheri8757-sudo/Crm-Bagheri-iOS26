@@ -6,21 +6,19 @@
    ============================================================ */
 
 /* ---------- Capsule geometry ---------- */
-/* Applies to buttons and chips. Text fields intentionally use the
-   row/separator treatment defined in the Form Controls section below. */
+/* Applies to form controls, buttons, chips, search inputs, selects */
 .btn,
 .btn.small,
 .btn.secondary,
 .btn.danger,
 .chip,
-.chip-opt{
-  border-radius:var(--vg-radius-control);
-}
-
+.chip-opt,
+.field input,
+.field select,
 .tx-toolbar-select,
 input[type="search"],
 input[placeholder*="جستجو"]{
-  border-radius:12px;
+  border-radius:var(--vg-radius-control);
 }
 
 /* Native checkbox/radio controls must not inherit text-field geometry. */
@@ -293,14 +291,14 @@ input[placeholder*="جستجو"]{
   border:1px solid var(--vg-color-primary);
   font-size:var(--vg-type-action);
   font-weight:var(--vg-weight-title);
-  box-shadow:0 1px 2px rgba(0,0,0,.06);
+  box-shadow:0 3px 10px rgba(0,112,210,.14);
   cursor:pointer;
   transition:transform .1s,box-shadow .1s;
 }
 
 .btn:active{
   transform:scale(.98);
-  box-shadow:0 1px 2px rgba(0,0,0,.06);
+  box-shadow:0 1px 4px rgba(0,0,0,.1);
 }
 
 .btn.secondary{
@@ -418,20 +416,13 @@ input[placeholder*="جستجو"]{
   width:100%;
   min-height:var(--vg-control-height);
   padding:11px 14px;
-  background:var(--vg-color-surface-soft);
+  background:var(--vg-color-surface);
   color:var(--vg-color-text);
-  border:1px solid transparent;
-  border-bottom:1px solid var(--vg-color-divider); /* خط جداکننده بین فیلدها */
+  border:1px solid var(--vg-color-border);
   font-size:16px;
   font-family:inherit;
   box-shadow:none;
   transition:border-color .15s,box-shadow .15s;
-  border-radius:0; /* Text fields use the flat, separated-row treatment. */
-}
-.field input:last-child,
-.field select:last-child,
-.field textarea:last-child {
-  border-bottom:0;
 }
 
 .field input:focus,
@@ -699,8 +690,8 @@ button[data-toggle-check]{
   content:'';
   position:absolute;
   top:0;
-  inset-inline-start:16px; /* تورفتگی ۱۶ پیکسل */
-  inset-inline-end:16px;
+  inset-inline-start:0;
+  inset-inline-end:20px;
   height:1px;
   background:var(--vg-color-divider);
   pointer-events:none;
@@ -788,7 +779,7 @@ a.ledger-row:active{
   bottom:calc(84px + env(safe-area-inset-bottom,0px) + var(--keyboard-height,0px));
   left:50%;
   transform:translateX(-50%) translateY(10px);
-  background:rgba(28,28,30,.95);
+  background:var(--vg-color-primary);
   color:#fff;
   padding:11px 18px;
   white-space:pre-wrap;
