@@ -1,10 +1,10 @@
 /* ==========================================================================
    TEST/css/app.css — FINAL RECONSTRUCTED + COMPOSITION RECOVERED
-   View-specific composition + protected systems + floating glass nav.
-   Visual Grammar (VG) owns shared component geometry: the three vg-*.css
-   files are linked after this one in index.html, so on shared selectors
-   their rules win the cascade tie-break over this file's, by design.
-   This file owns page composition, containers, spacing, grouping, and view-specific layout.
+   Legacy/base styles + protected systems + view-specific layout.
+   Ownership contract: visual-grammar.css owns tokens/base typography;
+   visual-grammar-components.css owns shared component geometry;
+   visual-grammar-pages.css owns the page frame and page composition.
+   This file retains legacy foundations and view-specific layout only.
    ========================================================================== */
 
 /* --------------------------------------------------------------------------
@@ -45,47 +45,24 @@
   box-sizing:border-box;
   -webkit-tap-highlight-color:transparent;
 }
-html{
-  -webkit-text-size-adjust:100%;
-  background:var(--vg-color-bg);
-}
+/* Base environment (html/body paint, typography and interaction defaults)
+   is owned by visual-grammar.css. Keep only the legacy minimum-height
+   constraint here because it is not defined by the foundation layer. */
 body{
-  margin:0;
-  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display','Helvetica Neue',Arial,sans-serif;
-  background:var(--vg-color-bg);
-  color:var(--vg-color-text);
   min-height:100vh;
-  font-size:16px;
-  line-height:1.55;
-  font-variant-numeric:tabular-nums;
-  -webkit-font-smoothing:antialiased;
-  overflow-x:hidden;
-  max-width:100vw;
-  overscroll-behavior-y:contain;
-  touch-action:manipulation;
-  -webkit-overflow-scrolling:touch;
 }
 img{
   max-width:100%;
   height:auto;
 }
-a{
-  color:inherit;
-  text-decoration:none;
-}
-
 /* --------------------------------------------------------------------------
    03. TYPOGRAPHY (View-specific hierarchy)
    -------------------------------------------------------------------------- */
 h2.section-title{
   margin:4px 0 14px;
-  font-size:1.05rem;
-  font-weight:600;
-  color:var(--vg-color-text);
   display:flex;
   align-items:center;
   gap:8px;
-  letter-spacing:-.2px;
 }
 h2.section-title::after{
   content:"";
@@ -93,10 +70,7 @@ h2.section-title::after{
   border-bottom:1px solid rgba(31,41,55,.08);
 }
 h3.sub-title{
-  font-size:.88rem;
   margin:16px 0 10px;
-  color:var(--vg-color-text);
-  font-weight:600;
 }
 
 /* Shared card typography hierarchy (used across list/detail/report cards) */
@@ -284,43 +258,8 @@ header.has-back .header-date{
    before the VG files, so anything defined here for these selectors is
    dead weight that only wins for properties VG doesn't set. */
 
-/* Main page frame (base mobile composition) */
-main{
-  position:relative;
-  z-index:1;
-  max-width:720px;
-  margin:0 auto;
-  padding:14px 14px calc(88px + env(safe-area-inset-bottom,0px));
-}
-
-/* Shared page composition (recovered from old app.css) */
-main > *:first-child{
-  margin-top:0;
-}
-main .section-title{
-  position:relative;
-  margin-bottom:14px;
-}
-main .tx-hint,
-main > p.tx-hint{
-  margin-top:-6px;
-  margin-bottom:16px;
-}
-main > .field{
-  margin-bottom:12px;
-}
-main > .chip-row{
-  margin-bottom:12px;
-}
-main > .tx-toolbar{
-  margin:0 0 14px;
-}
-main > .btn-row{
-  margin-bottom:12px;
-}
-main .empty{
-  margin:14px 0;
-}
+/* Page frame and shared page composition are owned by
+   css/visual-grammar-pages.css. Keep view-specific layout below. */
 
 /* Cards grid (composition) */
 .cards{
@@ -333,34 +272,21 @@ main .empty{
   grid-column:1/-1;
 }
 
-/* Toolbars / action groups (composition, not geometry) */
-.btn-row{
-  display:flex;
-  flex-wrap:wrap;
-  gap:8px;
-  margin-top:12px;
-}
+/* Toolbars / action groups: geometry is owned by
+   css/visual-grammar-components.css. Keep only view composition here. */
 .tx-toolbar{
-  display:flex;
-  align-items:center;
   justify-content:flex-start;
-  gap:8px;
-  margin:12px 0 14px;
   min-height:44px;
 }
 .tx-toolbar-select{
   width:auto;
   min-width:112px;
   max-width:150px;
-  min-height:44px;
   margin:0;
   flex:0 0 auto;
 }
 .tx-toolbar-label{
   flex:0 0 auto;
-  font-size:.72rem;
-  font-weight:600;
-  color:var(--vg-color-text-muted);
   line-height:1.2;
 }
 

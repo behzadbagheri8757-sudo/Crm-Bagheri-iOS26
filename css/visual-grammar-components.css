@@ -6,7 +6,8 @@
    ============================================================ */
 
 /* ---------- Capsule geometry ---------- */
-/* Applies to form controls, buttons, chips, search inputs, selects */
+/* Applies to buttons and chips. Text fields intentionally use the
+   row/separator treatment defined in the Form Controls section below. */
 .btn,
 .btn.small,
 .btn.secondary,
@@ -16,8 +17,6 @@
   border-radius:var(--vg-radius-control);
 }
 
-.field input,
-.field select,
 .tx-toolbar-select,
 input[type="search"],
 input[placeholder*="جستجو"]{
@@ -427,7 +426,7 @@ input[placeholder*="جستجو"]{
   font-family:inherit;
   box-shadow:none;
   transition:border-color .15s,box-shadow .15s;
-  border-radius:0; /* حذف گوشه‌های گرد از خود فیلد */
+  border-radius:0; /* Text fields use the flat, separated-row treatment. */
 }
 .field input:last-child,
 .field select:last-child,
