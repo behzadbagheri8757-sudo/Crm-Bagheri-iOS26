@@ -184,7 +184,7 @@
       return acctList(list.map(function (i) {
         return {
           title: '<a class="tx-inline-link" href="#/invoice?id=' + encodeURIComponent(i.id) + '">فاکتور #' + esc(String(i.number || '—')) + '</a>',
-          sub: acctDate(i.date), amount: i.total
+          sub: acctDate(i.date) + (i.buyerName ? ' · ' + i.buyerName : ''), amount: i.total
         };
       }));
     };
@@ -386,7 +386,7 @@
       <div class="tx-identity card">
         <div class="tx-identity-title">فاکتور #${esc(String(inv.number || ''))}</div>
         <div class="tx-identity-meta">
-          <span>${esc(cust ? cust.name : '—')}</span>
+          <span>${esc(cust ? cust.name : '—')}${inv.buyerName ? ' — ' + esc(inv.buyerName) : ''}</span>
           <span class="tx-dot">·</span>
           <span>${faDate(inv.date)}</span>
           <span class="tx-dot">·</span>

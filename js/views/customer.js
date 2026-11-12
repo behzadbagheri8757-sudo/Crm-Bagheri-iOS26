@@ -915,7 +915,10 @@
     let customerRiskLevel = null;
     let customerHealthLabel = 'وضعیت عادی';
     let _storyTextRaw = '';
-    {
+    if (isOneOffCustomer(c)) {
+      // مشتری یک‌بار‌مصرف: امتیاز/ریسک/داستان رفتاری معنا ندارد (چند نفر زیر یک حساب)
+      customerHealthLabel = 'مشتری یک‌بار‌مصرف';
+    } else {
       let priority = null, action = null;
       try { if (typeof calculateCustomerPriority === 'function') priority = calculateCustomerPriority(c.id, { ctx: ctx }); } catch (eP) { priority = null; }
       try { if (typeof calculateCustomerAction === 'function') action = calculateCustomerAction(c.id, priority, { ctx: ctx }); } catch (eA) { action = null; }
@@ -1024,6 +1027,7 @@
               esc(String(inv.number || '')) +
               '<span class="sub">' +
               faDate(inv.date) +
+              (inv.buyerName ? ' · ' + esc(inv.buyerName) : '') +
               ' — <span class="' +
               st.cls +
               '">' +
@@ -1360,8 +1364,9 @@
       '<div class="customer-tx-list customer-check-list">' + chkRows + '</div></details>';
     // Payment promise: ONE slot under the top alert (active promise card, or «ثبت وعدهٔ پرداخت» when there is debt).
     // Commitments slot: payment promise + delivery promises (DeliveryUI composes both; PromiseUI alone as fallback).
-    var promiseCardHtml = (typeof DeliveryUI !== 'undefined') ? DeliveryUI.slotHtml(c.id, t.balance)
-      : ((typeof PromiseUI !== 'undefined') ? PromiseUI.cardHtml(c.id, t.balance) : '');
+    var promiseCardHtml = (typeof VisitPlanUI !== 'undefined' ? VisitPlanUI.cardHtml(c.id) : '') +
+      ((typeof DeliveryUI !== 'undefined') ? DeliveryUI.slotHtml(c.id, t.balance)
+      : ((typeof PromiseUI !== 'undefined') ? PromiseUI.cardHtml(c.id, t.balance) : ''));
     var promiseHistoryHtml = ((typeof PromiseUI !== 'undefined') ? PromiseUI.historyHtml(c.id) : '') +
       ((typeof DeliveryUI !== 'undefined') ? DeliveryUI.historyHtml(c.id) : '');
     var visitDetailsHtml = '<details class="cd-history-details">' +
@@ -1446,6 +1451,7 @@
 
     if (typeof PromiseUI !== 'undefined') PromiseUI.bind(root, c.id);
     if (typeof DeliveryUI !== 'undefined') DeliveryUI.bind(root, c.id);
+    if (typeof VisitPlanUI !== 'undefined') VisitPlanUI.bind(root, c.id);
 
     document.getElementById('act-invoice').onclick = function () {
       openAddInvoice(c.id);

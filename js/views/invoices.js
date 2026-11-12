@@ -44,7 +44,7 @@
       rows = rows.filter(inv => {
         const cust = data.customers.find(c => c.id === inv.customerId);
         const name = (cust && cust.name) || '';
-        return String(inv.number || '').includes(q) || name.toLowerCase().includes(q);
+        return String(inv.number || '').includes(q) || name.toLowerCase().includes(q) || String(inv.buyerName || '').toLowerCase().includes(q);
       });
     }
 
@@ -53,7 +53,7 @@
       const paid = invoicePaidAmount(inv);
       const remain = invoiceRemain(inv);
       const cust = data.customers.find(c => c.id === inv.customerId);
-      return { inv, st, paid, remain, custName: cust ? cust.name : '—' };
+      return { inv, st, paid, remain, custName: (cust ? cust.name : '—') + (inv.buyerName ? ' — ' + inv.buyerName : '') };
     });
 
     if (invFilter === 'paid') rows = rows.filter(x => x.st.key === 'paid');

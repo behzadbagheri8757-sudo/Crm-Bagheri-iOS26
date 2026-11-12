@@ -316,7 +316,7 @@
         ? (getPendingWatchFollowUps() || []).filter(function (o) {
             // همان قاعده‌ی صفحه‌ی هشدارها: مشتری غیرفعال شمرده نمی‌شود
             var cu = (data.customers || []).find(function (x) { return x && x.id === o.customerId; });
-            return !!cu && cu.active !== false;
+            return isTrackedCustomer(cu);
           }).length
         : 0;
     } catch (e3) {}
@@ -512,21 +512,25 @@
        Fills from the right edge counter-clockwise so it reads like RTL text.
        Presentation only: the value comes from the same `pct` as before. */
     function ringSvg(p) {
-      var r = 46;
-      var circumference = 2 * Math.PI * r;
-      var pct = Math.min(100, Math.max(0, p));
-      var dashoffset = circumference * (1 - pct / 100);
-      return '<svg class="bp-ring-svg" viewBox="0 0 120 120" aria-hidden="true" focusable="false" style="--bp-ring-circumference:' + circumference.toFixed(2) + '">' +
-        '<defs><linearGradient id="bp-ring-grad" gradientUnits="userSpaceOnUse" x1="14" y1="60" x2="106" y2="60">' +
-          '<stop class="bp-ring-g0" offset="0"/><stop class="bp-ring-g1" offset="1"/>' +
-        '</linearGradient></defs>' +
-        '<circle class="bp-ring-track" cx="60" cy="60" r="46" fill="none" stroke-width="13"/>' +
-        '<circle class="bp-ring-fill" cx="60" cy="60" r="46" fill="none" ' +
-          'stroke="url(#bp-ring-grad)" stroke-width="13" stroke-linecap="round" ' +
-          'stroke-dasharray="' + circumference.toFixed(2) + '" ' +
-          'stroke-dashoffset="' + dashoffset.toFixed(2) + '" ' +
-          'transform="rotate(-90 60 60)"/>' +
-        '</svg>';
+      const cx = 60, cy = 60, r = 46;
+      function pt(deg) {
+        const a = deg * Math.PI / 180;
+        return [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+      }
+      function f(n) { return n.toFixed(2); }
+      const s0 = pt(45), e0 = pt(135);
+      const trackPath = 'M ' + f(s0[0]) + ' ' + f(s0[1]) + ' A ' + r + ' ' + r + ' 0 1 0 ' + f(e0[0]) + ' ' + f(e0[1]);
+      let fill = '';
+      if (p > 0) {
+        const sweep = 270 * Math.min(100, p) / 100;
+        const en = pt(45 - sweep);
+        fill = '<path class="bp-ring-fill" d="M ' + f(s0[0]) + ' ' + f(s0[1]) + ' A ' + r + ' ' + r + ' 0 ' + (sweep > 180 ? 1 : 0) + ' 0 ' + f(en[0]) + ' ' + f(en[1]) + '" fill="none" stroke="url(#bp-ring-grad)" stroke-width="13" stroke-linecap="round"/>';
+      }
+      return '<svg class="bp-ring-svg" viewBox="0 0 120 120" aria-hidden="true" focusable="false">' +
+        '<defs><linearGradient id="bp-ring-grad" gradientUnits="userSpaceOnUse" x1="108" y1="60" x2="12" y2="60"><stop class="bp-ring-g0" offset="0"/><stop class="bp-ring-g1" offset="1"/></linearGradient></defs>' +
+        '<path class="bp-ring-track" d="' + trackPath + '" fill="none" stroke-width="13" stroke-linecap="round"/>' +
+        fill +
+      '</svg>';
     }
 
     return '<div class="bp-target-strip ' + (done ? 'is-done' : 'is-' + status.cls) + progressClass + '">' +
@@ -619,10 +623,11 @@
 
     root.innerHTML =
       '<div class="dashboard-shell">' +
-      '<div class="dashboard-eyebrow">امروز چه کار کنم؟</div>' +
+      '<div class="dashboard-eyebrow">مرکز فرماندهی روزانه</div>' +
       alertBar +
       (typeof PromiseUI !== 'undefined' ? PromiseUI.dashboardHtml() : '') +
       (typeof DeliveryUI !== 'undefined' ? DeliveryUI.dashboardHtml() : '') +
+      (typeof VisitPlanUI !== 'undefined' ? VisitPlanUI.dashboardHtml() : '') +
       todaySnapshot +
       targetHtml(metrics) +
 
@@ -655,6 +660,7 @@
     bindAttentionLink(root, ctx);
     if (typeof PromiseUI !== 'undefined') PromiseUI.bindDashboard(root);
     if (typeof DeliveryUI !== 'undefined') DeliveryUI.bindDashboard(root);
+    if (typeof VisitPlanUI !== 'undefined') VisitPlanUI.bindDashboard(root);
   }
 
   function mount(root, params) {

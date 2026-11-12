@@ -185,6 +185,7 @@
         let badgeLabel = '';
         let badgeTone = 'neutral';
         if (c.active === false) { badgeLabel = 'غیرفعال شده'; badgeTone = 'muted'; }
+        else if (c.oneOff) { badgeLabel = 'یک‌بار‌مصرف'; badgeTone = 'muted'; }
         else if ((riskLevel === 'critical' || riskLevel === 'high') && typeof getRiskBadge === 'function') {
           // Intentional: the list badges ONLY critical/high (medium/low stay badge-less so the list
           // stays scannable). Detail and Quick View show the full label via the same getRiskBadge.

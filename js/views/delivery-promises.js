@@ -22,6 +22,9 @@
     return c ? (c.name || '—') : '—';
   }
   function afterChange() { if (typeof render === 'function') render(); }
+  function isOneOff(cid) { return isOneOffCustomer((data.customers || []).find(function (x) { return x && x.id === cid; })); }
+  /** One-off customers («متفرقه»): the note carries WHO ordered, so lists show it. */
+  function whoHint(p) { return (p.note && p.items && p.items.length && isOneOff(p.customerId)) ? ' · ' + esc(p.note) : ''; }
   function fa(n) { return enToFaDigits(String(n)); }
 
   /* ---------- customer page ---------- */
@@ -48,7 +51,7 @@
   /** The single «commitments» slot of the customer page: active cards first, compact add buttons side by side. */
   function slotHtml(cid, balance) {
     var out = '';
-    var payActive = !!PP.active(cid);
+    var payActive = isOneOff(cid) ? PP.pendingFor(cid).length > 0 : !!PP.active(cid);
     var dels = DP.pending(cid);
     if (payActive) out += PromiseUI.cardHtml(cid, balance);
     if (dels.length) out += cardHtml(cid);
@@ -90,12 +93,12 @@
   }
 
   /* shared date block (add + reschedule): quick chips + shamsi field, returns {get, onChange} */
-  function dateBlockHtml(defIso, withToday) {
+  function dateBlockHtml(defIso, withToday, label) {
     function chip(label, n) { return '<button type="button" class="chip-opt" data-dp-days="' + n + '">' + label + '</button>'; }
-    return '<div class="q-block"><div class="q-title">تاریخ تحویل</div><div class="chip-wrap">' +
+    return '<div class="q-block"><div class="q-title">' + (label || 'تاریخ تحویل') + '</div><div class="chip-wrap">' +
       (withToday ? chip('امروز', 0) : '') + chip('فردا', 1) + chip('۳ روز دیگر', 3) + chip('هفتهٔ دیگر', 7) + '</div></div>' +
       '<div class="field">' + shamsiDateInputHTML('dp-date', defIso) +
-      '<div class="pp-error" id="dp-date-error" hidden>تاریخ تحویل نمی‌تواند قبل از امروز باشد</div></div>';
+      '<div class="pp-error" id="dp-date-error" hidden>تاریخ نمی‌تواند قبل از امروز باشد</div></div>';
   }
   function wireDateBlock(onChange) {
     var dateEl = document.getElementById('dp-date');
@@ -147,7 +150,7 @@
       '<div id="dp-items" class="dp-items">' + itemsHtml() + '</div>' +
       '<button type="button" class="pp-link-btn dp-add-item" id="dp-add-item">+ کالای دیگر</button>' +
       dateBlockHtml(PP.addDays(todayISO(), 1), true) +
-      '<div class="field"><label>یادداشت (اختیاری)</label><input id="dp-note" autocomplete="off"></div>' +
+      '<div class="field"><label>' + (isOneOff(cid) ? 'نام خریدار / یادداشت' : 'یادداشت (اختیاری)') + '</label><input id="dp-note" autocomplete="off"></div>' +
       '<div class="btn-row"><button type="button" class="btn" id="dp-save">ثبت</button></div>',
       { dirtyCheck: true }
     );
@@ -187,20 +190,31 @@
     });
   }
 
-  function openRescheduleSheet(id) {
-    var p = DP.byId(id);
-    if (!p || p.status !== 'pending') return;
-    openSheet('<h3>تغییر تاریخ تحویل</h3>' + dateBlockHtml(p.deliveryDate >= todayISO() ? p.deliveryDate : PP.addDays(todayISO(), 1), true) +
+  /**
+   * Generic «pick a date» sheet (also used by VisitPlanUI).
+   * onSave(iso) → Promise<{ok, error?}>; the sheet closes and the view re-renders on success.
+   */
+  function openDateSheet(title, label, defIso, onSave) {
+    var start = (PP.isIso(defIso) && defIso >= todayISO()) ? defIso : PP.addDays(todayISO(), 1);
+    openSheet('<h3>' + title + '</h3>' + dateBlockHtml(start, true, label) +
       '<div class="btn-row"><button type="button" class="btn" id="dp-save">ثبت</button></div>', { dirtyCheck: true });
     var saveBtn = document.getElementById('dp-save');
     var date = wireDateBlock(function () { saveBtn.disabled = !date || !date.valid(); });
     saveBtn.disabled = !date.valid();
     saveBtn.addEventListener('click', async function (e) {
       await withSubmitGuard(e.currentTarget, async function () {
-        var res = await DP.commit(function (d) { return DP.reschedule(d, id, date.value()); });
+        var res = await onSave(date.value());
         if (!res || !res.ok) { showToast((res && res.error) || 'ثبت نشد', { type: 'error' }); throw new Error('validation'); }
         closeModal(); afterChange(); showToast('تاریخ تغییر کرد');
       });
+    });
+  }
+
+  function openRescheduleSheet(id) {
+    var p = DP.byId(id);
+    if (!p || p.status !== 'pending') return;
+    openDateSheet('تغییر تاریخ تحویل', 'تاریخ تحویل', p.deliveryDate, function (iso) {
+      return DP.commit(function (d) { return DP.reschedule(d, id, iso); });
     });
   }
 
@@ -276,7 +290,7 @@
       return '<div class="pp-section-title">' + title + ' (' + fa(list.length) + ')</div><div class="pp-list">' +
         list.map(function (p) {
           return '<button type="button" class="pp-row" data-dp-list-open="' + esc(p.id) + '"><span class="pp-row-main"><strong>' +
-            esc(customerName(p.customerId)) + '</strong><small>' + esc(DP.itemsLabel(p)) + ' · ' + esc(faDate(p.deliveryDate)) + '</small></span>' +
+            esc(customerName(p.customerId)) + '</strong><small>' + esc(DP.itemsLabel(p)) + whoHint(p) + ' · ' + esc(faDate(p.deliveryDate)) + '</small></span>' +
             badgeHtml(p) + '</button>';
         }).join('') + '</div>';
     }
@@ -315,7 +329,7 @@
     return '<div class="pp-dash-row">' +
       '<a class="pp-dash-who" href="#/customer?id=' + encodeURIComponent(p.customerId) + '">' +
         '<strong>' + esc(customerName(p.customerId)) + '</strong>' +
-        '<small>' + esc(DP.itemsLabel(p)) + (late ? ' · <span class="pp-dash-late">' + esc(DP.badge(p).text) + '</span>' : '') + '</small>' +
+        '<small>' + esc(DP.itemsLabel(p)) + whoHint(p) + (late ? ' · <span class="pp-dash-late">' + esc(DP.badge(p).text) + '</span>' : '') + '</small>' +
       '</a>' +
       '<button type="button" class="pp-receive" data-dp-deliver-quick="' + esc(p.id) + '">تحویل شد</button>' +
     '</div>';
@@ -356,5 +370,6 @@
     slotHtml: slotHtml, historyHtml: historyHtml, bind: bind,
     dashboardHtml: dashboardHtml, bindDashboard: bindDashboard,
     openAddSheet: openAddSheet, openDetailSheet: openDetailSheet, openListSheet: openListSheet, openLoadSheet: openLoadSheet, deliver: deliver,
+    openDateSheet: openDateSheet,
   };
 })(typeof window !== 'undefined' ? window : this);

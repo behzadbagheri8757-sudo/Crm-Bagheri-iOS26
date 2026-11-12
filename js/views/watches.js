@@ -163,7 +163,7 @@
   function isActiveCustomer(cid) {
     if (typeof data === 'undefined' || !Array.isArray(data.customers)) return false;
     var c = data.customers.find(function (x) { return x && x.id === cid; });
-    return !!c && c.active !== false;
+    return isTrackedCustomer(c);
   }
 
   /* مشتری‌هایی که چک وصول‌نشده‌ی معوق/تا ۳ روز آینده دارند (نیمه‌شب محلی، مثل صفحه‌ی چک‌ها). */

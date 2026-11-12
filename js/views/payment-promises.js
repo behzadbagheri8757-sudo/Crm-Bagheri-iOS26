@@ -22,6 +22,9 @@
     return c ? (c.name || '—') : '—';
   }
   function afterChange() { if (typeof render === 'function') render(); }
+  function isOneOff(cid) { return isOneOffCustomer((data.customers || []).find(function (x) { return x && x.id === cid; })); }
+  /** One-off customers («متفرقه»): the promise note carries WHO promised, so lists show it. */
+  function whoHint(p) { return (p.note && isOneOff(p.customerId)) ? ' · ' + esc(p.note) : ''; }
 
   /* ---------- customer page ---------- */
 
@@ -30,7 +33,22 @@
       '<span class="pp-add-plus" aria-hidden="true">+</span><span>وعدهٔ پرداخت</span></button>';
   }
 
+  /** One-off customer: several pending promises (one per person) listed in one card. */
+  function oneOffCardHtml(cid) {
+    var list = PP.pendingFor(cid);
+    var rows = list.map(function (p) {
+      return '<button type="button" class="pp-row" data-pp-open="' + esc(p.id) + '">' +
+        '<span class="pp-row-main"><strong>' + esc(PP.amountLabel(p)) + (p.note ? ' · ' + esc(p.note) : '') + '</strong>' +
+        '<small>' + esc(faDate(p.promiseDate)) + '</small></span>' + badgeHtml(p) + '</button>';
+    }).join('');
+    return '<div class="card pp-card dp-card">' +
+      '<div class="dp-card-head"><span class="pp-card-title">وعده‌های پرداخت</span>' +
+      '<button type="button" class="pp-link-btn" data-pp-add="' + esc(cid) + '">+ جدید</button></div>' +
+      '<div class="dp-card-list">' + rows + '</div></div>';
+  }
+
   function cardHtml(cid, balance) {
+    if (isOneOff(cid) && PP.pendingFor(cid).length) return oneOffCardHtml(cid);
     var p = PP.active(cid);
     if (!p) return balance > 0 ? addButtonHtml(cid) : '';
     return '<div class="card pp-card pp-card-' + PP.badge(p).tone + '">' +
@@ -97,7 +115,7 @@
         '<div class="chip-wrap">' + chip('امروز', 0) + chip('فردا', 1) + chip('۳ روز دیگر', 3) + chip('هفتهٔ دیگر', 7) + '</div></div>' +
       '<div class="field">' + shamsiDateInputHTML('pp-date', defDate) +
         '<div class="pp-error" id="pp-date-error" hidden>تاریخ وعده نمی‌تواند قبل از امروز باشد</div></div>' +
-      '<div class="field"><label>یادداشت (اختیاری)</label><input id="pp-note" autocomplete="off" value="' + (from ? esc(from.note || '') : '') + '"></div>' +
+      '<div class="field"><label>' + (isOneOff(cid) ? 'نام پرداخت‌کننده / یادداشت' : 'یادداشت (اختیاری)') + '</label><input id="pp-note" autocomplete="off" value="' + (from ? esc(from.note || '') : '') + '"></div>' +
       '<div class="btn-row"><button type="button" class="btn" id="pp-save">ثبت</button></div>',
       { dirtyCheck: true }
     );
@@ -135,7 +153,7 @@
     saveBtn.addEventListener('click', async function (e) {
       await withSubmitGuard(e.currentTarget, async function () {
         var res = await PP.commit(function (d) {
-          return PP.add(d, cid, { amount: amountVal(), promiseDate: dateEl.value, note: document.getElementById('pp-note').value });
+          return PP.add(d, cid, { amount: amountVal(), promiseDate: dateEl.value, note: document.getElementById('pp-note').value, replaces: from ? from.id : null });
         });
         if (!res || !res.ok) { showToast((res && res.error) || 'ثبت نشد', { type: 'error' }); throw new Error('validation'); }
         closeModal();
@@ -215,7 +233,7 @@
     return '<div class="pp-dash-row">' +
       '<a class="pp-dash-who" href="#/customer?id=' + encodeURIComponent(p.customerId) + '">' +
         '<strong>' + esc(customerName(p.customerId)) + '</strong>' +
-        '<small>' + esc(PP.amountLabel(p)) + (late ? ' · <span class="pp-dash-late">' + esc(b.text) + '</span>' : '') + '</small>' +
+        '<small>' + esc(PP.amountLabel(p)) + whoHint(p) + (late ? ' · <span class="pp-dash-late">' + esc(b.text) + '</span>' : '') + '</small>' +
       '</a>' +
       '<button type="button" class="pp-receive" data-pp-receive-quick="' + esc(p.id) + '">دریافت شد</button>' +
     '</div>';
@@ -263,7 +281,7 @@
       return '<div class="pp-section-title">' + title + ' (' + enToFaDigits(String(list.length)) + ')</div><div class="pp-list">' +
         list.map(function (p) {
           return '<button type="button" class="pp-row" data-pp-list-open="' + esc(p.id) + '"><span class="pp-row-main"><strong>' +
-            esc(customerName(p.customerId)) + '</strong><small>' + esc(PP.amountLabel(p)) + ' · ' + esc(faDate(p.promiseDate)) + '</small></span>' +
+            esc(customerName(p.customerId)) + '</strong><small>' + esc(PP.amountLabel(p)) + whoHint(p) + ' · ' + esc(faDate(p.promiseDate)) + '</small></span>' +
             badgeHtml(p) + '</button>';
         }).join('') + '</div>';
     }
