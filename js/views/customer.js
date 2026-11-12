@@ -44,6 +44,7 @@
   }
 
   let currentCustomerId = null;
+  let currentSection = null; // push sub-page: 'invoices' | 'payments' | 'checks' | 'visits' | null
   let rootEl = null;
   function customersHref() {
     return '#/customers';
@@ -1353,13 +1354,16 @@
       : '';
 
     // History: collapsed, with the count in the summary.
-    var invoiceDetailsHtml = '<details class="cd-history-details">' +
+    var invoiceDetailsHtml = '<a class="cd-push-row" href="#/customer?id=' + encodeURIComponent(c.id) + '&section=invoices">' + '<span class="cd-push-label">فاکتورها</span>' + '<span class="cd-push-meta">' + invs.length + '</span>' + '<svg class="cd-push-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></a>' +
+    '<details class="cd-history-details" data-section="invoices" hidden>' +
       '<summary class="customer-behavior-summary">فاکتورها (' + invs.length + ')</summary>' +
       '<div class="customer-tx-list customer-invoice-list">' + invRows + '</div></details>';
-    var paymentDetailsHtml = '<details class="cd-history-details">' +
+    var paymentDetailsHtml = '<a class="cd-push-row" href="#/customer?id=' + encodeURIComponent(c.id) + '&section=payments">' + '<span class="cd-push-label">پرداخت‌ها</span>' + '<span class="cd-push-meta">' + pays.length + '</span>' + '<svg class="cd-push-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></a>' +
+    '<details class="cd-history-details" data-section="payments" hidden>' +
       '<summary class="customer-behavior-summary">پرداخت‌ها (' + pays.length + ')</summary>' +
       '<div class="customer-tx-list customer-payment-list">' + payRows + '</div></details>';
-    var checkDetailsHtml = '<details class="cd-history-details">' +
+    var checkDetailsHtml = '<a class="cd-push-row" href="#/customer?id=' + encodeURIComponent(c.id) + '&section=checks">' + '<span class="cd-push-label">چک‌ها</span>' + '<span class="cd-push-meta">' + chks.length + '</span>' + '<svg class="cd-push-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></a>' +
+    '<details class="cd-history-details" data-section="checks" hidden>' +
       '<summary class="customer-behavior-summary">چک‌ها (' + chks.length + ')</summary>' +
       '<div class="customer-tx-list customer-check-list">' + chkRows + '</div></details>';
     // Payment promise: ONE slot under the top alert (active promise card, or «ثبت وعدهٔ پرداخت» when there is debt).
@@ -1369,7 +1373,8 @@
       : ((typeof PromiseUI !== 'undefined') ? PromiseUI.cardHtml(c.id, t.balance) : ''));
     var promiseHistoryHtml = ((typeof PromiseUI !== 'undefined') ? PromiseUI.historyHtml(c.id) : '') +
       ((typeof DeliveryUI !== 'undefined') ? DeliveryUI.historyHtml(c.id) : '');
-    var visitDetailsHtml = '<details class="cd-history-details">' +
+    var visitDetailsHtml = '<a class="cd-push-row" href="#/customer?id=' + encodeURIComponent(c.id) + '&section=visits">' + '<span class="cd-push-label">ویزیت‌ها و ارزیابی‌ها</span>' + '<span class="cd-push-meta">' + visits.length + '</span>' + '<svg class="cd-push-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></a>' +
+    '<details class="cd-history-details" data-section="visits" hidden>' +
       '<summary class="customer-behavior-summary">ویزیت‌ها و ارزیابی‌ها (' + visits.length + ')</summary>' +
       '<div class="btn-row" style="margin-bottom:8px;">' +
         '<button type="button" class="btn small secondary" id="act-visit-section">ثبت ویزیت برای این مشتری</button>' +
@@ -1940,6 +1945,25 @@
     }
   }
 
+
+  /* Push sub-page: /customer?id=…&section=invoices|payments|checks|visits.
+     Reuses the already-rendered section list (moved, not re-rendered) so every
+     bound handler keeps working. The delegated handlers live on #main, which
+     stays the same element. */
+  var PUSH_SECTION_LABELS = { invoices: 'فاکتورها', payments: 'پرداخت‌ها', checks: 'چک‌ها', visits: 'ویزیت‌ها و ارزیابی‌ها' };
+  function applyPushSection(root) {
+    if (!root || !currentSection) return;
+    var det = root.querySelector('details[data-section="' + currentSection + '"]');
+    if (!det) return;
+    var page = document.createElement('div');
+    page.className = 'cd-push-page';
+    var kids = Array.prototype.slice.call(det.childNodes);
+    kids.forEach(function (n) { if (!(n.nodeName === 'SUMMARY')) page.appendChild(n); });
+    root.innerHTML = '';
+    root.appendChild(page);
+    if (typeof setHeaderTitle === 'function') setHeaderTitle(PUSH_SECTION_LABELS[currentSection] || '', {});
+  }
+
   function mount(root, params) {
     let refreshToken = null;
     if (!root) return function () {};
@@ -1949,6 +1973,7 @@
     if (nav) nav.style.display = '';
 
     currentCustomerId = params && params.id ? params.id : null;
+    currentSection = params && params.section ? String(params.section) : null;
     function refreshCustomer() {
       // Per-cycle, RAM-only Context: shared only so that reconcileWatchLifecycle's
       // Watch-observation pass and the subsequent Priority/Signals pass (both of
@@ -1958,7 +1983,7 @@
       var ctx = typeof createComputationContext === 'function'
         ? createComputationContext({ data: data })
         : { aggregatePairMapCache: Object.create(null) };
-      function paint() { drawCustomerPage(rootEl || root, ctx); }
+      function paint() { drawCustomerPage(rootEl || root, ctx); applyPushSection(rootEl || root); }
       // Paint immediately so the page is never blank if lifecycle reconcile hangs.
       paint();
       if (typeof reconcileWatchLifecycle === 'function' && currentCustomerId) {
@@ -1972,6 +1997,7 @@
       ViewHost.clearRefresh(refreshToken);
       refreshToken = null;
       currentCustomerId = null;
+      currentSection = null;
       root.classList.remove('customer-detail-view'); // UPDATED: Added for CSS scoping cleanup
       root.innerHTML = '';
       rootEl = null;
