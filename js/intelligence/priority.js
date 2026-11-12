@@ -108,7 +108,7 @@
     var rows = [];
     for (var i = 0; i < data.customers.length; i++) {
       var c = data.customers[i];
-      if (!c || c.active === false) continue;
+      if (!isTrackedCustomer(c)) continue;
       var invTotal = null;
       try {
         var t = customerTotals(c.id, ctx);
@@ -153,7 +153,7 @@
     var rows = [];
     for (var i = 0; i < data.customers.length; i++) {
       var c = data.customers[i];
-      if (!c || c.active === false) continue;
+      if (!isTrackedCustomer(c)) continue;
       var invTotal = null;
       try {
         var t = customerTotals(c.id, ctx);
@@ -370,7 +370,7 @@
     if (typeof data === 'undefined' || !Array.isArray(data.customers)) return [];
 
     var economicRankMap = _buildEconomicRankMap(ctx);
-    var customers = data.customers.filter(function (c) { return c && c.active !== false; });
+    var customers = data.customers.filter(isTrackedCustomer);
     var results = customers.map(function (c) {
       return calculateCustomerPriority(c.id, { economicRankMap: economicRankMap, ctx: ctx });
     });

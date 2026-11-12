@@ -1016,7 +1016,7 @@
     }
     if (typeof data === 'undefined' || !Array.isArray(data.customers)) return [];
     const economicRankMap = (typeof _buildEconomicRankMap === 'function') ? _buildEconomicRankMap(ctx) : null;
-    const customers = data.customers.filter(function (c) { return c && c.active !== false; });
+    const customers = data.customers.filter(isTrackedCustomer);
     const results = customers.map(function (c) {
       return calculateCustomerAction(c.id, null, { economicRankMap: economicRankMap, ctx: ctx });
     });
@@ -1045,7 +1045,7 @@
     }
     const rows = [];
     data.customers.forEach(function (c) {
-      if (!c || c.active === false) return;
+      if (!isTrackedCustomer(c)) return;
       let invTotal = null;
       try {
         const t = customerTotals(c.id, ctx);
@@ -1253,7 +1253,7 @@
 
     if (typeof data !== 'undefined' && Array.isArray(data.customers)) {
       data.customers.forEach(function (c) {
-        if (!c || c.active === false) return;
+        if (!isTrackedCustomer(c)) return;
         const base = calculateCustomerAction(c.id, null, { economicRankMap: economicRankMap, ctx: ctx });
         if (!base || base.actionType === 'no_action') return;
         if (_visitAckHidesFromSuggested(c.id, base, ctx)) return;

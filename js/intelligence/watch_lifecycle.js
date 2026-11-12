@@ -518,12 +518,12 @@
     if (ctx && typeof ctx.customerById === 'function') {
       var c = ctx.customerById(cid);
       if (!c) return false;
-      return c.active !== false;
+      return isTrackedCustomer(c); // inactive OR one-off («متفرقه») customers generate no Watches
     }
     if (typeof data === 'undefined' || !Array.isArray(data.customers)) return true;
     var c2 = data.customers.find(function (x) { return x && x.id === cid; });
     if (!c2) return false;
-    return c2.active !== false;
+    return isTrackedCustomer(c2);
   }
 
   function _findLatestAlertSuperseded(key, ctx) {
