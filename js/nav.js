@@ -1102,6 +1102,7 @@ function setHeaderTitle(text, opts){
   // back-navigation) instead of waiting for the next scroll event, so a
   // page opened already-scrolled doesn't flash a large title first.
   updateHeaderCondensedState();
+  ensureHeaderAddButton();
 }
 
 /* Continuous scroll-linked collapse (fixes the earlier snap/lag): progress
@@ -1166,6 +1167,39 @@ function ensureHeaderDate(){
   }
 }
 
+/* Header «+» (trailing edge). Mirrors the legacy #fab: visibility follows
+   fab.style.display, and a click calls the view's fab.onclick, so the
+   existing view handlers keep working unchanged. */
+function ensureHeaderAddButton(){
+  const header = document.querySelector('header');
+  const fab = document.getElementById('fab');
+  if(!header || !fab) return;
+  let btn = header.querySelector('.hdr-add');
+  if(!btn){
+    btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'hdr-btn hdr-add';
+    btn.setAttribute('aria-label', 'افزودن');
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.15" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
+    btn.addEventListener('click', function(){
+      const f = document.getElementById('fab');
+      if(f && typeof f.onclick === 'function') f.onclick.call(f);
+    });
+    header.appendChild(btn);
+  }
+  const d0 = fab.style.display;
+  btn.hidden = !(d0 && d0 !== 'none');
+  if(!ensureHeaderAddButton._observed){
+    ensureHeaderAddButton._observed = true;
+    new MutationObserver(function(){
+      const b = document.querySelector('header .hdr-add');
+      if(!b) return;
+      const d = fab.style.display;
+      b.hidden = !(d && d !== 'none');
+    }).observe(fab, { attributes: true, attributeFilter: ['style'] });
+  }
+}
+
 function ensureAppBackButton(activeId, routePath){
   const header = document.querySelector('header');
   if(!header) return;
@@ -1208,9 +1242,9 @@ function ensureAppBackButton(activeId, routePath){
 
   const btn = document.createElement('button');
   btn.type = 'button';
-  btn.className = 'app-back';
+  btn.className = 'app-back hdr-btn';
   btn.setAttribute('aria-label', 'بازگشت');
-  btn.innerHTML = '<span class="app-back-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.15" stroke-linecap="round" stroke-linejoin="round"><path d="m14.5 5-7 7 7 7"/></svg></span><span class="app-back-txt">بازگشت</span>';
+  btn.innerHTML = '<span class="app-back-ico" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.15" stroke-linecap="round" stroke-linejoin="round"><path d="' + (document.documentElement.dir === 'rtl' ? 'm9.5 5 7 7-7 7' : 'm14.5 5-7 7 7 7') + '"/></svg></span><span class="app-back-txt">بازگشت</span>';
   btn.addEventListener('click', goAppBack);
   header.insertBefore(btn, header.firstChild);
   header.classList.add('has-back');
