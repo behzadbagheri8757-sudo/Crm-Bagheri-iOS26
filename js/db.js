@@ -485,11 +485,15 @@ function normalizeData(parsed){
     openingBalance: num(c.openingBalance),
     visits: c.visits||[],
     active: c.active!==false,
+    // مشتری یک‌بار‌مصرف. اگر هرگز تعیین نشده و نام دقیقاً «متفرقه» است، پیش‌فرض true (کاربر می‌تواند خاموشش کند؛ false صریح حفظ می‌شود).
+    oneOff: typeof c.oneOff==='boolean' ? c.oneOff : /^\s*متفرقه\s*$/.test(String(c.name||'')),
     prospectShopId: c.prospectShopId != null ? c.prospectShopId : null,
   }));
   d.invoices = (parsed.invoices||[]).map(i=>({
     id:i.id||uid(), number:optNum(i.number), customerId:i.customerId, date:i.date,
     visitId: i.visitId || null,
+    // نام خریدار (فقط برای مشتری یک‌بار‌مصرف؛ اختیاری)
+    ...((typeof i.buyerName==='string' && i.buyerName.trim()) ? {buyerName:i.buyerName.trim()} : {}),
     // Optional payment due date (YYYY-MM-DD). Absent => follow-up counts from the invoice date.
     ...((typeof i.dueDate==='string' && /^\d{4}-\d{2}-\d{2}$/.test(i.dueDate)) ? {dueDate:i.dueDate} : {}),
     items:(i.items||[]).map(it=>({

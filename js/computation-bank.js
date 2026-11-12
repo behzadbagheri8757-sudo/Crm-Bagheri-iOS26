@@ -132,7 +132,7 @@ var RECEIVABLE_ATTENTION_DEFAULTS = {
               };
               // Active payment promise => follow-up belongs to the promise (snoozed until it is resolved).
               var promisedC = ctx.activePromise(c.id);
-              if (promisedC) { out.promisedByCustomerId[c.id] = promisedC; continue; }
+              if (promisedC && !c.oneOff) { out.promisedByCustomerId[c.id] = promisedC; continue; }
               out.rows.push(rowC);
               out.byCustomerId[c.id] = rowC;
               continue;
@@ -175,7 +175,7 @@ var RECEIVABLE_ATTENTION_DEFAULTS = {
             if (days == null || !isFinite(days) || days < daysFloor) continue;
 
             var promised = ctx.activePromise(c.id);
-            if (promised) { out.promisedByCustomerId[c.id] = promised; continue; }
+            if (promised && !c.oneOff) { out.promisedByCustomerId[c.id] = promised; continue; }
             var row = {
               customerId: c.id,
               name: c.name || '—',

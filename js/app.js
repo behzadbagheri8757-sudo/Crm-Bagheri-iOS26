@@ -670,6 +670,7 @@ function openAddCustomer(editId){
     </div>
     <div class="field"><label>آدرس (اختیاری)</label><input id="f-address" value="${c?esc(c.address||''):''}"></div>
     <div class="field"><label>یادداشت (اختیاری)</label><textarea id="f-note">${c?esc(c.note||''):''}</textarea></div>
+    <label class="pp-tx-toggle" for="f-oneoff"><input type="checkbox" id="f-oneoff" ${c&&c.oneOff?'checked':''}><span>مشتری یک‌بار‌مصرف (متفرقه)<small>فروش‌های پراکندهٔ آدم‌های مختلف زیر یک حساب؛ پیشنهاد و هشدار رفتاری ندارد و روی فاکتور «نام خریدار» می‌گیرد</small></span></label>
     <div class="field">
       <label>مانده حساب اولیه (تومان)${c?' — برای اصلاح مانده بعد از شروع کار با برنامه':''}</label>
       <input id="f-opening" type="text" inputmode="decimal" value="${c&&c.openingBalance?c.openingBalance:''}">
@@ -688,9 +689,10 @@ function openAddCustomer(editId){
       const address = document.getElementById('f-address').value.trim();
       const note = document.getElementById('f-note').value.trim();
       const openingBalance = numVal(document.getElementById('f-opening'));
+      const oneOff = !!document.getElementById('f-oneoff').checked;
       const liveCustomer = customerId ? data.customers.find(x=>x.id===customerId) : null;
-      if(liveCustomer){ liveCustomer.ownerName=ownerName; liveCustomer.name=name; liveCustomer.phone=phone; liveCustomer.region=region; liveCustomer.route=route; liveCustomer.address=address; liveCustomer.note=note; liveCustomer.openingBalance=openingBalance; }
-      else{ data.customers.push({id:uid(), name, ownerName, phone, region, route, address, note, openingBalance, visits:[], active:true}); }
+      if(liveCustomer){ liveCustomer.ownerName=ownerName; liveCustomer.name=name; liveCustomer.phone=phone; liveCustomer.region=region; liveCustomer.route=route; liveCustomer.address=address; liveCustomer.oneOff=oneOff; liveCustomer.note=note; liveCustomer.openingBalance=openingBalance; }
+      else{ data.customers.push({id:uid(), name, ownerName, phone, region, route, address, note, openingBalance, visits:[], active:true, oneOff}); }
       await saveData(); closeModal();
       if(liveCustomer) openCustomerDetail(liveCustomer.id);
       else render();
@@ -750,7 +752,7 @@ function openAddTransaction(cid, opts){
   const PP = (typeof PaymentPromises !== 'undefined') ? PaymentPromises : null;
   const fromPromise = (PP && opts.promiseId) ? PP.byId(opts.promiseId) : null;
   const promiseTarget = (fromPromise && fromPromise.status==='pending' && fromPromise.customerId===cid)
-    ? fromPromise : (PP && !opts.promiseId ? PP.active(cid) : null);
+    ? fromPromise : (PP && !opts.promiseId && !isOneOffCustomer(data.customers.find(x=>x.id===cid)) ? PP.active(cid) : null);
   const promiseForced = !!(fromPromise && promiseTarget===fromPromise);
   let linkPromise = true;
   const PROMISE_METHODS = ['cash','card','transfer'];
@@ -1841,7 +1843,7 @@ function openAddVisit(cid){
       VISIT_NEXT_ACTIONS.map(function (a) { return '<option value="' + esc(a) + '">' + esc(a) + '</option>'; }).join('') +
       '</select></div>' +
     '<div class="field" id="visit-note-wrap" style="display:none;margin-top:12px;"><label>یادداشت کوتاه (اختیاری)</label><input id="f-visit-note" placeholder="اختیاری" autocomplete="off"></div>' +
-    '<div class="field" id="closed-next-date-wrap" style="display:none;margin-top:12px;"><label>ویزیت بعدی</label><div id="closed-next-date-options" class="chip-wrap">' +
+    '<div class="field" id="closed-next-date-wrap" style="display:none;margin-top:12px;"><label>ویزیت بعدی (اختیاری)</label><div id="closed-next-date-options" class="chip-wrap">' +
       '<button type="button" class="chip-opt" data-next-days="1">فردا</button><button type="button" class="chip-opt" data-next-days="2">۲ روز دیگر</button><button type="button" class="chip-opt" data-next-days="3">۳ روز دیگر</button><button type="button" class="chip-opt" data-next-days="7">هفتهٔ بعد</button><button type="button" class="chip-opt" data-next-custom>تاریخ دلخواه</button></div>' +
       '<div id="closed-next-custom" style="display:none;margin-top:8px;">' + shamsiDateInputHTML('f-next-visit-date', '') + '</div></div>' +
     '<div class="btn-row visit-save-actions" id="visit-save-actions" style="display:none;margin-top:8px;">' +
@@ -1885,11 +1887,19 @@ function openAddVisit(cid){
     if (saveActions) saveActions.style.display = late ? '' : 'none';
     if (saveInvoice) saveInvoice.style.display = state.step === 'outcome' && state.result === VISIT_RESULTS[0] && (state.offeredProducts || []).some(function (op) { return op && op.reaction === 'accepted'; }) ? '' : 'none';
     const closedNext = document.getElementById('closed-next-date-wrap');
-    if (closedNext) closedNext.style.display = state.step === 'closedFinish' ? '' : 'none';
+    // «ویزیت بعدی» (تاریخ): برای هر ویزیت اختیاری است، نه فقط «فروشگاه بسته بود» — داشبورد/صفحهٔ مشتری از روی آن یادآوری می‌دهند (js/visit-plan.js).
+    if (closedNext) closedNext.style.display = late ? '' : 'none';
   }
   const nextDateOptions = document.getElementById('closed-next-date-options');
   if (nextDateOptions) nextDateOptions.addEventListener('click', function (e) {
     const btn = e.target.closest('button'); if (!btn) return;
+    // Optional field: tapping the selected chip again clears the choice.
+    if (btn.classList.contains('selected')) {
+      btn.classList.remove('selected');
+      state.nextVisitDate = null;
+      const customOff = document.getElementById('closed-next-custom'); if (customOff) customOff.style.display = 'none';
+      return;
+    }
     const days = Number(btn.getAttribute('data-next-days'));
     if (days > 0) {
       const d = new Date(); d.setDate(d.getDate() + days);
@@ -2218,6 +2228,8 @@ function openAddVisit(cid){
             state.offeredProducts = [];
             state.nextAction = null;
             state.nextVisitDate = null;
+            document.querySelectorAll('#closed-next-date-options .selected').forEach(function (b) { b.classList.remove('selected'); });
+            const customReset = document.getElementById('closed-next-custom'); if (customReset) customReset.style.display = 'none';
             state.step = 'closedFinish';
           } else {
             state.result = null;
@@ -2289,7 +2301,7 @@ function openAddVisit(cid){
   }
 
   async function persistVisit(auto){
-    if (state.kind === 'closed') {
+    {
       const customWrap = document.getElementById('closed-next-custom');
       const customSelected = !!(customWrap && customWrap.style.display !== 'none');
       if (customSelected && !(state.nextVisitDate && parseISODateParts(state.nextVisitDate))) {
@@ -2311,6 +2323,10 @@ function openAddVisit(cid){
     const date = (dateEl && dateEl.value) || todayISO();
     const time = (timeEl && timeEl.value) || nowHHMM();
     const note = noteEl ? String(noteEl.value || '').trim() : '';
+    if (state.nextVisitDate && state.nextVisitDate < date) {
+      showToast('تاریخ ویزیت بعدی نمی‌تواند قبل از تاریخ این ویزیت باشد');
+      return false;
+    }
 
     const offered = validOffered();
 
@@ -2322,7 +2338,7 @@ function openAddVisit(cid){
       result: state.result,
       ordered: state.result === VISIT_RESULTS[0],
     };
-    if (state.kind === 'closed' && state.nextVisitDate) visit.nextVisitDate = state.nextVisitDate;
+    if (state.nextVisitDate) visit.nextVisitDate = state.nextVisitDate;
     if (note) visit.note = note;
     if (state.kind !== 'closed' && state.nextAction && VISIT_NEXT_ACTIONS.indexOf(state.nextAction) >= 0) visit.nextAction = state.nextAction;
     if (offered.length) visit.offeredProducts = offered;
@@ -2691,6 +2707,9 @@ function openInvoiceForm(cid, editInv, opts){
   let invoiceDateStr = editInv ? editInv.date : todayISO();
   let invoiceDueEnabled = !!(editInv && editInv.dueDate);
   let invoiceDueStr = (editInv && editInv.dueDate) ? String(editInv.dueDate).slice(0,10) : invoiceDateStr;
+  // نام خریدار: فقط برای مشتری یک‌بار‌مصرف («متفرقه») تا بدهی/فروش آدم‌های مختلف زیر یک حساب قاطی نشود.
+  const invoiceOneOff = isOneOffCustomer(data.customers.find(x=>x.id===cid));
+  let invoiceBuyerName = (editInv && editInv.buyerName) ? String(editInv.buyerName) : '';
   // فعال‌سازی ردیف جمع‌شده؛ renderSheet آن را تنظیم می‌کند (setActiveRow داخل scope همان است).
   let activateCollapsedRow = null;
   const qtyFocusPrevious = new Map();
@@ -2943,6 +2962,10 @@ function openInvoiceForm(cid, editInv, opts){
                 <span class="inv-row-label">تاریخ فاکتور</span>
                 ${shamsiDateInputHTML('f-date', invoiceDateStr)}
               </div>
+              ${invoiceOneOff ? `<div class="inv-row">
+                <label class="inv-row-label" for="f-buyer">نام خریدار <small>(اختیاری)</small></label>
+                <input type="text" id="f-buyer" class="inv-row-input" autocomplete="off" placeholder="مثلاً: آقای رضایی" value="${esc(invoiceBuyerName)}">
+              </div>` : ''}
               <div class="inv-row">
                 <label class="inv-row-label" for="f-due-toggle">سررسید پرداخت <small>(اختیاری)</small></label>
                 <input type="checkbox" class="inv-switch" id="f-due-toggle" role="switch" ${invoiceDueEnabled?'checked':''}>
@@ -3513,6 +3536,8 @@ function openInvoiceForm(cid, editInv, opts){
       const w = document.getElementById('f-due-wrap');
       if(w) w.style.display = invoiceDueEnabled ? '' : 'none';
     });
+    const buyerEl = document.getElementById('f-buyer');
+    if(buyerEl) buyerEl.addEventListener('input', e=>{ invoiceBuyerName = e.target.value; });
     const dueDateEl = document.getElementById('f-due-date');
     if(dueDateEl) {
       const syncDueDate = e => { invoiceDueStr = String(e.target.value || '').slice(0,10); };
@@ -3673,6 +3698,7 @@ function openInvoiceForm(cid, editInv, opts){
 
         // ۲) به‌روزرسانی خود فاکتور با مقادیر جدید (همون id و شماره فاکتور حفظ می‌مونه)
         if(invDueDate) editInv.dueDate = invDueDate; else delete editInv.dueDate;
+        { const bn = invoiceOneOff ? String(invoiceBuyerName||'').trim() : ''; if(bn) editInv.buyerName = bn; else delete editInv.buyerName; }
         editInv.date = date; editInv.items = items; editInv.total = total; editInv.discount = discount; editInv.discountType = discountType;
         editInv.prevBalance = prevBalance; editInv.cashPaid = cashPaid; editInv.cardPaid = cardPaid;
         editInv.transferPaid = transferPaid; editInv.checkPaid = checkAmount; editInv.newBalance = newBalance;
@@ -3717,7 +3743,8 @@ function openInvoiceForm(cid, editInv, opts){
       }
 
       const newInv = {
-        id:uid(), number:null, customerId:cid, date, ...(invDueDate ? {dueDate: invDueDate} : {}), items, total, discount, discountType,
+        id:uid(), number:null, customerId:cid, date, ...(invDueDate ? {dueDate: invDueDate} : {}),
+        ...((invoiceOneOff && String(invoiceBuyerName||'').trim()) ? {buyerName: String(invoiceBuyerName).trim()} : {}), items, total, discount, discountType,
         prevBalance, cashPaid, cardPaid, transferPaid, checkPaid:checkAmount, newBalance,
         ...(opts.visitId ? {visitId: opts.visitId} : {}),
       };

@@ -13,7 +13,7 @@
  *  - pending -> done      : complete() with an invoice, autoCompleteForInvoice(), or closeManually()
  *  - pending -> cancelled : cancel()
  *  - any -> deleted       : remove()
- *  - Auto-complete rule: a new invoice completes a pending promise of the same customer when it contains
+ *  - Auto-complete rule (not for one-off customers): a new invoice completes a pending promise of the same customer when it contains
  *    EVERY promised product with qty > 0 (quantities are not compared). Note-only promises never auto-complete.
  *
  * Pure functions take `src` (defaults to global `data`) and `today` (defaults to todayISO()).
@@ -185,6 +185,9 @@
   function autoCompleteForInvoice(src, invoice) {
     var done = [];
     if (!invoice || !invoice.id) return done;
+    // one-off customers: an invoice may belong to a different person than the promise → explicit only
+    var cu = (_src(src).customers || []).find(function (x) { return x && x.id === invoice.customerId; });
+    if (cu && cu.oneOff) return done;
     var have = {};
     (invoice.items || []).forEach(function (it) { if (it && it.productId && Number(it.qty) > 0) have[it.productId] = true; });
     pending(invoice.customerId, src).forEach(function (p) {

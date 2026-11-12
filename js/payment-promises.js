@@ -7,6 +7,8 @@
  *
  * Rules
  *  - One active (pending) promise per customer. A new one supersedes the old one.
+ *    EXCEPTION: one-off customers («متفرقه», several different people under one account) may hold
+ *    several pending promises at once — nothing is superseded, and nothing is auto-linked to a payment.
  *  - amount 0 = «مبلغ مشخص نیست» (shown as «کل بدهی»).
  *  - promiseDate >= today at creation.
  *  - pending -> kept   : only via keep() together with a real payment
@@ -42,6 +44,15 @@
   }
   function forCustomer(cid, src) {
     return all(src).filter(function (p) { return p && p.customerId === cid; });
+  }
+  function _oneOff(cid, src) {
+    var c = (_src(src).customers || []).find(function (x) { return x && x.id === cid; });
+    return !!(c && c.oneOff);
+  }
+  /** All pending promises of a customer, earliest first (several only for one-off customers). */
+  function pendingFor(cid, src) {
+    return forCustomer(cid, src).filter(function (p) { return p.status === 'pending' && isIso(p.promiseDate); })
+      .sort(function (a, b) { return a.promiseDate < b.promiseDate ? -1 : a.promiseDate > b.promiseDate ? 1 : 0; });
   }
   /** The customer's current pending promise (most urgent if data ever holds several). */
   function active(cid, src) {
@@ -107,10 +118,17 @@
     var amount = input.amount == null || input.amount === '' ? 0 : Number(input.amount);
     if (!Number.isFinite(amount) || amount < 0) return { ok: false, error: 'مبلغ نامعتبر است' };
     s.paymentPromises = Array.isArray(s.paymentPromises) ? s.paymentPromises : [];
-    // one active promise per customer: the new one replaces the old one
-    s.paymentPromises.forEach(function (p) {
-      if (p.customerId === cid && p.status === 'pending') p.status = 'superseded';
-    });
+    // one active promise per customer: the new one replaces the old one (not for one-off customers)
+    if (!_oneOff(cid, s)) {
+      s.paymentPromises.forEach(function (p) {
+        if (p.customerId === cid && p.status === 'pending') p.status = 'superseded';
+      });
+    } else if (input.replaces) {
+      // one-off: «تمدید» replaces exactly the promise being extended, nobody else's
+      s.paymentPromises.forEach(function (p) {
+        if (p.id === input.replaces && p.customerId === cid && p.status === 'pending') p.status = 'superseded';
+      });
+    }
     var promise = {
       id: uid(), customerId: cid, date: t, promiseDate: input.promiseDate,
       amount: amount, note: String(input.note || '').trim(), status: 'pending',
@@ -176,7 +194,7 @@
 
   global.PaymentPromises = {
     isIso: isIso, dayDiff: dayDiff, addDays: addDays,
-    all: all, forCustomer: forCustomer, active: active, byId: byId,
+    all: all, forCustomer: forCustomer, active: active, pendingFor: pendingFor, byId: byId,
     phase: phase, badge: badge, amountLabel: amountLabel, dueList: dueList, pendingList: pendingList,
     add: add, keep: keep, markBroken: markBroken, dismiss: dismiss, remove: remove, commit: commit,
   };

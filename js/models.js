@@ -56,6 +56,13 @@ let dbInstance = null;
 let custFilter = 'all';
 let custSortByDebt = false;
 
+/* مشتری یک‌بار‌مصرف («متفرقه»): فروش‌های پراکندهٔ آدم‌های مختلف زیر یک حساب.
+   - موتورهای رفتاری (پیشنهاد روزانه، اولویت، Watch) آن را نمی‌بینند → isTrackedCustomer
+   - حسابداری، بدهی و هشدار وصول مثل بقیه می‌ماند
+   - روی فاکتور «نام خریدار» (buyerName) دارد تا بدهی‌ها قاطی نشوند */
+function isOneOffCustomer(c){ return !!(c && c.oneOff); }
+function isTrackedCustomer(c){ return !!(c && c.active !== false && !c.oneOff); }
+
 function emptyData(){
   // suppliers[].payments: legacy {date, amount} or extended
   //   {id, date, amount, method:'cash'|'check', note?,
