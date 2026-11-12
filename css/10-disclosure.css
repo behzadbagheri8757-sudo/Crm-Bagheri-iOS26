@@ -1,0 +1,82 @@
+/* ==========================================================================
+   10-disclosure.css — iOS-style disclosure groups (prototype)
+   Scope: customer detail accordions (<details> with .customer-*-details).
+   Each group is one inset-grouped card. Summary = row with chevron.
+   Body = rows separated by hairlines. No card-in-card, no hard shadow.
+   Loaded after 00-chrome.css. Remove the legacy summary rules once approved.
+   ========================================================================== */
+
+#main.customer-detail-view details.customer-behavior-details,
+#main.customer-detail-view details.customer-watch-details,
+#main.customer-detail-view details.cd-history-details,
+#main.customer-detail-view details.cd-ack-details{
+  box-sizing:border-box;
+  margin:0 0 12px;
+  padding:0;
+  background:#fff;
+  border:0;
+  border-radius:14px;
+  box-shadow:none;
+  overflow:hidden;
+}
+
+#main.customer-detail-view details > summary.customer-behavior-summary{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  box-sizing:border-box;
+  min-height:52px;
+  margin:0;
+  padding:14px 16px;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+  list-style:none;
+  cursor:pointer;
+  font-size:1rem;
+  font-weight:600;
+  line-height:1.3;
+  color:var(--vg-color-text);
+  -webkit-tap-highlight-color:transparent;
+}
+#main.customer-detail-view details > summary.customer-behavior-summary::-webkit-details-marker{ display:none; }
+#main.customer-detail-view details > summary.customer-behavior-summary:active{ background:rgba(60,60,67,.08); }
+
+/* Chevron on the leading edge is the iOS disclosure affordance in RTL. */
+#main.customer-detail-view details > summary.customer-behavior-summary::after{
+  flex:0 0 auto;
+  width:12px;
+  height:12px;
+  margin:0;
+  transition:transform .2s ease;
+}
+#main.customer-detail-view details[open] > summary.customer-behavior-summary::after{
+  transform:rotate(180deg);
+}
+
+#main.customer-detail-view details[open] > summary.customer-behavior-summary{
+  border-bottom:.5px solid rgba(60,60,67,.18);
+  margin-bottom:0;
+}
+
+/* Body rows: hairline dividers, no nested cards. */
+#main.customer-detail-view details.customer-behavior-details > :not(summary),
+#main.customer-detail-view details.customer-watch-details > :not(summary),
+#main.customer-detail-view details.cd-history-details > :not(summary),
+#main.customer-detail-view details.cd-ack-details > :not(summary){
+  margin-inline:16px;
+  margin-block:0;
+}
+#main.customer-detail-view details .card{
+  box-shadow:none;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  padding-inline:0;
+}
+
+@media (prefers-reduced-motion: reduce){
+  #main.customer-detail-view details > summary.customer-behavior-summary::after{ transition:none; }
+}
