@@ -1,0 +1,120 @@
+/* ==========================================================================
+   00-chrome.css — canonical navigation chrome (header, back, header-add)
+   Owns: header, header h1, .header-date, .hdr-btn, button.app-back, .hdr-add.
+   Loaded LAST in index.html so it wins over legacy rules. Do not add
+   component rules for other areas here.
+   ========================================================================== */
+
+/* ---- Header bar ---- */
+header{
+  position:sticky;
+  top:0;
+  z-index:30;
+  --header-progress:0; /* set by js/nav.js from scrollY: 0 = expanded, 1 = collapsed */
+  box-sizing:border-box;
+  padding-inline:16px;
+  padding-block-start:calc(env(safe-area-inset-top,0px) + 48px - (30px * var(--header-progress)));
+  padding-block-end:calc(10px + (24px * (1 - var(--header-progress))));
+  min-height:calc(48px + env(safe-area-inset-top,0px));
+  text-align:start;
+  color:var(--vg-color-text);
+  background:rgba(242,242,247,.72);
+  backdrop-filter:saturate(180%) blur(20px);
+  -webkit-backdrop-filter:saturate(180%) blur(20px);
+  border-bottom:0; /* no hard separator: content dissolves under the glass */
+}
+header.header-root{
+  padding-block-start:calc(env(safe-area-inset-top,0px) + 10px);
+}
+
+/* ---- Title ---- */
+header h1{
+  margin:0;
+  max-width:100%;
+  box-sizing:border-box;
+  font-weight:700;
+  letter-spacing:.1px;
+  line-height:1.22;
+  color:var(--vg-color-text);
+  font-size:calc(1.05rem + (.65rem * (1 - var(--header-progress))));
+  overflow-wrap:anywhere;
+  text-wrap:balance;
+}
+/* Title clears the glass circles as soon as it starts rising into the button
+   row (progress ~0.1). Full clearance at once avoids a half-cleared mid state. */
+header.has-back h1,
+header:has(.hdr-add) h1{
+  padding-inline-start:calc(56px * min(1, var(--header-progress) * 10));
+  padding-inline-end:calc(56px * min(1, var(--header-progress) * 10));
+}
+
+/* ---- Date (kept where it was; relocation is a separate decision) ---- */
+header .header-date{
+  position:absolute;
+  top:calc(env(safe-area-inset-top,0px) + 13px - (10px * var(--header-progress)));
+  left:50%;
+  transform:translateX(-50%);
+  margin:0;
+  max-width:40%;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:.72rem;
+  font-weight:550;
+  line-height:1.25;
+  color:var(--vg-color-text-muted);
+  pointer-events:none;
+  z-index:5;
+}
+
+/* ---- Shared glass circle for header buttons ---- */
+.hdr-btn{
+  position:absolute;
+  top:calc(env(safe-area-inset-top,0px) + 4px);
+  z-index:12;
+  box-sizing:border-box;
+  width:44px;
+  height:44px;
+  min-width:44px;
+  min-height:44px;
+  margin:0;
+  padding:0;
+  border:0;
+  border-radius:50%;
+  display:grid;
+  place-items:center;
+  color:var(--vg-color-text);
+  background:rgba(255,255,255,.55);
+  backdrop-filter:saturate(180%) blur(16px);
+  -webkit-backdrop-filter:saturate(180%) blur(16px);
+  box-shadow:0 1px 3px rgba(0,0,0,.08), inset 0 0 0 .5px rgba(255,255,255,.7);
+  cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+  transition:transform 140ms cubic-bezier(.22,1,.36,1);
+}
+.hdr-btn:active{ transform:scale(.94); }
+.hdr-btn svg{ display:block; width:22px; height:22px; }
+.hdr-btn[hidden]{ display:none !important; }
+
+/* Back: leading edge (right in RTL). Chevron direction is set in nav.js. */
+button.app-back{ inset-inline-start:8px; }
+button.app-back .app-back-txt{ display:none; }
+
+/* Add: trailing edge (left in RTL). Proxies to the legacy #fab handler. */
+.hdr-add{ inset-inline-end:8px; }
+body.keyboard-open .hdr-add,
+body.modal-open .hdr-add{ opacity:0; pointer-events:none; }
+
+/* Legacy floating add button is replaced by .hdr-add; keep the element for
+   its onclick wiring, but never show it. */
+#fab.fab{ display:none !important; }
+
+/* ---- Dark theme ---- */
+html[data-theme="dark"] header{
+  background:rgba(28,28,30,.72);
+}
+html[data-theme="dark"] .hdr-btn{
+  color:#fff;
+  background:rgba(120,120,128,.32);
+  box-shadow:inset 0 0 0 .5px rgba(255,255,255,.12);
+}
