@@ -1047,9 +1047,11 @@
     const payRows = pays.length
       ? pays
           .map(function (p) {
+            const tagOpen = p.invoiceId ? '<a class="ledger-row" href="#/invoice?id=' + encodeURIComponent(p.invoiceId) + '&fromCustomer=' + encodeURIComponent(c.id) + '&fromSection=payments" style="text-decoration:none;color:inherit;">' : '<div class="ledger-row">';
+            const tagClose = p.invoiceId ? '</a>' : '</div>';
             const method = paymentMethodLabel(p.method);
             return (
-              '<div class="ledger-row">' +
+              tagOpen +
               '<span class="name">' +
               esc(method) +
               (p.note ? '<span class="sub">' + esc(p.note) + '</span>' : '') +
@@ -1059,7 +1061,7 @@
               '<span class="filler"></span>' +
               '<span class="amount">' +
               toman(p.amount) +
-              ' ت</span></div>'
+              ' ت</span>' + tagClose
             );
           })
           .join('')
@@ -1069,9 +1071,11 @@
       ? chks
           .map(function (ch) {
             const st = ch.status === 'cleared' ? 'پاس‌شده' : 'در جریان';
+            const tagOpen = ch.invoiceId ? '<a class="ledger-row" href="#/invoice?id=' + encodeURIComponent(ch.invoiceId) + '&fromCustomer=' + encodeURIComponent(c.id) + '&fromSection=checks" style="text-decoration:none;color:inherit;">' : '<div class="ledger-row">';
+            const tagClose = ch.invoiceId ? '</a>' : '</div>';
             const stCls = ch.status === 'cleared' ? 'accent-olive' : 'accent-amber';
             return (
-              '<div class="ledger-row">' +
+              tagOpen +
               '<span class="name">' +
               esc(ch.checkNumber || 'چک') +
               '<span class="sub">سررسید: ' +
@@ -1084,7 +1088,7 @@
               '<span class="filler"></span>' +
               '<span class="amount">' +
               toman(ch.amount) +
-              ' ت</span></div>'
+              ' ت</span>' + tagClose
             );
           })
           .join('')
@@ -1970,6 +1974,12 @@
     kids.forEach(function (n) { if (!(n.nodeName === 'SUMMARY')) page.appendChild(n); });
     root.innerHTML = '';
     root.appendChild(page);
+    /* Tap a row to expand clamped detail text (push sub-page only). */
+    page.addEventListener('click', function (e) {
+      var row = e.target && e.target.closest ? e.target.closest('.ledger-row') : null;
+      if (!row || row.tagName === 'A') return;
+      row.classList.toggle('is-open');
+    });
     if (typeof setHeaderTitle === 'function') setHeaderTitle(PUSH_SECTION_LABELS[currentSection] || '', {});
   }
 
