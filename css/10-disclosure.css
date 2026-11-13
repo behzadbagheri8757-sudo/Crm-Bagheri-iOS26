@@ -163,7 +163,7 @@ html[data-theme="dark"]{ --disc-sep: rgba(255,255,255,.14); }
   background-image:linear-gradient(var(--disc-sep), var(--disc-sep));
   background-repeat:no-repeat;
   background-size:calc(100% - 16px) .5px;
-  background-position:right bottom;
+  background-position:left bottom;
   box-shadow:none;
   color:var(--vg-color-text);
 }
@@ -260,7 +260,7 @@ html[data-theme="dark"]{ --disc-sep: rgba(255,255,255,.14); }
   background-image:linear-gradient(var(--disc-sep), var(--disc-sep));
   background-repeat:no-repeat;
   background-size:calc(100% - 16px) .5px;
-  background-position:right bottom;
+  background-position:left bottom;
 }
 #main.customer-detail-view .cd-push-page .cards > .card:last-child{ background-image:none; }
 #main.customer-detail-view .cd-push-page .cards > .card .label{
@@ -282,3 +282,24 @@ html[data-theme="dark"]{ --disc-sep: rgba(255,255,255,.14); }
   padding:14px 16px;
   border-radius:14px;
 }
+
+/* Grouped records card: all push rows of the customer page in one inset-grouped surface. */
+#main.customer-detail-view .cd-records-nav{
+  box-sizing:border-box;
+  margin:0 0 16px;
+  background:var(--vg-color-surface);
+  border-radius:14px;
+  overflow:hidden;
+}
+#main.customer-detail-view .cd-records-nav > a.cd-push-row{
+  margin:0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+  min-height:52px;
+  background-image:linear-gradient(var(--disc-sep), var(--disc-sep));
+  background-repeat:no-repeat;
+  background-size:calc(100% - 16px) .5px;
+  background-position:left bottom;
+}
+#main.customer-detail-view .cd-records-nav > a.cd-push-row:last-child{ background-image:none; }
