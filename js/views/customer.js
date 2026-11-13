@@ -1023,6 +1023,7 @@
             return (
               '<a class="ledger-row customer-invoice-row" href="#/invoice?id=' +
               encodeURIComponent(inv.id) +
+              '&fromCustomer=' + encodeURIComponent(c.id) + '&fromSection=invoices' +
               '" style="text-decoration:none;color:inherit;">' +
               '<span class="name">#' +
               esc(String(inv.number || '')) +
@@ -1957,6 +1958,14 @@
     if (!det) return;
     var page = document.createElement('div');
     page.className = 'cd-push-page';
+    var ctxName = '';
+    try { var cust = (data.customers || []).find(function (x) { return String(x.id) === String(currentCustomerId); }); ctxName = cust ? cust.name : ''; } catch (_e) {}
+    if (ctxName) {
+      var ctx = document.createElement('div');
+      ctx.className = 'cd-push-context';
+      ctx.textContent = 'مشتری: ' + ctxName;
+      page.appendChild(ctx);
+    }
     var kids = Array.prototype.slice.call(det.childNodes);
     kids.forEach(function (n) { if (!(n.nodeName === 'SUMMARY')) page.appendChild(n); });
     root.innerHTML = '';
