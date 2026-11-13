@@ -1043,6 +1043,10 @@ function routeBackTarget(path, params){
       return {path:'/customers'};
     }
     case '/invoice': {
+      /* Opened from a customer's invoices push list: return to that list. */
+      if(params.fromSection === 'invoices' && params.fromCustomer){
+        return {path:'/customer', params:{id:String(params.fromCustomer), section:'invoices'}};
+      }
       /* If the invoice belongs to a customer, return to that customer rather
          than blindly returning to the invoice list. Otherwise use the list. */
       try{
