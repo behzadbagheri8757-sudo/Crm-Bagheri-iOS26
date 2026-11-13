@@ -31,7 +31,20 @@
     AppRouter.navigate('/watch', { id: occId });
   }
 
+  /* Where the watch detail returns to: the customer's watch list when it was opened from there
+     (fromCustomer + fromSection=watches in the hash), otherwise the global watch list. */
   function navigateToWatches() {
+    var h = String(location.hash || '');
+    var qi = h.indexOf('?');
+    var q = qi >= 0 ? new URLSearchParams(h.slice(qi + 1)) : null;
+    if (q && q.get('fromCustomer')) {
+      var sec = q.get('fromSection') === 'watches' ? '&section=watches' : '';
+      location.hash = '#/customer?id=' + encodeURIComponent(q.get('fromCustomer')) + sec;
+      return;
+    }
+    navigateToWatchesGlobal();
+  }
+  function navigateToWatchesGlobal() {
     AppRouter.navigate('/watches');
   }
 

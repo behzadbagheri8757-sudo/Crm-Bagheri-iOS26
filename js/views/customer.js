@@ -585,14 +585,16 @@
       '<div class="bp-focus-head">الان مهم است</div>' +
       '<div class="bp-focus-list">' + topics.map(function (t) {
         var tap = !!t.occId;
-        return '<div class="bp-topic' + (tap ? ' is-tap' : '') + '"' + (tap ? ' data-watch-occ="' + esc(t.occId) + '" role="button" tabindex="0"' : '') + '>' +
+        var open = tap ? '<a class="bp-topic is-tap" href="#/watch?id=' + encodeURIComponent(t.occId) + '&fromCustomer=' + encodeURIComponent(cid) + '" style="text-decoration:none;color:inherit;">' : '<div class="bp-topic">';
+        var close = tap ? '</a>' : '</div>';
+        return open +
           '<span class="bp-topic-dot is-' + esc(t.level || 'low') + '" aria-hidden="true"></span>' +
           '<div class="bp-topic-main">' +
             '<div class="bp-topic-title">' + esc(t.title) + (t.lowConf ? ' <span class="bp-topic-flag">اطمینان پایین</span>' : '') + '</div>' +
             (t.text ? '<div class="bp-topic-text">' + esc(t.text) + '</div>' : '') +
           '</div>' +
           (tap ? '<span class="bp-topic-chev" aria-hidden="true">›</span>' : '') +
-        '</div>';
+        close;
       }).join('') + '</div></div>';
     return result;
   }
@@ -601,15 +603,23 @@
   function intelligenceWatchHtml(cid, ctx, wd) {
     wd = wd || loadWatchData(cid, ctx);
     var P = global.BagheriPresent;
-    var activeConfirmed = wd.activeConfirmed, occs = wd.occs;
-    if (!occs.length && !activeConfirmed.length) return '';
+    var activeConfirmed = wd.activeConfirmed || [];
+    /* Answered occurrences leave the active list (history only). */
+    var openOccs = wd.occs || []; // lifecycle status === 'active'; reviewed-but-active items stay (badge)
+    var total = openOccs.length + activeConfirmed.length;
+    if (!total) return '';
+
+    var rowHtml = '<a class="cd-push-row" href="#/customer?id=' + encodeURIComponent(cid) + '&section=watches">' +
+      '<span class="cd-push-label">هشدارها</span>' +
+      '<span class="cd-push-meta">' + esc(P ? P.n0(total) : String(total)) + '</span>' +
+      '<svg class="cd-push-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></a>';
+
+    /* Only the open section's body is emitted (the push page moves it). */
+    if (currentSection !== 'watches') return rowHtml;
 
     var confirmedHtml = '';
     if (activeConfirmed.length) {
       var crows = activeConfirmed.map(function (sg) {
-        /* فقط سیگنال‌هایی که واقعاً خبر خوب‌اند سبز می‌شوند. type==='opportunity'
-           به‌تنهایی کافی نیست: «مدت زیادی ویزیت نشده» و (در حالت بازطبقه‌بندی)
-           «کالای کلیدی خریده نشده/افت سبد» هم opportunity هستند ولی خبر خوب نیستند. */
         var isGood = sg.type === 'opportunity' && POSITIVE_SIGNAL_CATEGORIES.indexOf(sg.category) !== -1;
         var cls = isGood ? 'watch-level-opportunity' : levelClass(sg.severity);
         var lbl = isGood ? 'فرصت' : levelLabel(sg.severity);
@@ -623,40 +633,23 @@
         '<div class="watch-confirmed-list">' + crows + '</div></div>';
     }
 
-    var watchHtml = '';
-    if (occs.length) {
-      var wrows = occs.map(function (o) {
-        var sentence = P ? P.watchSentence(o) : (o.generatedReason || '');
-        var reviewed = !!o.reason;
-        var reasonBit = '';
-        if (reviewed && o.reason) {
-          var rlabel = (typeof watchReasonLabel === 'function') ? watchReasonLabel(o.reason.code) : (o.reason.code || '');
-          reasonBit = '<div class="bp-row-note">علت ثبت‌شده: ' + esc(rlabel) + (o.reason.comment ? (' — ' + esc(o.reason.comment)) : '') + '</div>';
-        }
-        var clickable = o.id ? (' data-watch-occ="' + esc(o.id) + '" role="button" tabindex="0"') : '';
-        return '<div class="watch-occ-item">' +
-          '<div class="watch-occ-row bp-occ"' + clickable + '>' +
-            '<div class="bp-occ-main">' +
-              '<div class="bp-row-title">' + esc(watchTitleText(o)) + '</div>' +
-              (sentence ? '<div class="bp-row-text">' + esc(sentence) + '</div>' : '') +
-              reasonBit +
-            '</div>' +
-            '<div class="bp-occ-side"><span class="watch-level-label ' + levelClass(o.level) + '">' + esc(levelLabel(o.level)) + '</span>' +
-              (reviewed ? '<span class="watch-reviewed">بررسی شده</span>' : '') + '</div>' +
-          '</div>' +
-          (P ? P.detailsHtml(P.watchDetailLines(o)) : '') +
-        '</div>';
-      }).join('');
-      watchHtml = '<div class="card wide watch-lifecycle-card" id="watch-lifecycle-card">' +
-        '<div class="label">هشدارهای زودهنگام</div>' +
-        '<div class="report-note watch-note">برای ثبت پاسخ، روی هر مورد بزنید.</div>' +
-        '<div class="watch-occ-list">' + wrows + '</div></div>';
-    }
+    /* Open occurrences: each row is a real link to the watch detail (single response UI). */
+    var orows = openOccs.map(function (o) {
+      var sentence = P ? P.watchSentence(o) : (o.generatedReason || '');
+      var reviewedBadge = o.reason ? '<span class="sub">بررسی شده</span>' : '';
+      var inner = '<span class="name">' + esc(watchTitleText(o)) +
+        (sentence ? '<span class="sub">' + esc(sentence) + '</span>' : '') + reviewedBadge + '</span>' +
+        '<span class="filler"></span>' +
+        '<span class="amount"><span class="watch-level-label ' + levelClass(o.level) + '">' + esc(levelLabel(o.level)) + '</span></span>';
+      if (!o.id) return '<div class="ledger-row">' + inner + '</div>';
+      return '<a class="ledger-row watch-occ-link" href="#/watch?id=' + encodeURIComponent(o.id) +
+        '&fromCustomer=' + encodeURIComponent(cid) + '&fromSection=watches" style="text-decoration:none;color:inherit;">' + inner + '</a>';
+    }).join('');
 
-    var total = occs.length + activeConfirmed.length;
-    return '<details class="customer-watch-details">' +
-      '<summary class="customer-behavior-summary">همه نشانه‌ها و هشدارها (' + esc(P ? P.n0(total) : String(total)) + ')</summary>' +
-      '<div class="customer-detail-watch-body">' + confirmedHtml + watchHtml + '</div></details>';
+    return '<details class="cd-history-details" data-section="watches">' +
+      confirmedHtml +
+      (orows ? '<div class="customer-tx-list customer-watch-list">' + orows + '</div>' : '') +
+      '</details>';
   }
 
   /* Short Level-1 glance for the behavior section. Uses only values customerBehavior() already returns. */
@@ -856,18 +849,6 @@
         try { ok = !!reverseWatchDecision(id); } catch (e) { ok = false; }
         if (typeof showToast === 'function') showToast(ok ? 'پیگیری لغو شد' : 'لغو پیگیری ممکن نشد');
         drawCustomerPage(rootEl || root);
-      });
-    });
-  }
-
-  function bindWatchLifecycleRows(root) {
-    if (!root) return;
-    root.querySelectorAll('[data-watch-occ]').forEach(function (el) {
-      el.addEventListener('click', function () {
-        var id = el.getAttribute('data-watch-occ');
-        openWatchReasonSheet(id, function () {
-          if (typeof drawCustomerPage === 'function') drawCustomerPage(rootEl || root);
-        });
       });
     });
   }
@@ -1147,6 +1128,8 @@
       : '<div class="empty" style="padding:12px 0;">ویزیتی ثبت نشده</div>';
 
     let behaviorHtml = '';
+    let behaviorSectionHtml = '';
+    let behaviorRowHtml = '';
     if (typeof customerBehavior === 'function') {
       const b = customerBehavior(c.id, ctx);
       // customerBehaviorSummary's own bullet lines now render lower on the
@@ -1261,13 +1244,21 @@
             ? '—'
             : 'ویزیتی ثبت نشده';
 
+      behaviorRowHtml = '<a class="cd-push-row" href="#/customer?id=' + encodeURIComponent(c.id) + '&section=behavior">' +
+        '<span class="cd-push-label">تحلیل رفتار خرید</span>' +
+        '<svg class="cd-push-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></a>';
+
       behaviorHtml =
         '<h3 class="sub-title">رفتار خرید و هوش تجاری</h3>' +
-        customerTrendChartHtml(c.id, ctx, b) +
         behaviorGlanceHtml(b, focus.groups) +
         intelligenceWatchHtml(c.id, ctx, watchData) +
-        '<details class="customer-behavior-details">' +
+        behaviorRowHtml;
+
+      /* Push body: trend chart on top, grouped summary, product lists, last visit. */
+      behaviorSectionHtml =
+        '<details class="cd-history-details" data-section="behavior">' +
         '<summary class="customer-behavior-summary">تحلیل رفتار خرید</summary>' +
+        customerTrendChartHtml(c.id, ctx, b) +
         summaryHtml +
         '<div class="cards">' +
         '<div class="card"><div class="label">اولین خرید</div><div class="value">' +
@@ -1359,16 +1350,16 @@
       : '';
 
     // History: collapsed, with the count in the summary.
-    var invoiceDetailsHtml = '<a class="cd-push-row" href="#/customer?id=' + encodeURIComponent(c.id) + '&section=invoices">' + '<span class="cd-push-label">فاکتورها</span>' + '<span class="cd-push-meta">' + invs.length + '</span>' + '<svg class="cd-push-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></a>' +
-    '<details class="cd-history-details" data-section="invoices" hidden>' +
+    var invoiceRowHtml = '<a class="cd-push-row" href="#/customer?id=' + encodeURIComponent(c.id) + '&section=invoices">' + '<span class="cd-push-label">فاکتورها</span>' + '<span class="cd-push-meta">' + invs.length + '</span>' + '<svg class="cd-push-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></a>';
+    var invoiceSectionHtml = '<details class="cd-history-details" data-section="invoices">' +
       '<summary class="customer-behavior-summary">فاکتورها (' + invs.length + ')</summary>' +
       '<div class="customer-tx-list customer-invoice-list">' + invRows + '</div></details>';
-    var paymentDetailsHtml = '<a class="cd-push-row" href="#/customer?id=' + encodeURIComponent(c.id) + '&section=payments">' + '<span class="cd-push-label">پرداخت‌ها</span>' + '<span class="cd-push-meta">' + pays.length + '</span>' + '<svg class="cd-push-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></a>' +
-    '<details class="cd-history-details" data-section="payments" hidden>' +
+    var paymentRowHtml = '<a class="cd-push-row" href="#/customer?id=' + encodeURIComponent(c.id) + '&section=payments">' + '<span class="cd-push-label">پرداخت‌ها</span>' + '<span class="cd-push-meta">' + pays.length + '</span>' + '<svg class="cd-push-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></a>';
+    var paymentSectionHtml = '<details class="cd-history-details" data-section="payments">' +
       '<summary class="customer-behavior-summary">پرداخت‌ها (' + pays.length + ')</summary>' +
       '<div class="customer-tx-list customer-payment-list">' + payRows + '</div></details>';
-    var checkDetailsHtml = '<a class="cd-push-row" href="#/customer?id=' + encodeURIComponent(c.id) + '&section=checks">' + '<span class="cd-push-label">چک‌ها</span>' + '<span class="cd-push-meta">' + chks.length + '</span>' + '<svg class="cd-push-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></a>' +
-    '<details class="cd-history-details" data-section="checks" hidden>' +
+    var checkRowHtml = '<a class="cd-push-row" href="#/customer?id=' + encodeURIComponent(c.id) + '&section=checks">' + '<span class="cd-push-label">چک‌ها</span>' + '<span class="cd-push-meta">' + chks.length + '</span>' + '<svg class="cd-push-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></a>';
+    var checkSectionHtml = '<details class="cd-history-details" data-section="checks">' +
       '<summary class="customer-behavior-summary">چک‌ها (' + chks.length + ')</summary>' +
       '<div class="customer-tx-list customer-check-list">' + chkRows + '</div></details>';
     // Payment promise: ONE slot under the top alert (active promise card, or «ثبت وعدهٔ پرداخت» when there is debt).
@@ -1378,14 +1369,20 @@
       : ((typeof PromiseUI !== 'undefined') ? PromiseUI.cardHtml(c.id, t.balance) : ''));
     var promiseHistoryHtml = ((typeof PromiseUI !== 'undefined') ? PromiseUI.historyHtml(c.id) : '') +
       ((typeof DeliveryUI !== 'undefined') ? DeliveryUI.historyHtml(c.id) : '');
-    var visitDetailsHtml = '<a class="cd-push-row" href="#/customer?id=' + encodeURIComponent(c.id) + '&section=visits">' + '<span class="cd-push-label">ویزیت‌ها و ارزیابی‌ها</span>' + '<span class="cd-push-meta">' + visits.length + '</span>' + '<svg class="cd-push-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></a>' +
-    '<details class="cd-history-details" data-section="visits" hidden>' +
+    var visitRowHtml = '<a class="cd-push-row" href="#/customer?id=' + encodeURIComponent(c.id) + '&section=visits">' + '<span class="cd-push-label">ویزیت‌ها و ارزیابی‌ها</span>' + '<span class="cd-push-meta">' + visits.length + '</span>' + '<svg class="cd-push-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></a>';
+    var visitSectionHtml = '<details class="cd-history-details" data-section="visits">' +
       '<summary class="customer-behavior-summary">ویزیت‌ها و ارزیابی‌ها (' + visits.length + ')</summary>' +
       '<div class="btn-row" style="margin-bottom:8px;">' +
         '<button type="button" class="btn small secondary" id="act-visit-section">ثبت ویزیت برای این مشتری</button>' +
         '<a class="btn small secondary" href="#/visits">همه ویزیت‌ها</a>' +
       '</div><div class="customer-tx-list customer-visit-list">' + visitRows + '</div></details>';
 
+    var sectionBodyHtml = currentSection === 'invoices' ? invoiceSectionHtml
+      : currentSection === 'payments' ? paymentSectionHtml
+      : currentSection === 'checks' ? checkSectionHtml
+      : currentSection === 'visits' ? visitSectionHtml
+      : currentSection === 'behavior' ? behaviorSectionHtml
+      : '';
     root.innerHTML =
       '<div class="btn-row" style="margin-bottom:10px;">' +
       '<a class="btn secondary small" href="' + customersHref() + '">← مشتریان</a></div>' +
@@ -1453,11 +1450,10 @@
       behaviorHtml +
       productRejectionInsightsHtml(c.id, ctx) +
       ackDetailsHtml +
-      invoiceDetailsHtml +
-      paymentDetailsHtml +
-      checkDetailsHtml +
+      (currentSection ? '' : invoiceRowHtml + paymentRowHtml + checkRowHtml) +
       promiseHistoryHtml +
-      visitDetailsHtml;
+      (currentSection ? '' : visitRowHtml) +
+      sectionBodyHtml;
 
     if (typeof PromiseUI !== 'undefined') PromiseUI.bind(root, c.id);
     if (typeof DeliveryUI !== 'undefined') DeliveryUI.bind(root, c.id);
@@ -1517,7 +1513,6 @@
         });
       };
     }
-    bindWatchLifecycleRows(root);
     bindWatchFollowUps(root, id);
   }
 
@@ -1955,7 +1950,7 @@
      Reuses the already-rendered section list (moved, not re-rendered) so every
      bound handler keeps working. The delegated handlers live on #main, which
      stays the same element. */
-  var PUSH_SECTION_LABELS = { invoices: 'فاکتورها', payments: 'پرداخت‌ها', checks: 'چک‌ها', visits: 'ویزیت‌ها و ارزیابی‌ها' };
+  var PUSH_SECTION_LABELS = { invoices: 'فاکتورها', payments: 'پرداخت‌ها', checks: 'چک‌ها', visits: 'ویزیت‌ها و ارزیابی‌ها', watches: 'هشدارها', behavior: 'تحلیل رفتار خرید' };
   function applyPushSection(root) {
     if (!root || !currentSection) return;
     var det = root.querySelector('details[data-section="' + currentSection + '"]');

@@ -663,10 +663,17 @@
     if (typeof VisitPlanUI !== 'undefined') VisitPlanUI.bindDashboard(root);
   }
 
+  /* Dashboard sub-pages: #/dashboard?section=… Renderers are registered here as each
+     section is moved out of the home screen. Unknown sections fall back to home. */
+  var DASH_SECTION_TITLES = {};
+  function sectionTitle(section) { return DASH_SECTION_TITLES[section] || ''; }
+
   function mount(root, params) {
     if (!root) return function () {};
     const nav = document.getElementById('nav');
     if (nav) nav.style.display = 'none';
+    var section = params && params.section ? String(params.section) : null;
+    if (section && typeof setHeaderTitle === 'function' && sectionTitle(section)) setHeaderTitle(sectionTitle(section), {});
     let cancelled = false;
     let refreshToken = null;
     const isStale = function () { return cancelled; };
