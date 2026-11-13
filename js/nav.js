@@ -1021,6 +1021,12 @@ function closeMoreSheet(){
   }, 280);
 }
 
+/* True when the hash is a dashboard sub-page, e.g. #/dashboard?section=finance. */
+function isDashboardSectionHash(){
+  const h = String(location.hash || '');
+  return h.indexOf('#/dashboard') === 0 && /[?&]section=/.test(h);
+}
+
 function isBackRoute(path){
   return ['/customer','/invoice','/supplier','/prospect','/evaluation','/prospect-routes','/locations','/watch'].indexOf(path) !== -1;
 }
@@ -1068,6 +1074,12 @@ function routeBackTarget(path, params){
     case '/locations':
       return {path:'/settings'};
     case '/watch':
+      /* Opened from a customer's watch list: return to that list, not the global one. */
+      if(params.fromCustomer){
+        return {path:'/customer', params: params.fromSection === 'watches'
+          ? {id:String(params.fromCustomer), section:'watches'}
+          : {id:String(params.fromCustomer)}};
+      }
       return {path:'/watches'};
     default:
       return {path:'/dashboard'};
@@ -1079,7 +1091,8 @@ function goAppBack(e){
   try{
     const cur = (typeof AppRouter !== 'undefined' && AppRouter.getCurrent) ? AppRouter.getCurrent() : null;
     const path = cur && cur.path ? cur.path : '/dashboard';
-    if(!isBackRoute(path)) return;
+    const dashSub = path === '/dashboard' && isDashboardSectionHash();
+    if(!isBackRoute(path) && !dashSub) return;
     const target = routeBackTarget(path, cur.params || {});
     if(typeof AppRouter !== 'undefined' && AppRouter.navigateBack){
       AppRouter.navigateBack(target.path, target.params || null);
@@ -1234,7 +1247,9 @@ function ensureAppBackButton(activeId, routePath){
   // rendered on any route. activeId is the one signal the router actually
   // updates per navigation, so it's the only correct check here.
   const isDash = !activeId || activeId === 'dashboard';
-  const showBack = !isDash && isBackRoute(routePath || '');
+  // Dashboard sub-pages (#/dashboard?section=…) are pushed from the home screen and show a back button.
+  const dashSection = isDashboardSectionHash();
+  const showBack = (!isDash && isBackRoute(routePath || '')) || (dashSection && routePath === '/dashboard');
 
   if(!showBack){
     if(existing) existing.remove();
