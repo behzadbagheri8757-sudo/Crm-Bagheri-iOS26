@@ -600,41 +600,50 @@
   }
 
   /* ---- Level 2: full list of confirmed signals + early warnings, collapsed by default. ---- */
-  function intelligenceWatchHtml(cid, ctx, wd) {
+  /* Watch list: the main-page row only. The section body is watchSectionHtml(). */
+  function watchOpenAndConfirmed(cid, ctx, wd) {
     wd = wd || loadWatchData(cid, ctx);
-    var P = global.BagheriPresent;
-    var activeConfirmed = wd.activeConfirmed || [];
-    /* Answered occurrences leave the active list (history only). */
-    var openOccs = wd.occs || []; // lifecycle status === 'active'; reviewed-but-active items stay (badge)
-    var total = openOccs.length + activeConfirmed.length;
-    if (!total) return '';
+    return {
+      open: wd.occs || [],               // lifecycle status === 'active'
+      confirmed: wd.activeConfirmed || []
+    };
+  }
 
-    var rowHtml = '<a class="cd-push-row" href="#/customer?id=' + encodeURIComponent(cid) + '&section=watches">' +
+  function intelligenceWatchHtml(cid, ctx, wd) {
+    var P = global.BagheriPresent;
+    var g = watchOpenAndConfirmed(cid, ctx, wd);
+    var total = g.open.length + g.confirmed.length;
+    if (!total) return '';
+    return '<a class="cd-push-row" href="#/customer?id=' + encodeURIComponent(cid) + '&section=watches">' +
       '<span class="cd-push-label">هشدارها</span>' +
       '<span class="cd-push-meta">' + esc(P ? P.n0(total) : String(total)) + '</span>' +
       '<svg class="cd-push-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></a>';
+  }
 
-    /* Only the open section's body is emitted (the push page moves it). */
-    if (currentSection !== 'watches') return rowHtml;
-
+  /* Push body for section=watches. Always returns a details node, even when nothing is
+     active, so the push page shows an empty state instead of the whole customer page. */
+  function watchSectionHtml(cid, ctx, wd) {
+    var P = global.BagheriPresent;
+    var g = watchOpenAndConfirmed(cid, ctx, wd);
+    var head = '<details class="cd-history-details" data-section="watches">' +
+      '<summary class="customer-behavior-summary">هشدارها</summary>';
+    if (!g.open.length && !g.confirmed.length) {
+      return head + '<div class="empty" style="padding:12px 0;">هشدار فعالی برای این مشتری نیست.</div></details>';
+    }
     var confirmedHtml = '';
-    if (activeConfirmed.length) {
-      var crows = activeConfirmed.map(function (sg) {
+    if (g.confirmed.length) {
+      var crows = g.confirmed.map(function (sg) {
         var isGood = sg.type === 'opportunity' && POSITIVE_SIGNAL_CATEGORIES.indexOf(sg.category) !== -1;
         var cls = isGood ? 'watch-level-opportunity' : levelClass(sg.severity);
         var lbl = isGood ? 'فرصت' : levelLabel(sg.severity);
         return '<div class="watch-confirmed-row">' +
           '<span class="bp-conf-text">' + (sg.productName ? '<strong>' + esc(sg.productName) + '</strong> — ' : '') + esc(sg.reason || '') + '</span>' +
-          '<span class="watch-level-label ' + cls + '">' + esc(lbl) + '</span>' +
-          '</div>';
+          '<span class="watch-level-label ' + cls + '">' + esc(lbl) + '</span></div>';
       }).join('');
-      confirmedHtml = '<div class="card wide watch-confirmed-card">' +
-        '<div class="label">تأییدشده</div>' +
+      confirmedHtml = '<div class="card wide watch-confirmed-card"><div class="label">تأییدشده</div>' +
         '<div class="watch-confirmed-list">' + crows + '</div></div>';
     }
-
-    /* Open occurrences: each row is a real link to the watch detail (single response UI). */
-    var orows = openOccs.map(function (o) {
+    var orows = g.open.map(function (o) {
       var sentence = P ? P.watchSentence(o) : (o.generatedReason || '');
       var reviewedBadge = o.reason ? '<span class="sub">بررسی شده</span>' : '';
       var inner = '<span class="name">' + esc(watchTitleText(o)) +
@@ -645,11 +654,8 @@
       return '<a class="ledger-row watch-occ-link" href="#/watch?id=' + encodeURIComponent(o.id) +
         '&fromCustomer=' + encodeURIComponent(cid) + '&fromSection=watches" style="text-decoration:none;color:inherit;">' + inner + '</a>';
     }).join('');
-
-    return '<details class="cd-history-details" data-section="watches">' +
-      confirmedHtml +
-      (orows ? '<div class="customer-tx-list customer-watch-list">' + orows + '</div>' : '') +
-      '</details>';
+    return head + confirmedHtml +
+      (orows ? '<div class="customer-tx-list customer-watch-list">' + orows + '</div>' : '') + '</details>';
   }
 
   /* Short Level-1 glance for the behavior section. Uses only values customerBehavior() already returns. */
@@ -913,6 +919,7 @@
 
     // P0 (what matters now) + follow-ups waiting for this customer — presentation of existing Truth.
     const watchData = loadWatchData(c.id, ctx);
+    let watchRowHtml = intelligenceWatchHtml(c.id, ctx, watchData);
     var attRow = null;
     var legacyDebtRow = null;
     try {
@@ -1250,9 +1257,7 @@
 
       behaviorHtml =
         '<h3 class="sub-title">رفتار خرید و هوش تجاری</h3>' +
-        behaviorGlanceHtml(b, focus.groups) +
-        intelligenceWatchHtml(c.id, ctx, watchData) +
-        behaviorRowHtml;
+        behaviorGlanceHtml(b, focus.groups);
 
       /* Push body: trend chart on top, grouped summary, product lists, last visit. */
       behaviorSectionHtml =
@@ -1382,6 +1387,7 @@
       : currentSection === 'checks' ? checkSectionHtml
       : currentSection === 'visits' ? visitSectionHtml
       : currentSection === 'behavior' ? behaviorSectionHtml
+      : currentSection === 'watches' ? watchSectionHtml(c.id, ctx, watchData)
       : '';
     root.innerHTML =
       '<div class="btn-row" style="margin-bottom:10px;">' +
@@ -1448,11 +1454,12 @@
       focus.html +
       followUpTopHtml +
       behaviorHtml +
+      (currentSection ? '' : '<div class="cd-records-nav">' +
+        watchRowHtml + behaviorRowHtml + invoiceRowHtml + paymentRowHtml + checkRowHtml + visitRowHtml +
+        '</div>') +
       productRejectionInsightsHtml(c.id, ctx) +
       ackDetailsHtml +
-      (currentSection ? '' : invoiceRowHtml + paymentRowHtml + checkRowHtml) +
       promiseHistoryHtml +
-      (currentSection ? '' : visitRowHtml) +
       sectionBodyHtml;
 
     if (typeof PromiseUI !== 'undefined') PromiseUI.bind(root, c.id);
@@ -1954,7 +1961,16 @@
   function applyPushSection(root) {
     if (!root || !currentSection) return;
     var det = root.querySelector('details[data-section="' + currentSection + '"]');
-    if (!det) return;
+    if (!det) {
+      /* Nothing to show for this section: an empty state, never the whole customer page. */
+      var empty = document.createElement('div');
+      empty.className = 'cd-push-page';
+      empty.innerHTML = '<div class="empty" style="padding:12px 0;">موردی برای نمایش نیست.</div>';
+      root.innerHTML = '';
+      root.appendChild(empty);
+      if (typeof setHeaderTitle === 'function') setHeaderTitle(PUSH_SECTION_LABELS[currentSection] || '', {});
+      return;
+    }
     var page = document.createElement('div');
     page.className = 'cd-push-page';
     var ctxName = '';

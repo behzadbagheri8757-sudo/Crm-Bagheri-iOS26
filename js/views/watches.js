@@ -39,7 +39,15 @@
     var q = qi >= 0 ? new URLSearchParams(h.slice(qi + 1)) : null;
     if (q && q.get('fromCustomer')) {
       var sec = q.get('fromSection') === 'watches' ? '&section=watches' : '';
-      location.hash = '#/customer?id=' + encodeURIComponent(q.get('fromCustomer')) + sec;
+      /* Use the router's back navigation (replaces the entry) so the device back gesture
+         does not return to this detail page. */
+      var target = '/customer', params = { id: String(q.get('fromCustomer')) };
+      if (q.get('fromSection') === 'watches') params.section = 'watches';
+      if (typeof AppRouter !== 'undefined' && AppRouter.navigateBack) {
+        AppRouter.navigateBack(target, params);
+      } else {
+        location.hash = '#/customer?id=' + encodeURIComponent(params.id) + sec;
+      }
       return;
     }
     navigateToWatchesGlobal();
