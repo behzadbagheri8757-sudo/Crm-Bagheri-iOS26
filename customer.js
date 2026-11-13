@@ -1,0 +1,2034 @@
+/* js/views/customer.js — SPA Customer detail view (Phase 4).
+   Extracted from customer.html. Uses customerTotals/customerProfit/customerBehavior
+   and existing mutation APIs (openAddInvoice/openAddTransaction/openAddCheck/openAddVisit/
+   openAddCustomer) exactly as the MPA page does. No new financial logic.
+*/
+'use strict';
+
+(function (global) {
+  /* Same defensive helper as payments view — customer payment rows call this. */
+  if (typeof global.paymentMethodLabel !== 'function') {
+    global.paymentMethodLabel = function paymentMethodLabel(method) {
+      var map = {
+        cash: 'نقد',
+        card: 'کارت',
+        transfer: 'انتقال',
+        return: 'برگشت',
+        check: 'چک',
+        discount: 'تخفیف',
+        supplier: 'پرداخت به تامین‌کننده'
+      };
+      if (method == null || method === '') return '—';
+      return map[method] || String(method);
+    };
+  }
+
+  // extractCustomerSignals may be memoized and already decorated by Risk's ACK pass.
+  // Work from a clean copy so this view applies the current ACK set exactly once.
+  function _freshSignalCopy(s) {
+    if (!s) return s;
+    var c = Object.assign({}, s);
+    c.ackRiskDelta = undefined;
+    c.ackPriorityDelta = undefined;
+    c.ackIds = undefined;
+    c.ackPriorityById = undefined;
+    c.ackDecision = undefined;
+    c.ackExpiresAt = undefined;
+    c.ackScope = undefined;
+    c.ackActionEffect = undefined;
+    c.ackUrgency = undefined;
+    c.ackActionText = undefined;
+    c.ackActionType = undefined;
+    c.ackReviewed = undefined;
+    return c;
+  }
+
+  let currentCustomerId = null;
+  let currentSection = null; // push sub-page: 'invoices' | 'payments' | 'checks' | 'visits' | null
+  let rootEl = null;
+  function customersHref() {
+    return '#/customers';
+  }
+
+  function navigateToCustomer(cid) {
+    AppRouter.navigate('/customer', { id: cid });
+  }
+
+  function invoicePayStatus(inv) {
+    const paid =
+      typeof invoiceEffectivePaid === 'function'
+        ? invoiceEffectivePaid(inv)
+        : (inv.cashPaid || 0) + (inv.cardPaid || 0) + (inv.transferPaid || 0) + (inv.checkPaid || 0);
+    const total = inv.total || 0;
+    if (total <= 0) return { label: '—', cls: '' };
+    if (paid <= 0) return { label: 'پرداخت‌نشده', cls: 'accent-rust' };
+    if (paid + 0.5 >= total) return { label: 'تسویه روی فاکتور', cls: 'accent-olive' };
+    return { label: 'پرداخت جزئی', cls: 'accent-amber' };
+  }
+
+  /* --- خلاصهٔ وضعیت (برای مرور سریع بین دو مغازه) ---
+     فقط از خروجی customerBehavior() تغذیه می‌شود، هیچ متریکی را دوباره
+     محاسبه یا تغییر نمی‌دهد. صرفاً نتایج موجود را برای تصمیم سریع کنار هم می‌گذارد. */
+  function customerBehaviorSummary(bb) {
+    if (!bb) return null;
+    if (bb.invoiceCount < 2) {
+      return {
+        level: 'insufficient',
+        lines: [
+          bb.invoiceCount === 0
+            ? 'هنوز فاکتوری برای این مشتری ثبت نشده است.'
+            : 'فقط یک فاکتور ثبت شده — برای تشخیص الگوی خرید حداقل ۲ فاکتور لازم است.'
+        ]
+      };
+    }
+    const risk = [];
+    const good = [];
+    if (bb.behindPattern === true) {
+      risk.push(
+        'از الگوی معمول خرید عقب افتاده — ' +
+          Math.round(bb.daysSinceLast) +
+          ' روز از آخرین خرید گذشته (الگو: هر ' +
+          Math.round(bb.avgIntervalDays) +
+          ' روز)'
+      );
+    } else if (bb.behindPattern === false) {
+      good.push('در محدودهٔ الگوی معمول خرید است');
+    }
+    if (bb.amountTrend === 'down') {
+      risk.push('روند مبلغ خرید در ۳۰ روز اخیر کاهشی است');
+    } else if (bb.amountTrend === 'up') {
+      good.push('روند مبلغ خرید در ۳۰ روز اخیر افزایشی است');
+    }
+    if (bb.decliningProducts && bb.decliningProducts.length) {
+      risk.push(
+        'افت خرید در: ' +
+          bb.decliningProducts
+            .slice(0, 2)
+            .map(function (p) {
+              return p.name;
+            })
+            .join('، ')
+      );
+    }
+    if (bb.consecutiveNoOrder >= 2) {
+      risk.push('آخرین ' + bb.consecutiveNoOrder + ' ویزیت بدون سفارش بوده');
+    }
+    if (bb.conversionRate != null && bb.visitCount >= 2 && bb.conversionRate >= 0.5) {
+      good.push('نرخ تبدیل ویزیت به سفارش بالا: ' + Math.round(bb.conversionRate * 100) + '٪');
+    }
+    let level = 'normal';
+    if (risk.length >= 2) level = 'risk';
+    else if (risk.length === 1) level = 'watch';
+    else if (good.length) level = 'good';
+    const reminder = bb.topProducts && bb.topProducts[0] ? 'کالای اصلی: ' + bb.topProducts[0].name : null;
+    const action = bb.lastNextAction ? 'اقدام یادداشت‌شده از ویزیت قبل: ' + bb.lastNextAction : null;
+    return { level: level, risk: risk, good: good, reminder: reminder, action: action };
+  }
+
+  /* --- Watch / Early Warning Layer (frozen spec §15) ---
+     Runs BOTH extractCustomerSignals() (Confirmed) and
+     extractWatchObservations() (Watch), as required by the spec.
+     NOTE: this codebase does not currently render extractCustomerSignals()
+     anywhere in the Customer View (it is only used by app.js for the
+     "no purchase reason" prompt on invoices) — there was no existing
+     Confirmed display here to preserve. To satisfy "Confirmed signals
+     طبق منطق فعلی نمایش داده شوند" + "UI باید distinction واضح داشته
+     باشد", a minimal read-only Confirmed list (active signals only,
+     using the signals' own existing reason/productName fields — no new
+     business logic) is shown alongside the new Watch list. This is an
+     explicitly reported interpretation, not a silent guess. No action
+     buttons are added for either list. */
+  /* ============================================================
+     PRODUCT REJECTION INSIGHT (UI-only, read-only)
+     Source: customerBehavior(cid).offeredProductStats
+     Not a Watch / Alert / Score / Recommendation / Action.
+     Threshold configurable via localStorage key below.
+     ============================================================ */
+  var PRODUCT_REJECTION_THRESHOLD_KEY = 'baqeri_product_rejection_threshold_v1';
+  var PRODUCT_REJECTION_THRESHOLD_DEFAULT = 3;
+
+  function getProductRejectionThreshold() {
+    try {
+      if (typeof localStorage !== 'undefined' && localStorage) {
+        var raw = localStorage.getItem(PRODUCT_REJECTION_THRESHOLD_KEY);
+        if (raw != null && raw !== '') {
+          var n = Number(raw);
+          if (Number.isFinite(n) && n >= 1) return Math.floor(n);
+        }
+      }
+    } catch (e) { /* ignore */ }
+    return PRODUCT_REJECTION_THRESHOLD_DEFAULT;
+  }
+
+  function setProductRejectionThreshold(value) {
+    var n = Math.floor(Number(value));
+    if (!Number.isFinite(n) || n < 1) n = PRODUCT_REJECTION_THRESHOLD_DEFAULT;
+    try {
+      if (typeof localStorage !== 'undefined' && localStorage) {
+        localStorage.setItem(PRODUCT_REJECTION_THRESHOLD_KEY, String(n));
+      }
+    } catch (e) { /* ignore */ }
+    return n;
+  }
+
+  var REJECTION_REASON_LABELS = {
+    price: 'قیمت',
+    quality: 'کیفیت',
+    competitor: 'رقیب',
+    unavailable: 'ناموجود',
+    no_need: 'عدم نیاز',
+    still_stock: 'موجود داشت',
+    other: 'سایر'
+  };
+
+  function rejectionReasonLabel(code) {
+    if (!code) return '—';
+    return REJECTION_REASON_LABELS[code] || String(code);
+  }
+
+  /**
+   * Build rejection insights for ONE customer from offeredProductStats.
+   * Only products with rejectedCount >= threshold are returned.
+   * Pure / read-only — does not write DB or mutate CRM.
+   */
+  function buildProductRejectionInsights(customerId, threshold, ctx) {
+    var out = [];
+    if (!customerId || typeof customerBehavior !== 'function') return out;
+    var thr = (threshold != null && Number.isFinite(Number(threshold)))
+      ? Math.floor(Number(threshold))
+      : getProductRejectionThreshold();
+    if (thr < 1) thr = PRODUCT_REJECTION_THRESHOLD_DEFAULT;
+
+    var b;
+    try { b = customerBehavior(customerId, ctx); } catch (e) { return out; }
+    if (!b || !Array.isArray(b.offeredProductStats)) return out;
+
+    // V1: latest purchase date per product (this customer's invoices). A rejection that is OLDER
+    // than a later purchase is stale and must not be shown.
+    var ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+    var lastPurchases = Object.create(null);
+    try {
+      if (typeof customerInvoices === 'function') {
+        var invs = customerInvoices(customerId, ctx) || [];
+        for (var vi = 0; vi < invs.length; vi++) {
+          var inv = invs[vi];
+          if (!inv || typeof inv.date !== 'string' || !ISO_DATE.test(inv.date)) continue;
+          var its = inv.items || [];
+          for (var wi = 0; wi < its.length; wi++) {
+            var it = its[wi];
+            if (!it || !it.productId || !(Number(it.qty) > 0)) continue;
+            if (!lastPurchases[it.productId] || inv.date > lastPurchases[it.productId]) lastPurchases[it.productId] = inv.date;
+          }
+        }
+      }
+    } catch (eInv) { lastPurchases = Object.create(null); }
+
+    for (var i = 0; i < b.offeredProductStats.length; i++) {
+      var st = b.offeredProductStats[i];
+      if (!st || st.productId == null) continue;
+      var rejected = Number(st.rejectedCount) || 0;
+      var offered = Number(st.offeredCount) || 0;
+      if (rejected < thr) continue; // 1st and 2nd never shown
+      if (offered < 1) continue;
+
+      // V1: bought after the last offer => stale. Only when BOTH dates are valid YYYY-MM-DD;
+      // anything missing/invalid is kept (we cannot prove it is stale).
+      var lastBought = lastPurchases[st.productId];
+      if (lastBought && ISO_DATE.test(lastBought) && typeof st.lastOfferedDate === 'string' &&
+          ISO_DATE.test(st.lastOfferedDate) && lastBought > st.lastOfferedDate) {
+        continue;
+      }
+
+      // V5: every rejection was «still has stock» AND explicitly from OUR stock => the customer is
+      // buying from us, not rejecting. Any other reason, any competitor/unknown source, or any
+      // rejection without a recorded source keeps the item (mixed or unproven).
+      var reasonMap = st.rejectionReasons || {};
+      var onlyStillStock = Object.keys(reasonMap).every(function (rk) { return rk === 'still_stock' || !(Number(reasonMap[rk]) > 0); });
+      if (onlyStillStock) {
+        var srcMap = st.stillStockSources || {};
+        var oursN = Number(srcMap.ours) || 0;
+        if (oursN > 0 && oursN === rejected && !(Number(srcMap.competitor) > 0) && !(Number(srcMap.unknown) > 0)) continue;
+      }
+
+      var ratio = rejected / offered;
+      // Contract from calc.js: use st.rejectionReasons only (not topRejectionReason/reasonCounts)
+      var topReason = null;
+      if (st.rejectionReasons && typeof st.rejectionReasons === 'object') {
+        var bestCode = null;
+        var bestN = -1;
+        var codes = Object.keys(st.rejectionReasons).sort(); // alphabetical deterministic tie-break
+        for (var c = 0; c < codes.length; c++) {
+          var n = Number(st.rejectionReasons[codes[c]]);
+          if (!Number.isFinite(n) || n <= 0) continue;
+          if (n > bestN) { bestN = n; bestCode = codes[c]; }
+        }
+        topReason = bestCode;
+      }
+
+      var name = st.productName || null;
+      if (!name && typeof data !== 'undefined' && Array.isArray(data.products)) {
+        var p = data.products.find(function (x) { return x && x.id === st.productId; });
+        if (p) name = p.name;
+      }
+
+      out.push({
+        productId: st.productId,
+        productName: name || String(st.productId),
+        offeredCount: offered,
+        rejectedCount: rejected,
+        rejectionRatio: ratio,
+        topRejectionReason: topReason,
+        lastOfferedDate: st.lastOfferedDate || null,
+        stillStockSources: st.stillStockSources || null
+      });
+    }
+
+    // Sort: most rejections first, then name (deterministic)
+    out.sort(function (a, b) {
+      if (b.rejectedCount !== a.rejectedCount) return b.rejectedCount - a.rejectedCount;
+      return String(a.productName || '').localeCompare(String(b.productName || ''), 'fa');
+    });
+    return out;
+  }
+
+  /* Human cause phrase used after «به‌خاطر». Presentation text only. */
+  var REJECTION_CAUSE = {
+    price: 'قیمت', quality: 'کیفیت', competitor: 'خرید از رقیب',
+    unavailable: 'نبود موجودی', no_need: 'نیاز نداشتن', still_stock: 'داشتن موجودی'
+  };
+
+  function dominantStockSource(ss) {
+    if (!ss) return null;
+    var best = null, bn = 0;
+    ['competitor', 'ours', 'unknown'].forEach(function (k) {
+      var n = Number(ss[k]) || 0;
+      if (n > bn) { bn = n; best = k; }
+    });
+    return best;
+  }
+
+  /* One human sentence for a rejection insight.
+     short=true  -> single sentence for the top-of-page topic list.
+     short=false -> detail list: count/cause sentence + stock-source sentence when stored. */
+  function rejectionSentence(it, short) {
+    var P = global.BagheriPresent;
+    if (!P || !it) return '';
+    var src = dominantStockSource(it.stillStockSources);
+    var stockTxt = src ? P.stockSentence(src) : '';
+    if (short && stockTxt && it.topRejectionReason === 'still_stock') return stockTxt;
+    var cause = REJECTION_CAUSE[it.topRejectionReason];
+    var base = P.n0(it.rejectedCount) + ' بار از ' + P.n0(it.offeredCount) + ' پیشنهاد رد شده' + (cause ? '؛ بیشتر به‌خاطر ' + cause : '') + '.';
+    if (short) return base;
+    return stockTxt ? base + ' ' + stockTxt : base;
+  }
+
+  function productRejectionInsightsHtml(customerId, ctx) {
+    var items = [];
+    try {
+      items = buildProductRejectionInsights(customerId, undefined, ctx);
+    } catch (e) {
+      return '';
+    }
+    if (!items.length) return ''; // hide section entirely
+    var P = global.BagheriPresent;
+
+    var rows = items.map(function (it) {
+      return '<div class="ledger-row customer-static-row">' +
+        '<span class="name">' + esc(it.productName) +
+          '<span class="sub">' + esc(rejectionSentence(it, false)) + '</span></span>' +
+        '<span class="filler"></span>' +
+        '<span class="amount customer-static-value">' +
+          esc(P ? P.n0(it.rejectedCount) : String(it.rejectedCount)) + ' بار رد شده</span></div>';
+    }).join('');
+
+    return '<details class="customer-rejection-details">' +
+      '<summary class="customer-behavior-summary">کالاهای ردشده توسط مشتری (' + esc(P ? P.n0(items.length) : String(items.length)) + ')</summary>' +
+      '<div class="dash-activity customer-rejection-list">' + rows + '</div></details>';
+  }
+
+  /* ============================================================
+     Delivery patch — Customer Detail presentation
+     Level 0: one human sentence.  Level 1: short list / summary.
+     Level 2: raw evidence inside a single «جزئیات» disclosure.
+     Nothing here generates, scores or resolves a Watch/Signal.
+     ============================================================ */
+  function levelClass(level) {
+    return level === 'critical' ? 'watch-level-critical' : level === 'high' ? 'watch-level-high' : level === 'medium' ? 'watch-level-medium' : 'watch-level-low';
+  }
+  function levelLabel(level) {
+    return level === 'critical' ? 'بحرانی' : level === 'high' ? 'زیاد' : level === 'medium' ? 'متوسط' : 'کم';
+  }
+
+  var POSITIVE_SIGNAL_CATEGORIES = ['PURCHASE_GROWTH'];
+
+  var CONFIRMED_TITLES = {
+    PURCHASE_GROWTH: 'خرید رو به رشد',
+    PURCHASE_DECLINE_MILD: 'خرید کمتر شده',
+    PURCHASE_DECLINE_SEVERE: 'خرید به‌طور محسوسی کمتر شده',
+    BEHIND_PATTERN: 'از زمان معمول خرید عقب افتاده',
+    BASKET_SHRINK: 'افت مقدار خرید',
+    KEY_PRODUCT_LOST: 'کالای کلیدی خریده نشده',
+    PAYMENT_OVERDUE: 'پرداخت معوق',
+    CHECK_BOUNCED: 'چک برگشتی',
+    CONSECUTIVE_NO_ORDER: 'ویزیت‌های اخیر بدون سفارش',
+    VISIT_CONVERSION_LOW: 'نرخ سفارش از ویزیت پایین است',
+    VISIT_OVERDUE: 'زمان ویزیت گذشته',
+    LONG_NO_VISIT: 'مدت زیادی ویزیت نشده',
+    SKU_DELAY: 'دیرتر از معمول خریده شده',
+    SKU_QUANTITY_DROP: 'مقدار خرید کمتر شده',
+    SKU_FREQUENCY_DROP: 'کمتر از قبل خریده می‌شود',
+    LINE_DROP: 'در سبد اخیر کم‌رنگ شده',
+    COMBINED_SKU_DETERIORATION: 'چند نشانه کاهش در یک کالا',
+    MULTI_SKU_DECLINE: 'کاهش هم‌زمان چند کالا',
+    SKU_CHURN: 'خرید این کالا متوقف شده'
+  };
+  /* Presentation-only grouping so the same subject (e.g. a Confirmed signal and its
+     earlier Watch) is shown once. Not a business rule; source data is never changed. */
+  var TOPIC_GROUPS = {
+    PURCHASE_DECLINE_MILD: 'volume', PURCHASE_DECLINE_SEVERE: 'volume', BASKET_SHRINK: 'volume',
+    MULTI_SKU_DECLINE: 'volume', PURCHASE_DECLINE_WATCH: 'volume', BASKET_SHRINK_WATCH: 'volume',
+    BEHIND_PATTERN: 'timing', BEHIND_PATTERN_WATCH: 'timing',
+    KEY_PRODUCT_LOST: 'keylost', KEY_PRODUCT_LOST_WATCH: 'keylost',
+    PAYMENT_OVERDUE: 'money', CHECK_BOUNCED: 'money',
+    CONSECUTIVE_NO_ORDER: 'visits', VISIT_CONVERSION_LOW: 'visits',
+    VISIT_OVERDUE: 'visitgap', LONG_NO_VISIT: 'visitgap'
+  };
+
+  /* Reads existing Truth only (same sources the page used before). */
+  function loadWatchData(cid, ctx) {
+    var out = { activeConfirmed: [], occs: [] };
+    if (typeof extractCustomerSignals !== 'function' && typeof extractWatchObservations !== 'function' && typeof getActiveWatchOccurrences !== 'function') return out;
+
+    var confirmed = [];
+    if (typeof extractCustomerSignals === 'function') {
+      try { confirmed = extractCustomerSignals(cid, ctx) || []; } catch (e) { confirmed = []; }
+    }
+    // ACK: attach the seller's live decisions and drop the signals a decision suppresses, so
+    // Focus / Story match Risk and Action. Applied to COPIES: the memoized signal objects are shared
+    // with risk.js, which applies ACKs in place — mutating them here would double-count ackRiskDelta
+    // whenever this runs before calculateCustomerRisk on the same context.
+    try {
+      if (typeof isAckLayerActive === 'function' && isAckLayerActive() &&
+          typeof getActiveAcksForCustomer === 'function' && typeof applyAcksToSignals === 'function') {
+        confirmed = confirmed.map(_freshSignalCopy);
+        applyAcksToSignals(confirmed, getActiveAcksForCustomer(cid));
+      }
+    } catch (eAckW) { /* fail-open */ }
+    out.activeConfirmed = confirmed.filter(function (s) {
+      return s && s.status === 'active' && s.ackActionEffect !== 'suppress';
+    });
+
+    var occs = [];
+    if (typeof getActiveWatchOccurrences === 'function') {
+      try { occs = getActiveWatchOccurrences(cid) || []; } catch (eOcc) { occs = []; }
+    }
+    // Fallback to raw generation if lifecycle absent. Guarded against inactive customers
+    // (W-BUG-02): this path bypasses reconcileWatchLifecycle's active-customer check.
+    var custIsActive = true;
+    if (typeof data !== 'undefined' && Array.isArray(data.customers)) {
+      var custRec = data.customers.find(function (x) { return x && x.id === cid; });
+      custIsActive = !!(custRec && custRec.active !== false);
+    }
+    if (!occs.length && custIsActive && typeof extractWatchObservations === 'function') {
+      try {
+        var raw = extractWatchObservations(cid, confirmed, ctx) || [];
+        if (typeof filterSuppressedWatchObservations === 'function') {
+          try { raw = filterSuppressedWatchObservations(cid, raw, ctx) || []; } catch (eF) { /* fail-open */ }
+        }
+        occs = raw.map(function (w) {
+          return {
+            id: null,
+            customerId: cid,
+            productId: w.productId,
+            productName: w.productName,
+            watchCategory: w.category,
+            level: w.level,
+            generatedReason: w.reason,
+            reason: null,
+            evidence: w.evidence || null,
+            watchComponents: w.watchComponents || null,
+            status: 'active'
+          };
+        });
+      } catch (e2) { occs = []; }
+    }
+    // Presentation-level de-duplication (new array; source objects untouched).
+    var seen = Object.create(null);
+    out.occs = occs.filter(function (o) {
+      if (!o) return false;
+      var k = o.id || ((o.watchCategory || '') + '|' + (o.productId || ''));
+      if (seen[k]) return false;
+      seen[k] = true;
+      return true;
+    });
+    return out;
+  }
+
+  function watchTitleText(o) {
+    var P = global.BagheriPresent;
+    var label = P ? P.watchLabel(o.watchCategory) : (o.generatedReason || '');
+    return o.productName ? (o.productName + ' · ' + label) : label;
+  }
+
+  /* ---- Pending follow-ups: surfaced near the top; raw evidence stays behind «جزئیات». ---- */
+  function pendingFollowUpHtml(cid) {
+    if (typeof getPendingWatchFollowUps !== 'function') return '';
+    var P = global.BagheriPresent;
+    var rows = [];
+    try { rows = getPendingWatchFollowUps(cid) || []; } catch (e) { rows = []; }
+    if (!rows.length) return '';
+    var html = rows.map(function (o) {
+      var sentence = P ? P.watchSentence(o) : (o.generatedReason || '');
+      return '<div class="watch-followup-row bp-followup" data-followup-id="' + esc(o.id) + '">' +
+        '<div class="watch-followup-main">' +
+          '<div class="bp-row-title">' + esc(o.productName || 'همان موضوع قبلی') + '</div>' +
+          (sentence ? '<div class="bp-row-text">' + esc(sentence) + '</div>' : '') +
+          (o.reason && o.reason.comment ? '<div class="bp-row-note">یادداشت قبلی: ' + esc(o.reason.comment) + '</div>' : '') +
+          (P ? P.detailsHtml(P.watchDetailLines(o)) : '') +
+        '</div>' +
+        '<div class="watch-followup-actions"><button type="button" class="btn secondary small" data-followup-complete="' + esc(o.id) + '">ثبت نتیجه</button>' +
+        '<button type="button" class="btn secondary small" data-followup-cancel="' + esc(o.id) + '">لغو پیگیری</button></div></div>';
+    }).join('');
+    return '<div class="card wide watch-followup-card"><div class="label">پیگیری‌های باز</div>' + html + '</div>';
+  }
+
+  /* ---- P0: a few genuinely different, important topics. Hidden when there are none. ---- */
+  function customerFocusHtml(cid, ctx, wd) {
+    var P = global.BagheriPresent;
+    var result = { html: '', groups: {} };
+    if (!P) return result;
+    var cands = [];
+    var order = 0;
+
+    wd.activeConfirmed.forEach(function (sg) {
+      if (!sg || sg.type !== 'risk') return;
+      if (sg.ackReviewed) return;   // v5: Focus excludes signals the seller already reviewed in a visit
+      var grp = TOPIC_GROUPS[sg.category];
+      var key = sg.productId ? 'p:' + sg.productId : 'c:' + (grp || sg.category);
+      var label = CONFIRMED_TITLES[sg.category] || 'نیاز به بررسی';
+      cands.push({
+        key: key, group: grp || null, order: order++, src: 2,
+        rank: P.lvRank(sg.severity), level: sg.severity,
+        title: sg.productName ? (sg.productName + ' · ' + label) : label,
+        text: sg.reason || '', occId: null,
+        lowConf: (typeof sg.confidence === 'number' && sg.confidence < 0.5)
+      });
+    });
+    wd.occs.forEach(function (o) {
+      var grp = TOPIC_GROUPS[o.watchCategory];
+      var key = o.productId ? 'p:' + o.productId : 'c:' + (grp || o.watchCategory);
+      cands.push({
+        key: key, group: grp || null, order: order++, src: 1,
+        rank: P.lvRank(o.level), level: o.level,
+        title: watchTitleText(o), text: P.watchSentence(o), occId: o.id || null, lowConf: false
+      });
+    });
+    // V7: at most ONE genuine good-news slot (PURCHASE_GROWTH only — «long time no visit» and the
+    // reclassified KEY_PRODUCT_LOST / BASKET_SHRINK are also type 'opportunity' but are not good news).
+    // ACK-aware: a suppressed or already-reviewed signal is not shown. Scored rank 1 / src 1 so it sits
+    // BELOW any risk or watch of the same level and ABOVE a rejection; the per-subject dedupe below
+    // keeps the risk if both concern the same product.
+    var oppSig = null;
+    for (var oi = 0; oi < wd.activeConfirmed.length; oi++) {
+      var og = wd.activeConfirmed[oi];
+      if (!og || og.type !== 'opportunity') continue;
+      if (POSITIVE_SIGNAL_CATEGORIES.indexOf(og.category) === -1) continue;
+      if (og.ackActionEffect === 'suppress' || og.ackReviewed) continue;
+      oppSig = og; break;
+    }
+    if (oppSig) {
+      var oppLabel = CONFIRMED_TITLES[oppSig.category] || 'فرصت';
+      cands.push({
+        key: oppSig.productId ? 'p:' + oppSig.productId : 'o:c:' + oppSig.category,
+        group: null, order: order++, src: 1, rank: 1, level: 'low',
+        title: oppSig.productName ? (oppSig.productName + ' · ' + oppLabel) : oppLabel,
+        text: oppSig.reason || '', occId: null, lowConf: false
+      });
+    }
+    var rejItems = [];
+    try { rejItems = buildProductRejectionInsights(cid, undefined, ctx) || []; } catch (eR) { rejItems = []; }
+    rejItems.forEach(function (it) {
+      cands.push({
+        key: 'rej:' + it.productId, group: null, order: order++, src: 0,
+        rank: 1, level: 'low',
+        title: it.productName + ' · چند بار رد شده',
+        text: rejectionSentence(it, true), occId: null, lowConf: false
+      });
+    });
+
+    // Keep the strongest candidate per subject, then the top 3 overall.
+    var best = Object.create(null);
+    cands.forEach(function (c) {
+      var cur = best[c.key];
+      var score = c.rank * 10 + c.src;
+      if (!cur || score > cur.score) best[c.key] = { c: c, score: score };
+    });
+    // Fold a stored stock-source answer into the topic of the same product (one subject, one block).
+    var stockByPid = Object.create(null);
+    rejItems.forEach(function (it) {
+      var src = dominantStockSource(it.stillStockSources);
+      if (src) stockByPid[it.productId] = P.stockSentence(src);
+    });
+    var topics = Object.keys(best).map(function (k) { return best[k]; })
+      .sort(function (a, b) { return (b.score - a.score) || (a.c.order - b.c.order); })
+      .slice(0, 3)
+      .map(function (x) { return x.c; })
+      .filter(function (t) { return t.text || t.title; });
+    topics.forEach(function (t) {
+      var pid = t.key.indexOf('p:') === 0 ? t.key.slice(2) : (t.key.indexOf('rej:') === 0 ? t.key.slice(4) : null);
+      if (pid && stockByPid[pid] && t.text.indexOf(stockByPid[pid]) < 0) t.text = (t.text ? t.text + ' ' : '') + stockByPid[pid];
+    });
+    if (!topics.length) return result;
+
+    topics.forEach(function (t) { if (t.group) result.groups[t.group] = true; });
+    result.html = '<div class="bp-focus">' +
+      '<div class="bp-focus-head">الان مهم است</div>' +
+      '<div class="bp-focus-list">' + topics.map(function (t) {
+        var tap = !!t.occId;
+        return '<div class="bp-topic' + (tap ? ' is-tap' : '') + '"' + (tap ? ' data-watch-occ="' + esc(t.occId) + '" role="button" tabindex="0"' : '') + '>' +
+          '<span class="bp-topic-dot is-' + esc(t.level || 'low') + '" aria-hidden="true"></span>' +
+          '<div class="bp-topic-main">' +
+            '<div class="bp-topic-title">' + esc(t.title) + (t.lowConf ? ' <span class="bp-topic-flag">اطمینان پایین</span>' : '') + '</div>' +
+            (t.text ? '<div class="bp-topic-text">' + esc(t.text) + '</div>' : '') +
+          '</div>' +
+          (tap ? '<span class="bp-topic-chev" aria-hidden="true">›</span>' : '') +
+        '</div>';
+      }).join('') + '</div></div>';
+    return result;
+  }
+
+  /* ---- Level 2: full list of confirmed signals + early warnings, collapsed by default. ---- */
+  function intelligenceWatchHtml(cid, ctx, wd) {
+    wd = wd || loadWatchData(cid, ctx);
+    var P = global.BagheriPresent;
+    var activeConfirmed = wd.activeConfirmed, occs = wd.occs;
+    if (!occs.length && !activeConfirmed.length) return '';
+
+    var confirmedHtml = '';
+    if (activeConfirmed.length) {
+      var crows = activeConfirmed.map(function (sg) {
+        /* فقط سیگنال‌هایی که واقعاً خبر خوب‌اند سبز می‌شوند. type==='opportunity'
+           به‌تنهایی کافی نیست: «مدت زیادی ویزیت نشده» و (در حالت بازطبقه‌بندی)
+           «کالای کلیدی خریده نشده/افت سبد» هم opportunity هستند ولی خبر خوب نیستند. */
+        var isGood = sg.type === 'opportunity' && POSITIVE_SIGNAL_CATEGORIES.indexOf(sg.category) !== -1;
+        var cls = isGood ? 'watch-level-opportunity' : levelClass(sg.severity);
+        var lbl = isGood ? 'فرصت' : levelLabel(sg.severity);
+        return '<div class="watch-confirmed-row">' +
+          '<span class="bp-conf-text">' + (sg.productName ? '<strong>' + esc(sg.productName) + '</strong> — ' : '') + esc(sg.reason || '') + '</span>' +
+          '<span class="watch-level-label ' + cls + '">' + esc(lbl) + '</span>' +
+          '</div>';
+      }).join('');
+      confirmedHtml = '<div class="card wide watch-confirmed-card">' +
+        '<div class="label">تأییدشده</div>' +
+        '<div class="watch-confirmed-list">' + crows + '</div></div>';
+    }
+
+    var watchHtml = '';
+    if (occs.length) {
+      var wrows = occs.map(function (o) {
+        var sentence = P ? P.watchSentence(o) : (o.generatedReason || '');
+        var reviewed = !!o.reason;
+        var reasonBit = '';
+        if (reviewed && o.reason) {
+          var rlabel = (typeof watchReasonLabel === 'function') ? watchReasonLabel(o.reason.code) : (o.reason.code || '');
+          reasonBit = '<div class="bp-row-note">علت ثبت‌شده: ' + esc(rlabel) + (o.reason.comment ? (' — ' + esc(o.reason.comment)) : '') + '</div>';
+        }
+        var clickable = o.id ? (' data-watch-occ="' + esc(o.id) + '" role="button" tabindex="0"') : '';
+        return '<div class="watch-occ-item">' +
+          '<div class="watch-occ-row bp-occ"' + clickable + '>' +
+            '<div class="bp-occ-main">' +
+              '<div class="bp-row-title">' + esc(watchTitleText(o)) + '</div>' +
+              (sentence ? '<div class="bp-row-text">' + esc(sentence) + '</div>' : '') +
+              reasonBit +
+            '</div>' +
+            '<div class="bp-occ-side"><span class="watch-level-label ' + levelClass(o.level) + '">' + esc(levelLabel(o.level)) + '</span>' +
+              (reviewed ? '<span class="watch-reviewed">بررسی شده</span>' : '') + '</div>' +
+          '</div>' +
+          (P ? P.detailsHtml(P.watchDetailLines(o)) : '') +
+        '</div>';
+      }).join('');
+      watchHtml = '<div class="card wide watch-lifecycle-card" id="watch-lifecycle-card">' +
+        '<div class="label">هشدارهای زودهنگام</div>' +
+        '<div class="report-note watch-note">برای ثبت پاسخ، روی هر مورد بزنید.</div>' +
+        '<div class="watch-occ-list">' + wrows + '</div></div>';
+    }
+
+    var total = occs.length + activeConfirmed.length;
+    return '<details class="customer-watch-details">' +
+      '<summary class="customer-behavior-summary">همه نشانه‌ها و هشدارها (' + esc(P ? P.n0(total) : String(total)) + ')</summary>' +
+      '<div class="customer-detail-watch-body">' + confirmedHtml + watchHtml + '</div></details>';
+  }
+
+  /* Short Level-1 glance for the behavior section. Uses only values customerBehavior() already returns. */
+  /* Presentation-only: compact 8-week customer purchase trend. */
+  function customerTrendChartHtml(cid, ctx, behavior) {
+    try {
+      const invs = (typeof customerInvoices === 'function' ? customerInvoices(cid, ctx) : []) || [];
+      if (!invs.length) return '';
+      const now = new Date(); now.setHours(0,0,0,0);
+      const vals = new Array(8).fill(0);
+      invs.forEach(function (inv) {
+        if (!inv || !inv.date) return;
+        const d = new Date(inv.date + 'T00:00:00'); if (isNaN(d.getTime())) return;
+        d.setHours(0,0,0,0);
+        const days = Math.floor((now - d) / 86400000);
+        if (days < 0 || days >= 56) return;
+        vals[7 - Math.floor(days / 7)] += Number(inv.total) || 0;
+      });
+      if (!vals.some(function (v) { return v > 0; })) return '';
+      const max = Math.max.apply(null, vals) || 1;
+      const pts = vals.map(function (v, i) {
+        const x = i * (100 / (vals.length - 1));
+        const y = 34 - (v / max) * 27;
+        return x.toFixed(1) + ',' + y.toFixed(1);
+      }).join(' ');
+      const area = '0,36 ' + pts + ' 100,36';
+      const trendCoords = pts.split(' ').map(function (q) { return q.split(',').map(Number); });
+      const trendLine = chartSmoothPath(trendCoords);
+      const trendArea = trendLine + ' L 100 36 L 0 36 Z';
+      const last = pts.split(' ').pop();
+      const lastParts = last.split(',');
+      const firstHalf = vals.slice(0, 4).reduce(function (s, v) { return s + v; }, 0);
+      const secondHalf = vals.slice(4).reduce(function (s, v) { return s + v; }, 0);
+      let trendText = 'تقریباً ثابت';
+      if (firstHalf === 0 && secondHalf > 0) trendText = 'خرید اخیر بیشتر شده';
+      else if (firstHalf > 0 && secondHalf === 0) trendText = 'خرید اخیر کمتر شده';
+      else if (firstHalf > 0) {
+        const ratio = secondHalf / firstHalf;
+        if (ratio >= 1.15) trendText = 'خرید اخیر بیشتر شده';
+        else if (ratio <= 0.85) trendText = 'خرید اخیر کمتر شده';
+      }
+      return '<div class="customer-trend-card"><div class="customer-trend-head"><div><span class="label">روند خرید</span><span class="customer-trend-period">۸ هفته اخیر</span></div><span class="customer-trend-note">' + esc(trendText) + '</span></div><div class="customer-trend-chart" aria-label="روند خرید بر اساس مبلغ فاکتورها در ۸ هفته اخیر" style="position:relative;"><svg viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="ct-grad" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="100" y2="0"><stop class="ch-a" offset="0"/><stop class="ch-b" offset="1"/></linearGradient><linearGradient id="ct-fade" x1="0" y1="0" x2="0" y2="1"><stop class="ch-fade-top" offset="0"/><stop class="ch-fade-bottom" offset="1"/></linearGradient></defs><path d="' + trendArea + '" fill="url(#ct-fade)"/><path class="ch-line" d="' + trendLine + '" stroke="url(#ct-grad)" vector-effect="non-scaling-stroke"/></svg><i class="customer-trend-dot" style="left:' + parseFloat(lastParts[0]) + '%;top:' + ((parseFloat(lastParts[1]) / 40) * 100) + '%;"></i></div></div>';
+    } catch (e) { return ''; }
+  }
+
+  function behaviorGlanceHtml(b, groups) {
+    var P = global.BagheriPresent;
+    if (!P || !b) return '';
+    var lines = [];
+    if (b.amountTrend === 'up') lines.push('خرید ۳۰ روز اخیر نسبت به ۳۰ روز قبل بیشتر شده.');
+    else if (b.amountTrend === 'down' && !groups.volume) lines.push('خرید ۳۰ روز اخیر نسبت به ۳۰ روز قبل کمتر شده.');
+    if (b.behindPattern === true && !groups.timing && b.daysSinceLast != null && b.avgIntervalDays != null) {
+      lines.push(P.n0(b.daysSinceLast) + ' روز از آخرین خرید گذشته؛ این مشتری معمولاً هر ' + P.n0(b.avgIntervalDays) + ' روز خرید می‌کند.');
+    }
+    var vis = b.visitInvoiceStats;
+    if (vis && vis.linkedInvoiceCount > 0 && b.visitCount > 0) {
+      var line = 'از ' + P.n0(b.visitCount) + ' ویزیت ثبت‌شده، ' + P.n0(vis.linkedInvoiceCount) + ' فاکتور از همان ویزیت صادر شده';
+      if (vis.avgDaysBetweenVisitAndInvoice != null) {
+        line += vis.avgDaysBetweenVisitAndInvoice < 0.5 ? '؛ معمولاً همان روز.' : '؛ معمولاً حدود ' + P.n1(vis.avgDaysBetweenVisitAndInvoice) + ' روز بعد.';
+      } else line += '.';
+      lines.push(line);
+    }
+    if (b.lastNextAction) lines.push('اقدام بعدی از ویزیت قبل: ' + b.lastNextAction);
+    if (b.topProducts && b.topProducts.length) {
+      lines.push('کالاهای اصلی: ' + b.topProducts.slice(0, 3).map(function (x) { return x.name; }).join('، '));
+    }
+    if (!lines.length) return '';
+    return '<div class="bp-glance">' + lines.map(function (l) { return '<div class="bp-glance-line">' + esc(l) + '</div>'; }).join('') + '</div>';
+  }
+
+  function watchSheetContextHtml(o) {
+    var P = global.BagheriPresent;
+    if (!P || !o) return '';
+    var sentence = P.watchSentence(o);
+    return (sentence ? '<div class="bp-row-text bp-sheet-text">' + esc(sentence) + '</div>' : '') + P.detailsHtml(P.watchDetailLines(o));
+  }
+
+  function openWatchReasonSheet(occurrenceId, onDone) {
+    if (!occurrenceId || typeof recordWatchReason !== 'function') return;
+    var options = (typeof getWatchResponseOptions === 'function')
+      ? getWatchResponseOptions(occurrenceId)
+      : (typeof WATCH_REASON_OPTIONS !== 'undefined' && Array.isArray(WATCH_REASON_OPTIONS))
+      ? WATCH_REASON_OPTIONS
+      : [
+          { code: 'still_stock', label: 'هنوز موجودی دارد' },
+          { code: 'price', label: 'قیمت' },
+          { code: 'competitor', label: 'خرید از رقیب' },
+          { code: 'no_need', label: 'فعلاً نیاز ندارد' },
+          { code: 'quality', label: 'مشکل کیفیت' },
+          { code: 'other', label: 'سایر' }
+        ];
+    var optsHtml = options.map(function (o) {
+      return '<button type="button" class="btn secondary small" data-watch-reason="' + esc(o.code) + '" style="width:100%;margin-bottom:6px;text-align:right;">' +
+        esc(o.label) + '</button>';
+    }).join('');
+    if (typeof openSheet !== 'function') return;
+    openSheet(
+      '<div class="sheet-title">ثبت علت هشدار</div>' +
+      '<div class="report-note" style="margin-bottom:10px;">پاسخ‌های «هنوز موجودی دارد»، «این محصول را نمی‌خواهد»، «بعداً پیگیری می‌کنم» و «فعلاً نیاز ندارد» هشدار را می‌بندند و همان مورد را فوراً برنمی‌گردانند؛ سایر علت‌ها فقط ثبت می‌شوند.</div>' +
+      '<div id="watch-reason-list">' + optsHtml + '</div>' +
+      '<div class="field" style="margin-top:10px;"><label>یادداشت (اختیاری)</label>' +
+      '<input type="text" id="watch-reason-note" autocomplete="off" placeholder="توضیح کوتاه..."></div>' +
+      '<div class="btn-row" style="margin-top:12px;justify-content:space-between;">' +
+      '<button type="button" class="btn secondary" id="watch-dismiss-btn">بستن هشدار</button>' +
+      '<button type="button" class="btn secondary" id="watch-reason-cancel">انصراف</button></div>'
+    );
+    var cancel = document.getElementById('watch-reason-cancel');
+    if (cancel) cancel.onclick = function () { if (typeof closeModal === 'function') closeModal(); };
+    var dismissBtn = document.getElementById('watch-dismiss-btn');
+    if (dismissBtn) {
+      dismissBtn.onclick = function () {
+        if (typeof dismissWatchOccurrence !== 'function') return;
+        var noteEl = document.getElementById('watch-reason-note');
+        var note = noteEl ? noteEl.value : '';
+        try {
+          dismissWatchOccurrence(occurrenceId, note);
+          if (typeof showToast === 'function') showToast('هشدار بسته شد');
+        } catch (err) {
+          console.error(err);
+          if (typeof showToast === 'function') showToast('بستن هشدار ممکن نشد');
+        }
+        if (typeof closeModal === 'function') closeModal();
+        if (typeof onDone === 'function') onDone();
+      };
+    }
+    var list = document.getElementById('watch-reason-list');
+    if (list) {
+      list.addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-watch-reason]');
+        if (!btn) return;
+        var code = btn.getAttribute('data-watch-reason');
+        var noteEl = document.getElementById('watch-reason-note');
+        var note = noteEl ? noteEl.value : '';
+        try {
+          recordWatchReason(occurrenceId, code, note);
+          if (typeof showToast === 'function') showToast('علت ثبت شد');
+        } catch (err) {
+          console.error(err);
+          if (typeof showToast === 'function') showToast('ثبت علت ممکن نشد');
+        }
+        if (typeof closeModal === 'function') closeModal();
+        if (typeof onDone === 'function') onDone();
+      });
+    }
+  }
+
+  function openWatchFollowUpSheet(occurrenceId, cid, onDone) {
+    if (!occurrenceId || typeof getPendingWatchFollowUps !== 'function' || typeof openSheet !== 'function') return;
+    var pending = [];
+    try { pending = getPendingWatchFollowUps(cid) || []; } catch (e) { pending = []; }
+    var occ = pending.find(function (x) { return x && x.id === occurrenceId; });
+    if (!occ) return;
+    var options = [
+      { code: 'still_stock', label: 'هنوز موجودی دارد' },
+      { code: 'not_wanted', label: 'این محصول را نمی‌خواهد' },
+      { code: 'dismiss', label: 'بررسی شد، فعلاً پیگیری نمی‌خواهم' },
+      { code: 'price', label: 'قیمت' },
+      { code: 'competitor', label: 'خرید از رقیب' },
+      { code: 'no_need', label: 'فعلاً نیاز ندارد' },
+      { code: 'quality', label: 'مشکل کیفیت' },
+      { code: 'other', label: 'سایر' }
+    ].filter(function (x) { return x.code !== 'not_wanted' || !!occ.productId; });
+    var buttons = options.map(function (o) { return '<button type="button" class="btn secondary small" data-followup-result="' + esc(o.code) + '" style="width:100%;margin-bottom:6px;text-align:right;">' + esc(o.label) + '</button>'; }).join('');
+    openSheet('<div class="sheet-title">ثبت نتیجه پیگیری</div>' + watchSheetContextHtml(occ) + '<div id="watch-followup-results">' + buttons + '</div>' + '<div class="field" style="margin-top:10px;"><label>یادداشت (اختیاری)</label><input id="watch-followup-note" type="text" autocomplete="off"></div>' + '<div class="btn-row" style="margin-top:10px;"><button type="button" class="btn secondary" id="watch-followup-cancel-sheet">انصراف</button></div>');
+    var cancel = document.getElementById('watch-followup-cancel-sheet');
+    if (cancel) cancel.onclick = function () { if (typeof closeModal === 'function') closeModal(); };
+    var list = document.getElementById('watch-followup-results');
+    if (list) list.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-followup-result]'); if (!btn) return;
+      var note = document.getElementById('watch-followup-note');
+      var code = btn.getAttribute('data-followup-result');
+      var result = null;
+      if (code === 'dismiss') {
+        // Explicit completion of the pending follow-up; do not turn it into not_wanted.
+        result = typeof completeWatchFollowUp === 'function' ? completeWatchFollowUp(occurrenceId, 'dismiss', note ? note.value : '') : null;
+      } else if (typeof completeWatchFollowUp === 'function') {
+        result = completeWatchFollowUp(occurrenceId, code, note ? note.value : '');
+      }
+      if (typeof showToast === 'function') showToast(result ? 'نتیجه پیگیری ثبت شد' : 'ثبت نتیجه ممکن نشد');
+      if (typeof closeModal === 'function') closeModal();
+      if (typeof onDone === 'function') onDone();
+    });
+  }
+
+  function bindWatchFollowUps(root, cid) {
+    if (!root) return;
+    root.querySelectorAll('[data-followup-complete]').forEach(function (el) {
+      el.addEventListener('click', function () {
+        openWatchFollowUpSheet(el.getAttribute('data-followup-complete'), cid, function () { drawCustomerPage(rootEl || root); });
+      });
+    });
+    root.querySelectorAll('[data-followup-cancel]').forEach(function (el) {
+      el.addEventListener('click', function () {
+        if (typeof reverseWatchDecision !== 'function') return;
+        var id = el.getAttribute('data-followup-cancel');
+        var ok = false;
+        try { ok = !!reverseWatchDecision(id); } catch (e) { ok = false; }
+        if (typeof showToast === 'function') showToast(ok ? 'پیگیری لغو شد' : 'لغو پیگیری ممکن نشد');
+        drawCustomerPage(rootEl || root);
+      });
+    });
+  }
+
+  function bindWatchLifecycleRows(root) {
+    if (!root) return;
+    root.querySelectorAll('[data-watch-occ]').forEach(function (el) {
+      el.addEventListener('click', function () {
+        var id = el.getAttribute('data-watch-occ');
+        openWatchReasonSheet(id, function () {
+          if (typeof drawCustomerPage === 'function') drawCustomerPage(rootEl || root);
+        });
+      });
+    });
+  }
+
+  function drawCustomerPage(root, ctx) {
+    if (!root) return;
+    root.classList.add('customer-detail-view'); // UPDATED: Added for CSS scoping
+
+    const id = currentCustomerId;
+
+    if (!id) {
+      root.innerHTML =
+        '<div class="empty">شناسه مشتری مشخص نشده است.</div>' +
+        '<div class="btn-row"><a class="btn secondary" href="' +
+        customersHref() +
+        '">بازگشت به لیست مشتریان</a></div>';
+      return;
+    }
+    const c = data.customers.find(function (x) {
+      return x.id === id;
+    });
+    if (!c) {
+      root.innerHTML =
+        '<div class="empty">مشتری با این شناسه پیدا نشد.</div>' +
+        '<div class="btn-row"><a class="btn secondary" href="' +
+        customersHref() +
+        '">بازگشت به لیست مشتریان</a></div>';
+      return;
+    }
+
+    if (typeof setHeaderTitle === 'function') {
+      setHeaderTitle(c.name, { isRoot: false });
+    }
+
+    const t = customerTotals(c.id, ctx);
+    const profit = customerProfit(c.id, ctx);
+    const word = balanceStatusWord(t.balance);
+    const color = t.balance > 0 ? 'accent-rust' : t.balance < 0 ? 'accent-olive' : 'accent-olive';
+    const balanceLine = t.balance === 0 ? word : word + ': ' + toman(Math.abs(t.balance)) + ' ت';
+
+    /* Hierarchy (v5): identity → ONE top alert → story (toned) → recommended action → primary actions
+       → what matters now → money → behaviour → decisions/history (collapsed). Everything below is a
+       read-only merge of outputs the engine already computes (Priority / Action / Watch / Balance);
+       no new score, threshold or signal. */
+    let recommendedAction = null;
+    let customerRiskLevel = null;
+    let customerHealthLabel = 'وضعیت عادی';
+    let _storyTextRaw = '';
+    if (isOneOffCustomer(c)) {
+      // مشتری یک‌بار‌مصرف: امتیاز/ریسک/داستان رفتاری معنا ندارد (چند نفر زیر یک حساب)
+      customerHealthLabel = 'مشتری یک‌بار‌مصرف';
+    } else {
+      let priority = null, action = null;
+      try { if (typeof calculateCustomerPriority === 'function') priority = calculateCustomerPriority(c.id, { ctx: ctx }); } catch (eP) { priority = null; }
+      try { if (typeof calculateCustomerAction === 'function') action = calculateCustomerAction(c.id, priority, { ctx: ctx }); } catch (eA) { action = null; }
+      recommendedAction = action && action.actionType !== 'no_action' ? action : null;
+      const riskLevel = priority ? priority.riskLevel : null;
+      customerRiskLevel = riskLevel;
+      customerHealthLabel = (typeof getRiskBadge === 'function' ? getRiskBadge(riskLevel).label : '') || 'وضعیت عادی';
+      _storyTextRaw = (priority && priority.customerStory && priority.customerStory.summary) ? priority.customerStory.summary : '';
+    }
+
+    // P0 (what matters now) + follow-ups waiting for this customer — presentation of existing Truth.
+    const watchData = loadWatchData(c.id, ctx);
+    var attRow = null;
+    var legacyDebtRow = null;
+    try {
+      if (ctx && typeof ctx.receivableAttention === 'function') {
+        var attData = ctx.receivableAttention();
+        attRow = (attData.byCustomerId && attData.byCustomerId[c.id]) ? attData.byCustomerId[c.id] : null;
+        legacyDebtRow = (attData.legacyByCustomerId && attData.legacyByCustomerId[c.id]) ? attData.legacyByCustomerId[c.id] : null;
+      }
+    } catch (eAtt) { attRow = null; legacyDebtRow = null; }
+    const focus = customerFocusHtml(c.id, ctx, watchData);
+    const followUpTopHtml = pendingFollowUpHtml(c.id);
+
+    var pendingFollowUps = [];
+    try {
+      if (typeof getPendingWatchFollowUps === 'function') {
+        pendingFollowUps = (getPendingWatchFollowUps(c.id) || []).filter(function (o) {
+          var cu = (data.customers || []).find(function (x) { return x && x.id === o.customerId; });
+          return !!cu && cu.active !== false;
+        });
+      }
+    } catch (eFU) { pendingFollowUps = []; }
+
+    // ONE top alert: a bounced check always wins over the receivable follow-up.
+    var hasBouncedCheck = false;
+    try {
+      hasBouncedCheck = (watchData.activeConfirmed || []).some(function (sg) { return sg && sg.category === 'CHECK_BOUNCED'; });
+    } catch (eB) { hasBouncedCheck = false; }
+    var topAlertHtml = '';
+    if (hasBouncedCheck) {
+      topAlertHtml = '<div class="cd-top-alert cd-top-alert-danger" role="alert">' +
+        '<span class="cd-top-alert-title">چک برگشتی فعال</span>' +
+        '<span class="cd-top-alert-desc">' +
+          esc(typeof getRiskBadge === 'function' ? getRiskBadge('critical').label : 'اقدام فوری') +
+        '</span></div>';
+    } else if (attRow && attRow.balance > 0) {
+      topAlertHtml = '<div class="cd-top-alert cd-top-alert-warning">' +
+        '<span class="cd-top-alert-title">نیازمند پیگیری — ' + toman(attRow.balance) + ' ت</span>' +
+        '<span class="cd-top-alert-desc">' + esc(receivableAttentionDesc(attRow)) + '</span></div>';
+    }
+
+    // Story tone (colour of the story's leading edge): critical → risk → watch → opportunity → follow-up → normal.
+    var storyTone = 'normal';
+    if (customerRiskLevel === 'critical') storyTone = 'critical';
+    else if (customerRiskLevel === 'high') storyTone = 'risk';
+    else if (customerRiskLevel === 'medium') storyTone = 'watch';
+    else {
+      var hasPositive = false;
+      try {
+        hasPositive = (watchData.activeConfirmed || []).some(function (sg) {
+          return sg && sg.type === 'opportunity' &&
+            POSITIVE_SIGNAL_CATEGORIES.indexOf(sg.category) !== -1 &&
+            sg.ackActionEffect !== 'suppress' && !sg.ackReviewed;
+        });
+      } catch (eOpp) { hasPositive = false; }
+      if (hasPositive) storyTone = 'opportunity';
+      else if (pendingFollowUps.length) storyTone = 'followup';
+    }
+    var storyHtml = '';
+    if (_storyTextRaw) {
+      storyHtml = '<div class="cust-summary cd-story is-' + storyTone + '">' +
+        '<div class="cust-summary-label">خلاصه وضعیت</div>' +
+        '<div class="cust-summary-story">' + esc(_storyTextRaw) + '</div></div>';
+    }
+
+
+    const invs = customerInvoices(c.id, ctx)
+      .slice()
+      .sort(function (a, b) {
+        return (b.date || '').localeCompare(a.date || '') || String(b.number).localeCompare(String(a.number));
+      });
+    const pays = customerPayments(c.id, ctx)
+      .slice()
+      .sort(function (a, b) {
+        return (b.date || '').localeCompare(a.date || '');
+      });
+    const chks = customerChecks(c.id, ctx)
+      .slice()
+      .sort(function (a, b) {
+        return (b.dueDate || '').localeCompare(a.dueDate || '');
+      });
+    const visits = (c.visits || []).slice().sort(function (a, b) {
+      return (b.date || '').localeCompare(a.date || '') || (b.time || '').localeCompare(a.time || '');
+    });
+
+    const invRows = invs.length
+      ? invs
+          .map(function (inv) {
+            const st = invoicePayStatus(inv);
+            return (
+              '<a class="ledger-row customer-invoice-row" href="#/invoice?id=' +
+              encodeURIComponent(inv.id) +
+              '&fromCustomer=' + encodeURIComponent(c.id) + '&fromSection=invoices' +
+              '" style="text-decoration:none;color:inherit;">' +
+              '<span class="name">#' +
+              esc(String(inv.number || '')) +
+              '<span class="sub">' +
+              faDate(inv.date) +
+              (inv.buyerName ? ' · ' + esc(inv.buyerName) : '') +
+              ' — <span class="' +
+              st.cls +
+              '">' +
+              st.label +
+              '</span></span></span>' +
+              '<span class="filler"></span>' +
+              '<span class="amount">' +
+              toman(inv.total) +
+              ' ت</span></a>'
+            );
+          })
+          .join('')
+      : '<div class="empty" style="padding:12px 0;">فاکتوری ثبت نشده</div>';
+
+    const payRows = pays.length
+      ? pays
+          .map(function (p) {
+            const tagOpen = p.invoiceId ? '<a class="ledger-row" href="#/invoice?id=' + encodeURIComponent(p.invoiceId) + '&fromCustomer=' + encodeURIComponent(c.id) + '&fromSection=payments" style="text-decoration:none;color:inherit;">' : '<div class="ledger-row">';
+            const tagClose = p.invoiceId ? '</a>' : '</div>';
+            const method = paymentMethodLabel(p.method);
+            return (
+              tagOpen +
+              '<span class="name">' +
+              esc(method) +
+              (p.note ? '<span class="sub">' + esc(p.note) + '</span>' : '') +
+              '<span class="sub">' +
+              faDate(p.date) +
+              '</span></span>' +
+              '<span class="filler"></span>' +
+              '<span class="amount">' +
+              toman(p.amount) +
+              ' ت</span>' + tagClose
+            );
+          })
+          .join('')
+      : '<div class="empty" style="padding:12px 0;">پرداختی ثبت نشده</div>';
+
+    const chkRows = chks.length
+      ? chks
+          .map(function (ch) {
+            const st = ch.status === 'cleared' ? 'پاس‌شده' : 'در جریان';
+            const tagOpen = ch.invoiceId ? '<a class="ledger-row" href="#/invoice?id=' + encodeURIComponent(ch.invoiceId) + '&fromCustomer=' + encodeURIComponent(c.id) + '&fromSection=checks" style="text-decoration:none;color:inherit;">' : '<div class="ledger-row">';
+            const tagClose = ch.invoiceId ? '</a>' : '</div>';
+            const stCls = ch.status === 'cleared' ? 'accent-olive' : 'accent-amber';
+            return (
+              tagOpen +
+              '<span class="name">' +
+              esc(ch.checkNumber || 'چک') +
+              '<span class="sub">سررسید: ' +
+              faDate(ch.dueDate) +
+              ' — <span class="' +
+              stCls +
+              '">' +
+              st +
+              '</span></span></span>' +
+              '<span class="filler"></span>' +
+              '<span class="amount">' +
+              toman(ch.amount) +
+              ' ت</span>' + tagClose
+            );
+          })
+          .join('')
+      : '<div class="empty" style="padding:12px 0;">چکی ثبت نشده</div>';
+
+    const visitRows = visits.length
+      ? visits
+          .slice(0, 30)
+          .map(function (v) {
+            const scoreBit = typeof v.score === 'number' ? ' — امتیاز: ' + v.score + ' از ۱۰۰' : '';
+            const extraBits = [];
+            if (v.reason) extraBits.push('دلیل: ' + v.reason);
+            if (v.opportunity) extraBits.push('فرصت (مشاهده): ' + v.opportunity);
+            if (v.threat) extraBits.push('تهدید (مشاهده): ' + v.threat);
+            if (v.nextAction) extraBits.push('اقدام بعدی: ' + v.nextAction);
+            if (Array.isArray(v.tags) && v.tags.length) extraBits.push('برچسب: ' + v.tags.join('، '));
+            if (Array.isArray(v.offeredProducts) && v.offeredProducts.length) {
+              var rxMap = { accepted: 'قبول', rejected: 'رد', deferred: 'بعداً' };
+              var rrMap = { price: 'قیمت', quality: 'کیفیت', competitor: 'رقیب', unavailable: 'ناموجود', no_need: 'عدم نیاز', still_stock: 'موجود داشت', other: 'سایر' };
+              var bits = v.offeredProducts.map(function (op) {
+                var prod = (data.products || []).find(function (p) { return p.id === op.productId; });
+                var name = prod ? prod.name : (op.productId || '—');
+                var s = name + ' (' + (rxMap[op.reaction] || op.reaction || '—') + ')';
+                if (op.reaction === 'rejected' && op.rejectionReason) s += ' — ' + (rrMap[op.rejectionReason] || op.rejectionReason);
+                return s;
+              });
+              extraBits.push('پیشنهاد: ' + bits.join('؛ '));
+            }
+            if (v.note) extraBits.push(v.note);
+            const extraHtml = extraBits
+              .map(function (x) {
+                return '<span class="sub customer-visit-row-detail">' + esc(x) + '</span>';
+              })
+              .join('');
+            const ordered = v.ordered || v.result === (typeof VISIT_RESULTS !== 'undefined' && VISIT_RESULTS[0]);
+            return (
+              '<div class="ledger-row" style="cursor:default;">' +
+              '<span class="name">' +
+              esc(v.result || 'ویزیت') +
+              '<span class="sub">' +
+              faDate(v.date) +
+              (v.time ? ' — ' + esc(v.time) : '') +
+              scoreBit +
+              '</span>' +
+              extraHtml +
+              '</span>' +
+              '<span class="filler"></span>' +
+              '<span class="amount ' +
+              (ordered ? 'accent-olive' : '') +
+              '">' +
+              (ordered ? 'سفارش' : 'ویزیت') +
+              '</span></div>'
+            );
+          })
+          .join('')
+      : '<div class="empty" style="padding:12px 0;">ویزیتی ثبت نشده</div>';
+
+    let behaviorHtml = '';
+    if (typeof customerBehavior === 'function') {
+      const b = customerBehavior(c.id, ctx);
+      // customerBehaviorSummary's own bullet lines now render lower on the
+      // page, inside "جزئیات کامل رفتار خرید" progressive disclosure —
+      // the headline decision (risk/opportunity + next action) already
+      // moved up into the Unified Summary block above the fold.
+      let summaryHtml = '';
+      const summary = customerBehaviorSummary(b);
+      if (summary && summary.level === 'insufficient') {
+        summaryHtml =
+          '<div class="card wide" style="margin-bottom:10px;">' +
+          '<div class="label">خلاصهٔ رفتار خرید</div>' +
+          '<div class="value" style="font-size:.9rem;">' +
+          esc(summary.lines[0]) +
+          '</div></div>';
+      } else if (summary) {
+        const badgeMap = {
+          risk: ['نیاز به توجه', 'accent-rust'],
+          watch: ['قابل بررسی', 'accent-amber'],
+          good: ['وضعیت مطلوب', 'accent-olive'],
+          normal: ['عادی', '']
+        };
+        const bm = badgeMap[summary.level] || badgeMap.normal;
+        const noteLines = summary.risk.concat(summary.good);
+        const extraLines = [summary.reminder, summary.action].filter(Boolean);
+        summaryHtml =
+          '<div class="card wide" style="margin-bottom:10px;">' +
+          '<div class="label">خلاصهٔ رفتار خرید</div>' +
+          '<div class="value ' +
+          bm[1] +
+          '" style="font-size:1.05rem;">' +
+          esc(bm[0]) +
+          '</div>' +
+          (noteLines.length
+            ? '<div style="font-size:.85rem;line-height:1.9;margin-top:8px;color:var(--ink);">' +
+              noteLines
+                .map(function (x) {
+                  return '• ' + esc(x);
+                })
+                .join('<br>') +
+              '</div>'
+            : '') +
+          (extraLines.length
+            ? '<div style="font-size:.85rem;line-height:1.9;margin-top:8px;padding-top:8px;border-top:1px dotted var(--line);color:var(--ink);">' +
+              extraLines
+                .map(function (x) {
+                  return esc(x);
+                })
+                .join('<br>') +
+              '</div>'
+            : '') +
+          '</div>';
+      }
+
+      const trendLabel =
+        b.amountTrend === 'up' ? 'سیگنال افزایش' : b.amountTrend === 'down' ? 'سیگنال کاهش' : b.amountTrend === 'flat' ? 'تقریباً ثابت' : null;
+      const trendCls = b.amountTrend === 'up' ? 'accent-olive' : b.amountTrend === 'down' ? 'accent-rust' : '';
+      const intervalText = b.avgIntervalDays != null ? Math.round(b.avgIntervalDays * 10) / 10 + ' روز' : 'اطلاعات کافی نیست';
+      const gapText = b.daysSinceLast != null ? Math.round(b.daysSinceLast) + ' روز' : '—';
+      const behindHtml =
+        b.behindPattern === true
+          ? '<div class="card wide"><div class="label">نشانه</div><div class="value accent-amber" style="font-size:.95rem;">از الگوی معمول خرید عقب افتاده</div></div>'
+          : b.behindPattern === false
+            ? '<div class="card wide"><div class="label">وضعیت فاصله</div><div class="value accent-olive" style="font-size:.95rem;">در محدوده الگوی معمول</div></div>'
+            : '';
+      const topProdHtml =
+        b.topProducts && b.topProducts.length
+          ? b.topProducts
+              .map(function (p) {
+                return (
+                  '<div class="ledger-row" style="cursor:default;"><span class="name">' +
+                  esc(p.name) +
+                  '<span class="sub">تعداد: ' +
+                  fmtQtyDisplay(p.qty) +
+                  '</span></span><span class="filler"></span><span class="amount">' +
+                  toman(p.revenue) +
+                  ' ت</span></div>'
+                );
+              })
+              .join('')
+          : '<div class="empty" style="padding:8px 0;">اطلاعات کافی نیست</div>';
+      const decliningHtml =
+        b.decliningProducts && b.decliningProducts.length
+          ? b.decliningProducts
+              .map(function (p) {
+                return (
+                  '<div class="ledger-row" style="cursor:default;"><span class="name">' +
+                  esc(p.name) +
+                  '<span class="sub">قبلاً ' +
+                  fmtQtyDisplay(p.earlyQty) +
+                  ' ← اخیراً ' +
+                  fmtQtyDisplay(p.lateQty) +
+                  '</span></span></div>'
+                );
+              })
+              .join('')
+          : '';
+      const lv = b.lastVisit;
+      const lastVisitBits = [];
+      if (lv) {
+        lastVisitBits.push(esc(lv.result || 'ویزیت'));
+        if (lv.reason) lastVisitBits.push('دلیل: ' + esc(lv.reason));
+        if (lv.nextAction) lastVisitBits.push('اقدام بعدی: ' + esc(lv.nextAction));
+        if (lv.opportunity) lastVisitBits.push('فرصت (مشاهده): ' + esc(lv.opportunity));
+        if (lv.threat) lastVisitBits.push('تهدید (مشاهده): ' + esc(lv.threat));
+        if (Array.isArray(lv.tags) && lv.tags.length) lastVisitBits.push('برچسب: ' + esc(lv.tags.join('، ')));
+      }
+      const convText =
+        b.conversionRate != null
+          ? Math.round(b.conversionRate * 100) + '٪ (' + b.orderedCount + ' از ' + b.visitCount + ')'
+          : b.visitCount
+            ? '—'
+            : 'ویزیتی ثبت نشده';
+
+      behaviorHtml =
+        '<h3 class="sub-title">رفتار خرید و هوش تجاری</h3>' +
+        customerTrendChartHtml(c.id, ctx, b) +
+        behaviorGlanceHtml(b, focus.groups) +
+        intelligenceWatchHtml(c.id, ctx, watchData) +
+        '<details class="customer-behavior-details">' +
+        '<summary class="customer-behavior-summary">تحلیل رفتار خرید</summary>' +
+        summaryHtml +
+        '<div class="cards">' +
+        '<div class="card"><div class="label">اولین خرید</div><div class="value">' +
+        (b.firstInvoiceDate ? faDate(b.firstInvoiceDate) : '—') +
+        '</div></div>' +
+        '<div class="card"><div class="label">آخرین خرید</div><div class="value">' +
+        (b.lastInvoiceDate ? faDate(b.lastInvoiceDate) : '—') +
+        '</div></div>' +
+        '<div class="card"><div class="label">تعداد فاکتور</div><div class="value">' +
+        b.invoiceCount +
+        '</div></div>' +
+        '<div class="card"><div class="label">میانگین مبلغ فاکتور</div><div class="value">' +
+        (b.avgInvoice != null ? toman(b.avgInvoice) + ' ت' : '—') +
+        '</div></div>' +
+        '<div class="card"><div class="label">الگوی معمول خرید</div><div class="value">' +
+        esc(String(intervalText)) +
+        '</div></div>' +
+        '<div class="card"><div class="label">فاصله از آخرین خرید</div><div class="value">' +
+        esc(String(gapText)) +
+        '</div></div>' +
+        '<div class="card"><div class="label">خرید خالص ۳۰ روز</div><div class="value">' +
+        toman(b.sales30 || 0) +
+        ' ت</div></div>' +
+        '<div class="card"><div class="label">خرید خالص ۹۰ روز</div><div class="value">' +
+        toman(b.sales90 || 0) +
+        ' ت</div></div>' +
+        (b.returnTotal > 0
+          ? '<div class="card wide"><div class="label">جمع برگشت از فروش (کل سابقه)</div><div class="value">' +
+            toman(b.returnTotal) +
+            ' ت</div></div>'
+          : '') +
+        (trendLabel
+          ? '<div class="card wide"><div class="label">روند مبلغ (۳۰ روز اخیر نسبت به ۳۰ روز قبل)</div><div class="value ' +
+            trendCls +
+             '">' +
+            trendLabel +
+            '</div></div>'
+          : '<div class="card wide"><div class="label">روند مبلغ</div><div class="value">اطلاعات کافی نیست</div></div>') +
+        behindHtml +
+        '<div class="card"><div class="label">تعداد ویزیت</div><div class="value">' +
+        b.visitCount +
+        '</div></div>' +
+        '<div class="card"><div class="label">نرخ تبدیل ویزیت به سفارش</div><div class="value">' +
+        esc(String(convText)) +
+        '</div></div>' +
+        '</div>' +
+        '<div class="sub-title customer-detail-subtitle">کالاهای اصلی مشتری</div>' +
+        '<div class="customer-tx-list customer-top-products">' + topProdHtml + '</div>' +
+        (decliningHtml ? '<div class="sub-title customer-detail-subtitle customer-detail-subtitle-secondary">کالاهای با کاهش خرید (نسبت به نیمه اول سابقه)</div><div class="customer-tx-list customer-declining-products">' + decliningHtml + '</div>' : '') +
+        (lv
+          ? '<div class="card customer-last-visit-card">' +
+            '<div class="label">آخرین ویزیت — ' +
+            faDate(lv.date) +
+            (lv.time ? ' ' + esc(lv.time) : '') +
+            '</div>' +
+            '<div class="customer-last-visit-body">' +
+            lastVisitBits.join('<br>') +
+            '</div></div>'
+          : '<div class="empty customer-empty">ویزیتی ثبت نشده</div>') +
+        '</details>';
+    }
+
+    /* Presentation helper: one labelled row of the identity block (label muted, value primary). */
+    function cdMeta(label, value) {
+      return '<div class="cd-meta-row"><span class="cd-meta-k">' + label + '</span><span class="cd-meta-v" title="' + esc(String(value)) + '">' + esc(String(value)) + '</span></div>';
+    }
+
+    var recMatchesVisitDetail = !!(recommendedAction && (recommendedAction.actionType === 'visit' || recommendedAction.actionType === 'follow_up'));
+    var recMatchesPaymentDetail = !!(recommendedAction && recommendedAction.actionType === 'payment_followup');
+    // The recommendation is a one-line hint above the buttons (never a separate box); when it IS one of the
+    // three fixed actions that button is the single primary one, otherwise «ثبت فاکتور» stays primary.
+    var detailHintHtml = recommendedAction
+      ? '<div class="bp-qv-action-hint cd-action-hint"><span class="bp-qv-action-hint-label">پیشنهاد</span> ' + esc(recommendedAction.action) + '</div>'
+      : '';
+
+    // Primary action follows the recommendation (visit / payment); otherwise the usual «invoice».
+    function detailBtn(action, label, btnId) {
+      var primary;
+      if (recMatchesVisitDetail) primary = (action === 'visit');
+      else if (recMatchesPaymentDetail) primary = (action === 'payment');
+      else primary = (action === 'invoice');
+      return '<button type="button" class="btn ' + (primary ? '' : 'secondary') + '" id="' + btnId + '">' + label + '</button>';
+    }
+
+    // Seller decisions live at the bottom, collapsed: reviewing/cancelling is rare, never above the fold.
+    var ackHtmlRaw = (typeof ackListHtml === 'function' ? ackListHtml(c.id) : '');
+    var ackDetailsHtml = ackHtmlRaw
+      ? '<details class="cd-ack-details"><summary class="customer-behavior-summary">تصمیم‌های ثبت‌شده</summary>' + ackHtmlRaw + '</details>'
+      : '';
+
+    // History: collapsed, with the count in the summary.
+    var invoiceDetailsHtml = '<a class="cd-push-row" href="#/customer?id=' + encodeURIComponent(c.id) + '&section=invoices">' + '<span class="cd-push-label">فاکتورها</span>' + '<span class="cd-push-meta">' + invs.length + '</span>' + '<svg class="cd-push-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></a>' +
+    '<details class="cd-history-details" data-section="invoices" hidden>' +
+      '<summary class="customer-behavior-summary">فاکتورها (' + invs.length + ')</summary>' +
+      '<div class="customer-tx-list customer-invoice-list">' + invRows + '</div></details>';
+    var paymentDetailsHtml = '<a class="cd-push-row" href="#/customer?id=' + encodeURIComponent(c.id) + '&section=payments">' + '<span class="cd-push-label">پرداخت‌ها</span>' + '<span class="cd-push-meta">' + pays.length + '</span>' + '<svg class="cd-push-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></a>' +
+    '<details class="cd-history-details" data-section="payments" hidden>' +
+      '<summary class="customer-behavior-summary">پرداخت‌ها (' + pays.length + ')</summary>' +
+      '<div class="customer-tx-list customer-payment-list">' + payRows + '</div></details>';
+    var checkDetailsHtml = '<a class="cd-push-row" href="#/customer?id=' + encodeURIComponent(c.id) + '&section=checks">' + '<span class="cd-push-label">چک‌ها</span>' + '<span class="cd-push-meta">' + chks.length + '</span>' + '<svg class="cd-push-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></a>' +
+    '<details class="cd-history-details" data-section="checks" hidden>' +
+      '<summary class="customer-behavior-summary">چک‌ها (' + chks.length + ')</summary>' +
+      '<div class="customer-tx-list customer-check-list">' + chkRows + '</div></details>';
+    // Payment promise: ONE slot under the top alert (active promise card, or «ثبت وعدهٔ پرداخت» when there is debt).
+    // Commitments slot: payment promise + delivery promises (DeliveryUI composes both; PromiseUI alone as fallback).
+    var promiseCardHtml = (typeof VisitPlanUI !== 'undefined' ? VisitPlanUI.cardHtml(c.id) : '') +
+      ((typeof DeliveryUI !== 'undefined') ? DeliveryUI.slotHtml(c.id, t.balance)
+      : ((typeof PromiseUI !== 'undefined') ? PromiseUI.cardHtml(c.id, t.balance) : ''));
+    var promiseHistoryHtml = ((typeof PromiseUI !== 'undefined') ? PromiseUI.historyHtml(c.id) : '') +
+      ((typeof DeliveryUI !== 'undefined') ? DeliveryUI.historyHtml(c.id) : '');
+    var visitDetailsHtml = '<a class="cd-push-row" href="#/customer?id=' + encodeURIComponent(c.id) + '&section=visits">' + '<span class="cd-push-label">ویزیت‌ها و ارزیابی‌ها</span>' + '<span class="cd-push-meta">' + visits.length + '</span>' + '<svg class="cd-push-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></a>' +
+    '<details class="cd-history-details" data-section="visits" hidden>' +
+      '<summary class="customer-behavior-summary">ویزیت‌ها و ارزیابی‌ها (' + visits.length + ')</summary>' +
+      '<div class="btn-row" style="margin-bottom:8px;">' +
+        '<button type="button" class="btn small secondary" id="act-visit-section">ثبت ویزیت برای این مشتری</button>' +
+        '<a class="btn small secondary" href="#/visits">همه ویزیت‌ها</a>' +
+      '</div><div class="customer-tx-list customer-visit-list">' + visitRows + '</div></details>';
+
+    root.innerHTML =
+      '<div class="btn-row" style="margin-bottom:10px;">' +
+      '<a class="btn secondary small" href="' + customersHref() + '">← مشتریان</a></div>' +
+
+      '<div class="card customer-identity-card">' +
+        '<div class="customer-identity-name">' + esc(c.name) + '</div>' +
+        '<div class="customer-balance-block">' +
+          '<div class="label">مانده حساب</div>' +
+          '<div class="value ' + color + ' customer-balance-value">' + balanceLine + '</div>' +
+        '</div>' +
+        (legacyDebtRow && legacyDebtRow.amount > 0
+          ? '<div class="bp-customer-legacy-debt sub" style="margin:6px 0;">بدهی فاکتورهای قبلی: ' +
+              toman(legacyDebtRow.amount) + ' ت' +
+              (legacyDebtRow.oldestDate ? ' — قدیمی‌ترین: ' + faDate(legacyDebtRow.oldestDate) : '') +
+            '</div>'
+          : '') +
+        '<div class="bp-customer-health"><span class="bp-customer-health-label">وضعیت مشتری</span>' +
+          '<span class="bp-customer-health-value ' + (customerRiskLevel ? 'radar-risk-' + esc(customerRiskLevel) : '') + '">' +
+            esc(customerHealthLabel) +
+          '</span></div>' +
+        '<div class="customer-identity-meta">' +
+          (c.ownerName ? cdMeta('مسئول فروشگاه', c.ownerName) : '') +
+          (c.phone ? cdMeta('تلفن', c.phone) : '') +
+          (c.locationId
+            ? cdMeta('موقعیت', getLocationDisplayString(c.locationId))
+            : ((c.region ? cdMeta('منطقه', c.region) : '') +
+               (c.route ? cdMeta('مسیر', c.route) : ''))) +
+          (c.address ? cdMeta('آدرس', c.address) : '') +
+          (c.note ? cdMeta('یادداشت', c.note) : '') +
+        '</div>' +
+      '</div>' +
+
+      topAlertHtml +
+      promiseCardHtml +
+      storyHtml +
+
+      detailHintHtml +
+      '<div class="btn-row cust-actions-primary" style="margin-bottom:8px;">' +
+        detailBtn('invoice', 'ثبت فاکتور', 'act-invoice') +
+        detailBtn('payment', 'ثبت پرداخت', 'act-pay') +
+        detailBtn('visit', 'ثبت ویزیت', 'act-visit') +
+      '</div>' +
+      '<details class="bp-customer-secondary-actions"><summary>سایر عملیات</summary>' +
+        '<div class="btn-row cust-actions-secondary" style="margin-bottom:16px;">' +
+          '<button type="button" class="btn small secondary" id="act-check">ثبت چک</button>' +
+          '<button type="button" class="btn small secondary" id="act-edit">ویرایش مشتری</button>' +
+          '<button type="button" class="btn small secondary" id="act-location">اختصاص موقعیت</button>' +
+          '<button type="button" class="btn small secondary" id="act-print-statement">صورت‌حساب</button>' +
+          '<button type="button" class="btn small secondary" id="act-toggle-active">' + (c.active === false ? 'فعال‌سازی مشتری' : 'غیرفعال‌سازی مشتری') + '</button>' +
+        '</div>' +
+      '</details>' +
+
+      '<h3 class="sub-title">خلاصه مالی</h3>' +
+      '<div class="cards cust-metrics">' +
+        '<div class="cd-metric-cell"><div class="label">مجموع خرید</div><div class="value">' + toman(t.invTotal) + ' ت</div></div>' +
+        '<div class="cd-metric-cell"><div class="label">مجموع پرداخت‌ها</div><div class="value">' + toman(t.payTotal) + ' ت</div></div>' +
+        '<div class="cd-metric-cell"><div class="label">مجموع چک‌ها</div><div class="value">' + toman(t.checkTotal) + ' ت</div></div>' +
+        '<div class="cd-metric-cell"><div class="label">مانده اولیه</div><div class="value">' + toman(t.openingBalance) + ' ت</div></div>' +
+        '<div class="cd-metric-cell"><div class="label">تعداد فاکتور</div><div class="value">' + invs.length + '</div></div>' +
+        '<div class="cd-metric-cell"><div class="label">سود مشتری</div><div class="value">' + toman(profit) + ' ت</div></div>' +
+      '</div>' +
+
+      focus.html +
+      followUpTopHtml +
+      behaviorHtml +
+      productRejectionInsightsHtml(c.id, ctx) +
+      ackDetailsHtml +
+      invoiceDetailsHtml +
+      paymentDetailsHtml +
+      checkDetailsHtml +
+      promiseHistoryHtml +
+      visitDetailsHtml;
+
+    if (typeof PromiseUI !== 'undefined') PromiseUI.bind(root, c.id);
+    if (typeof DeliveryUI !== 'undefined') DeliveryUI.bind(root, c.id);
+    if (typeof VisitPlanUI !== 'undefined') VisitPlanUI.bind(root, c.id);
+
+    document.getElementById('act-invoice').onclick = function () {
+      openAddInvoice(c.id);
+    };
+    if (typeof bindAckReverse === 'function') bindAckReverse(root, function () { if (typeof render === 'function') render(); });
+    document.getElementById('act-pay').onclick = function () {
+      openAddTransaction(c.id);
+    };
+    document.getElementById('act-visit').onclick = function () {
+      openAddVisit(c.id);
+    };
+    const visitSecBtn = document.getElementById('act-visit-section');
+    if (visitSecBtn)
+      visitSecBtn.onclick = function () {
+        openAddVisit(c.id);
+      };
+    document.getElementById('act-check').onclick = function () {
+      openAddCheck(c.id);
+    };
+    document.getElementById('act-edit').onclick = function () {
+      openAddCustomer(c.id);
+    };
+    document.getElementById('act-location').onclick = function () {
+      openLocationAssignSheet({
+        title: 'اختصاص موقعیت — ' + c.name,
+        currentLocationId: c.locationId || null,
+        onSave: async function (locationId) {
+          await setCustomerLocation(c.id, locationId);
+          showToast('موقعیت ذخیره شد');
+          render();
+        },
+      });
+    };
+    const printBtn = document.getElementById('act-print-statement');
+    if (printBtn) {
+      printBtn.onclick = function () {
+        if (typeof printCustomerStatement === 'function') printCustomerStatement(c.id);
+      };
+    }
+    const toggleActiveBtn = document.getElementById('act-toggle-active');
+    if (toggleActiveBtn) {
+      toggleActiveBtn.onclick = async function (ev) {
+        await withSubmitGuard(ev.currentTarget, async () => {
+          const willDeactivate = c.active !== false;
+          const msg = willDeactivate
+            ? 'این مشتری غیرفعال شود؟ اطلاعات، فاکتورها، پرداخت‌ها، چک‌ها و سوابق او حذف نخواهد شد.'
+            : 'مشتری «' + c.name + '» دوباره فعال شود؟';
+          if (!(await appConfirm(msg))) throw new Error('validation');
+          c.active = (c.active === false) ? true : false;
+          await saveData();
+          drawCustomerPage(rootEl || root);
+          showToast(c.active === false ? 'مشتری غیرفعال شد' : 'مشتری فعال شد');
+        });
+      };
+    }
+    bindWatchLifecycleRows(root);
+    bindWatchFollowUps(root, id);
+  }
+
+
+  /* ======================================================================
+     Quick View = «خلاصهٔ پیش از ویزیت» (pre-visit scan).
+     Presentation-only. Reads existing Truth; no new financial/intelligence logic.
+     Reused (not rewritten): customerBehavior / customerInvoices / customerChecks /
+     loadWatchData / BagheriPresent.{lastPurchaseMap,lastOfferMap,relDays,n0,stockShort,reasonLabel}
+     / ctx.customerById / ctx.productById / fifoAvailableQty / _behaviorDaysDiff / todayISO.
+     Every base datum is read ONCE in collectVisitSummaryInputs and passed down as `precomputed`.
+     ====================================================================== */
+  var QV_TIMING_NEAR_RATIO = 0.7;          // days since last purchase / usual interval: below → «هنوز زود است»
+  var QV_TIMING_DUE_RATIO = 1;             // at/after this → «موعد احتمالی رسیده»
+  var QV_TIMING_MIN_PURCHASE_DAYS = 3;     // distinct purchase days needed for a non-noisy estimate
+  var QV_MAX_PRODUCTS = 2;
+  var QV_CHECK_DUE_SOON_DAYS = 3;
+  var QV_HINT_HIDDEN_ACTION_TYPES = ['visit', 'follow_up', 'payment_followup', 'invoice']; // already = a main button
+
+  function qvSafe(fn, fallback) { try { return fn(); } catch (e) { return fallback; } }
+
+  /* The one place that reads shared inputs (each exactly once). */
+  function collectVisitSummaryInputs(cid, ctx) {
+    var P = global.BagheriPresent || {};
+    var hasCtx = !!(ctx && typeof ctx.customerById === 'function');
+    var customer = hasCtx
+      ? ctx.customerById(cid)
+      : (data.customers || []).find(function (x) { return x && x.id === cid; }) || null;
+    if (!customer) return null;
+    // ctx.productById is already an indexed/memoised lookup; only without a ctx do we build ONE Map.
+    var productById;
+    if (ctx && typeof ctx.productById === 'function') {
+      productById = function (pid) { return ctx.productById(pid); };
+    } else {
+      var productMap = new Map((data.products || []).map(function (p) { return [p.id, p]; }));
+      productById = function (pid) { return productMap.get(pid) || null; };
+    }
+    var lastPurchaseMap = (typeof P.lastPurchaseMap === 'function' ? P.lastPurchaseMap(cid) : null) || {};
+    // Same inputs the visit form feeds productPurchaseCycle: {buys, metrics}. Metrics are ctx-memoised.
+    var skuMetrics = [];
+    try { if (typeof _extractSkuRawMetrics === 'function') skuMetrics = _extractSkuRawMetrics(cid, ctx) || []; } catch (eM) { skuMetrics = []; }
+    var cycleInput = { buys: lastPurchaseMap, metrics: skuMetrics };
+    var cycleCache = new Map();
+    return {
+      ctx: ctx,
+      customer: customer,
+      // Per-product cycle (BagheriPresent.productPurchaseCycle = same helper as the visit form), computed once per pid.
+      // null = helper unavailable → callers show nothing (no invented due dates).
+      cycleOf: function (pid) {
+        if (!cycleCache.has(pid)) {
+          cycleCache.set(pid, typeof P.productPurchaseCycle === 'function'
+            ? qvSafe(function () { return P.productPurchaseCycle(cid, pid, cycleInput); }, null)
+            : null);
+        }
+        return cycleCache.get(pid);
+      },
+      behavior: customerBehavior(cid, ctx) || {},
+      invoices: customerInvoices(cid, ctx) || [],
+      checks: customerChecks(cid, ctx) || [],
+      watchData: loadWatchData(cid, ctx),
+      productById: productById,
+      lastPurchaseMap: lastPurchaseMap,
+      lastOfferMap: (typeof P.lastOfferMap === 'function' ? P.lastOfferMap(cid, customer) : null) || {},
+      today: todayISO()
+    };
+  }
+
+  /* ---- shared helpers (each has one job) ---- */
+  function qvDaysUntil(pre, iso) {            // + = future, 0 = today, − = past, null = unknown
+    return iso ? _behaviorDaysDiff(pre.today, String(iso).slice(0, 10)) : null;
+  }
+  // Sellable stock = what the sale gate (validateSaleAvailability) allows: BOTH stockQty and open FIFO layers.
+  // null/undefined stockQty = UNKNOWN (returns null), never zero.
+  function getSellableStock(product) {
+    if (!product || product.stockQty == null) return null;
+    var s = Number(product.stockQty);
+    if (!isFinite(s)) return null;
+    if (typeof fifoAvailableQty === 'function') s = Math.min(s, fifoAvailableQty(product.id));
+    return s;
+  }
+  function isOfferableProduct(product) {      // active AND (unknown stock OR stock > 0)
+    if (!product || product.active === false) return false;
+    var s = getSellableStock(product);
+    return s === null || s > 0;
+  }
+  function getRejectionText(reason, stockSource) {
+    var P = global.BagheriPresent || {};
+    if (reason === 'still_stock') {
+      var src = typeof P.stockShort === 'function' ? P.stockShort(stockSource) : '';
+      return src ? 'گفت ' + src : 'گفت هنوز موجودی دارد';
+    }
+    var label = typeof P.reasonLabel === 'function' ? P.reasonLabel(reason) : '';
+    return 'رد کرد' + (label ? ' — ' + label : '');
+  }
+
+  /* ---- the five outputs ---- */
+  function getLatestPurchase(pre) {
+    // «معتبر» = same rule customerBehavior uses for purchase days: dated invoice with total > 0.
+    var best = null;
+    pre.invoices.forEach(function (inv) {
+      if (!inv || !(inv.total > 0) || !parseISODateParts(inv.date)) return;
+      var d = String(inv.date).slice(0, 10);
+      var newer = !best || d > best.date ||
+        (d === best.date && String(inv.number || '').localeCompare(String(best.invoiceNumber || '')) > 0);
+      if (newer) best = { date: d, amount: inv.total, invoiceNumber: inv.number || null };
+    });
+    if (!best) return null;
+    var ds = _behaviorDaysDiff(best.date, pre.today);
+    best.daysSince = (ds != null && ds >= 0) ? ds : null;
+    return best;
+  }
+
+  function getPurchaseTiming(pre, lastPurchase) {
+    var P = global.BagheriPresent || {};
+    var b = pre.behavior;
+    if (!lastPurchase) return { state: 'none', text: 'خریدی ثبت نشده' };
+    var avg = b.avgDistinctIntervalDays;   // same-day invoices = ONE purchase (limited-history guard in calc.js)
+    var days = lastPurchase.daysSince;
+    if (!(b.purchaseDayCount >= QV_TIMING_MIN_PURCHASE_DAYS) || !(avg > 0) || days == null) {
+      return { state: 'insufficient', text: 'سابقهٔ کافی برای برآورد زمان خرید نداریم' };
+    }
+    var n = typeof P.n0 === 'function' ? P.n0(avg) : String(Math.round(avg));
+    if (days < avg * QV_TIMING_NEAR_RATIO) {
+      return { state: 'early', text: 'معمولاً حدود هر ' + n + ' روز خرید می‌کند؛ هنوز زود است' };
+    }
+    if (days < avg * QV_TIMING_DUE_RATIO) {
+      return { state: 'near', text: 'نزدیک زمان معمول خرید است (حدود هر ' + n + ' روز)' };
+    }
+    return { state: 'due', text: 'موعد احتمالی خرید رسیده است' };
+  }
+
+  function getPriorityAlert(pre) {
+    var P = global.BagheriPresent || {};
+    var fa = typeof P.n0 === 'function' ? P.n0 : function (v) { return String(v); };
+    var sumAmt = function (list) { return list.reduce(function (s, c) { return s + (Number(c.amount) || 0); }, 0); };
+    var amtText = function (list) { var t = sumAmt(list); return t > 0 ? ' — ' + toman(t) + ' ت' : ''; };
+
+    // 1) active bounced check (watchData = ACK-aware, exactly what Quick View used before)
+    var bouncedActive = (pre.watchData.activeConfirmed || []).some(function (s) { return s && s.category === 'CHECK_BOUNCED'; });
+    if (bouncedActive) {
+      var bounced = pre.checks.filter(function (c) { return c && c.status === 'bounced'; });
+      return { level: 'danger', kind: 'bounced_check',
+        text: 'چک برگشتی فعال' + (bounced.length > 1 ? ' (' + fa(bounced.length) + ' چک)' : '') + amtText(bounced) };
+    }
+    // 2) overdue, uncollected (same rule as PAYMENT_OVERDUE: pending + dueDate < today)
+    var pending = pre.checks.filter(function (c) { return c && c.status === 'pending' && qvDaysUntil(pre, c.dueDate) !== null; });
+    var overdue = pending.filter(function (c) { return qvDaysUntil(pre, c.dueDate) < 0; });
+    if (overdue.length) {
+      return { level: 'warning', kind: 'overdue_check',
+        text: fa(overdue.length) + ' چک سررسیدگذشته و وصول‌نشده' + amtText(overdue) };
+    }
+    // 3) due within 0..3 days
+    var soon = pending.filter(function (c) { var d = qvDaysUntil(pre, c.dueDate); return d >= 0 && d <= QV_CHECK_DUE_SOON_DAYS; });
+    if (soon.length) {
+      var nearest = Math.min.apply(null, soon.map(function (c) { return qvDaysUntil(pre, c.dueDate); }));
+      return { level: 'warning', kind: 'due_soon_check',
+        text: 'چک با سررسید ' + (nearest === 0 ? 'امروز' : fa(nearest) + ' روز دیگر') +
+          (soon.length > 1 ? ' (' + fa(soon.length) + ' چک)' : '') + amtText(soon) };
+    }
+    return null;
+  }
+
+  function getProductsToCheck(pre) {
+    var P = global.BagheriPresent || {};
+    var rel = typeof P.relDays === 'function' ? P.relDays : function () { return ''; };
+    var rows = [];
+    Object.keys(pre.lastOfferMap).forEach(function (pid) {
+      var of = pre.lastOfferMap[pid];                      // lastOfferMap = ONLY the latest reaction per product
+      if (!of || (of.reaction !== 'rejected' && of.reaction !== 'deferred')) return;   // accepted → not here
+      var product = pre.productById(pid);
+      if (!isOfferableProduct(product)) return;
+      var bought = pre.lastPurchaseMap[pid];
+      // Resolved only when the purchase is strictly AFTER the reaction day. Same-day order is unknown
+      // (invoices carry no time), so it stays listed — we do not claim it was resolved.
+      if (bought && String(bought).slice(0, 10) > String(of.date || '').slice(0, 10)) return;
+      var when = rel(of.date);
+      var cy = pre.cycleOf(pid);
+      var detail = (when ? when + ' ' : '') + (of.reaction === 'deferred' ? 'گفت بعداً تصمیم می‌گیرد' : getRejectionText(of.reason, of.stockSource));
+      rows.push({
+        productId: pid,
+        name: product.name || '',
+        kind: of.reaction,                                  // 'rejected' | 'deferred' (never merged)
+        // relevance to THIS visit: product's own cycle is due/overdue → first; then recency
+        relevance: (cy && (cy.state === 'due_today' || cy.state === 'overdue')) ? 0 : 1,
+        sortKey: of.key || '',
+        detail: detail,
+        text: (product.name || '') + ' — ' + detail
+      });
+    });
+    rows.sort(function (a, b) {
+      if (a.relevance !== b.relevance) return a.relevance - b.relevance;
+      return a.sortKey < b.sortKey ? 1 : (a.sortKey > b.sortKey ? -1 : 0);
+    });
+    // NOT capped here: eligibility is decided for every product; the display cap is applied by the caller.
+    return rows.map(function (r) { return { productId: r.productId, name: r.name, kind: r.kind, detail: r.detail, text: r.text }; });
+  }
+
+  // «پیشنهاد محتمل» = the purchase cycle (productPurchaseCycle, same helper as the visit form) is due today or overdue.
+  // For a grouped product (analysisGroupId) cycle, count and last date are the GROUP's, so the due date belongs to the
+  // group: at most ONE suggestion per group. Rejections are per product (never spread to siblings); the representative
+  // is the first eligible member: aggregation's representative SKU (most recent purchase event), then latest own purchase.
+  // Candidates = every product the customer bought; not due / unknown / thin history → not suggested; slots never padded.
+  function getSuggestedProducts(pre, excludePids) {
+    var P = global.BagheriPresent || {};
+    var rel = typeof P.relDays === 'function' ? P.relDays : function () { return ''; };
+    var n0 = typeof P.n0 === 'function' ? P.n0 : function (v) { return String(v); };
+    var skip = Object.create(null);
+    (excludePids || []).forEach(function (pid) { skip[pid] = true; });
+    var rows = [];
+    Object.keys(pre.lastPurchaseMap).forEach(function (pid) {
+      if (skip[pid]) return;
+      var product = pre.productById(pid);
+      if (!isOfferableProduct(product)) return;
+      var cy = pre.cycleOf(pid);
+      if (!cy || (cy.state !== 'due_today' && cy.state !== 'overdue')) return;
+      var when = rel(pre.lastPurchaseMap[pid]);
+      var grouped = !!cy.familyLevel;
+      rows.push({
+        productId: pid,
+        name: product.name || '',
+        groupKey: grouped && cy.familyId != null ? 'g:' + cy.familyId : 'p:' + pid,
+        isRepresentative: cy.representativeProductId === pid ? 1 : 0,
+        skuLastDate: String(pre.lastPurchaseMap[pid] || ''),
+        behind: cy.typicalCycle > 0 ? cy.daysOverdue / cy.typicalCycle : 0,   // lateness relative to its OWN cycle
+        purchaseCount: cy.purchaseCount || 0,                                   // history quality: tie-breaker only
+        daysOverdue: cy.daysOverdue || 0,
+        reasonText: grouped
+          ? 'موعد گروه تحلیلی این محصول: ' + (cy.state === 'overdue' ? 'حدود ' + n0(cy.daysOverdue) + ' روز از موعد معمول گذشته' : 'امروز موعد معمول است')
+          : (cy.state === 'overdue' ? 'حدود ' + n0(cy.daysOverdue) + ' روز از موعد معمول خرید گذشته' : 'امروز موعد معمول خرید است'),
+        lastPurchaseText: when ? (grouped ? 'آخرین خرید همین محصول: ' : 'آخرین خرید: ') + when : ''
+      });
+    });
+    rows.sort(function (a, b) {
+      return (b.behind - a.behind) || (b.purchaseCount - a.purchaseCount) || (b.daysOverdue - a.daysOverdue) ||
+        (b.isRepresentative - a.isRepresentative) || (a.skuLastDate < b.skuLastDate ? 1 : (a.skuLastDate > b.skuLastDate ? -1 : 0)) ||
+        String(a.name).localeCompare(String(b.name));
+    });
+    var seen = Object.create(null), out = [];
+    for (var i = 0; i < rows.length && out.length < QV_MAX_PRODUCTS; i++) {
+      if (seen[rows[i].groupKey]) continue;     // one suggestion per group
+      seen[rows[i].groupKey] = true;
+      out.push({ productId: rows[i].productId, name: rows[i].name, reasonText: rows[i].reasonText, lastPurchaseText: rows[i].lastPurchaseText });
+    }
+    return out;
+  }
+
+  function buildCustomerVisitSummary(cid, ctx, precomputed) {
+    var summary = { lastPurchase: null, purchaseTiming: null, priorityAlert: null, suggestedProducts: [], productsToCheck: [] };
+    var pre = precomputed || qvSafe(function () { return collectVisitSummaryInputs(cid, ctx); }, null);
+    if (!pre) return summary;
+    summary.lastPurchase = qvSafe(function () { return getLatestPurchase(pre); }, null);
+    summary.purchaseTiming = qvSafe(function () { return getPurchaseTiming(pre, summary.lastPurchase); }, null);
+    summary.priorityAlert = qvSafe(function () { return getPriorityAlert(pre); }, null);
+    var allToCheck = qvSafe(function () { return getProductsToCheck(pre); }, []);
+    // A product lives in ONE list: every unresolved rejection/deferral (not just the 2 displayed) is kept out of «پیشنهاد».
+    var checkIds = allToCheck.map(function (p) { return p.productId; });
+    summary.productsToCheck = allToCheck.slice(0, QV_MAX_PRODUCTS);   // display cap only; eligibility above used ALL
+    summary.suggestedProducts = qvSafe(function () { return getSuggestedProducts(pre, checkIds); }, []);
+    return summary;
+  }
+
+  /* ---- rendering (grouped boxes; tokens/rules in visual-grammar-pages.css) ---- */
+  function qvPurchaseHtml(s) {
+    var P = global.BagheriPresent || {};
+    var lp = s.lastPurchase, t = s.purchaseTiming;
+    if (!lp && !(t && t.state === 'none')) return '';
+    var rel = lp && typeof P.relDays === 'function' ? P.relDays(lp.date) : '';
+    var main = lp ? '<div class="bp-qv-main">' + (rel ? esc(rel) + ' · ' : '') + toman(lp.amount) + ' ت</div>' : '';
+    var sub = lp
+      ? '<div class="bp-qv-sub">' + esc(faDate(lp.date)) + (lp.invoiceNumber ? ' · فاکتور ' + esc(lp.invoiceNumber) : '') + '</div>'
+      : '';
+    var timing = t ? '<div class="bp-qv-timing is-' + esc(t.state) + '">' + esc(t.text) + '</div>' : '';
+    return '<section class="bp-qv-group"><div class="bp-qv-section-label">آخرین خرید</div>' + main + sub + timing + '</section>';
+  }
+  function qvProductsHtml(s) {
+    var out = '';
+    if (s.suggestedProducts.length) {
+      out += '<section class="bp-qv-section"><div class="bp-qv-section-label">پیشنهاد محتمل</div>' + s.suggestedProducts.map(function (p) {
+        return '<div class="bp-qv-item"><div class="bp-qv-item-name">' + esc(p.name) + '</div>' +
+          '<div class="bp-qv-item-sub">' + esc(p.reasonText) + (p.lastPurchaseText ? ' · ' + esc(p.lastPurchaseText) : '') + '</div></div>';
+      }).join('') + '</section>';
+    }
+    if (s.productsToCheck.length) {
+      out += '<section class="bp-qv-section"><div class="bp-qv-section-label">قبل از پیشنهاد بررسی کن</div>' + s.productsToCheck.map(function (p) {
+        return '<div class="bp-qv-item is-check is-' + esc(p.kind) + '"><div class="bp-qv-item-name">' + esc(p.name) +
+          (p.kind === 'deferred' ? '<span class="bp-qv-tag">پیگیری پیشنهاد قبلی</span>' : '') + '</div>' +
+          '<div class="bp-qv-item-sub">' + esc(p.detail) + '</div></div>';
+      }).join('') + '</section>';
+    }
+    return out;
+  }
+
+  /* Central quick view for the Customers list. Presentation-only: it reuses
+     the frozen Priority/Watch/Balance outputs and existing action APIs. */
+  function openCustomerQuickView(cid) {
+    var ctx = typeof createComputationContext === 'function'
+      ? createComputationContext({ data: data })
+      : { aggregatePairMapCache: Object.create(null) };
+    var priority = null;
+    try { priority = typeof calculateCustomerPriority === 'function' ? calculateCustomerPriority(cid, { ctx: ctx }) : null; } catch (e) { priority = null; }
+    var pre = collectVisitSummaryInputs(cid, ctx);   // customer + behavior + invoices + checks + watchData: ONE read
+    if (!pre) return;
+    var c = pre.customer;
+    var summary = buildCustomerVisitSummary(cid, ctx, pre);
+    var totals = customerTotals(cid, ctx) || { balance: 0 };
+    var story = priority && priority.customerStory && priority.customerStory.summary ? priority.customerStory.summary : '';
+    var riskLevel = priority ? priority.riskLevel : null;
+    var health = (typeof getRiskBadge === 'function' ? getRiskBadge(riskLevel).label : '') || 'وضعیت عادی';
+
+    // Recommended action (same calculateCustomerAction the Detail page and Dashboard queue use).
+    // Signature: calculateCustomerAction(cid, precomputedPriority, { ctx }).
+    var recommendedAction = null;
+    try {
+      if (typeof calculateCustomerAction === 'function') {
+        var qa = calculateCustomerAction(cid, priority, { ctx: ctx });
+        recommendedAction = (qa && qa.actionType !== 'no_action' && qa.action) ? qa : null;
+      }
+    } catch (eAct) { recommendedAction = null; }
+
+    // When the recommendation IS "register a visit" / "register a payment", the matching fixed button
+    // becomes the primary one (no duplicate button, no hint). Only other actions get a one-line hint.
+    var recMatchesVisit = !!(recommendedAction && (recommendedAction.actionType === 'visit' || recommendedAction.actionType === 'follow_up'));
+    var recMatchesPayment = !!(recommendedAction && recommendedAction.actionType === 'payment_followup');
+    var recommendedHintHtml = (recommendedAction && QV_HINT_HIDDEN_ACTION_TYPES.indexOf(recommendedAction.actionType) < 0)
+      ? '<div class="bp-qv-action-hint"><span class="bp-qv-action-hint-label">پیشنهاد</span> ' + esc(recommendedAction.action) + '</div>'
+      : '';
+
+    var showStory = !!story;   // shown whenever it exists; CSS clamps it to 2 lines
+
+    var alertHtml = summary.priorityAlert
+      ? '<div class="bp-qv-alert is-' + esc(summary.priorityAlert.level) + '" role="alert">' + esc(summary.priorityAlert.text) + '</div>'
+      : '';
+
+    function qvBtn(action, label) {
+      var primary;
+      if (recMatchesVisit) primary = (action === 'visit');
+      else if (recMatchesPayment) primary = (action === 'payment');
+      else primary = (action === 'visit');
+      return '<button type="button" class="btn ' + (primary ? 'primary' : 'secondary') + '" data-action="' + action + '">' + label + '</button>';
+    }
+
+    var overlay = document.createElement('div');
+    overlay.className = 'bp-qv-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.innerHTML =
+      '<div class="bp-qv-card" role="document">' +
+        '<button type="button" class="bp-qv-close" aria-label="بستن">×</button>' +
+        '<div class="bp-qv-head">' +
+          '<div class="bp-qv-name">' + esc(c.name || 'مشتری') + '</div>' +
+          ((c.ownerName || c.phone) ? '<div class="bp-qv-meta">' + [c.ownerName, c.phone].filter(Boolean).map(esc).join(' · ') + '</div>' : '') +
+          '<div class="bp-qv-status">' +
+            '<div class="bp-qv-balance is-prominent ' + (totals.balance > 0 ? 'is-debt' : '') + '">' +
+              '<span class="bp-qv-balance-label">' + esc(balanceStatusWord(totals.balance)) + '</span>' +
+              (totals.balance !== 0 ? '<span class="bp-qv-balance-amount">' + toman(Math.abs(totals.balance)) + ' ت</span>' : '') +
+            '</div>' +
+            '<div class="bp-qv-health radar-risk-' + esc(riskLevel || 'normal') + '">' + esc(health) + '</div>' +
+          '</div>' +
+        '</div>' +
+        alertHtml +
+        qvPurchaseHtml(summary) +
+        qvProductsHtml(summary) +
+        (showStory ? '<div class="bp-qv-story"><div class="bp-qv-section-label">خلاصه وضعیت</div><div class="bp-qv-story-text">' + esc(story) + '</div></div>' : '') +
+        recommendedHintHtml +
+        '<div class="bp-qv-footer">' +
+          '<div class="bp-qv-actions">' +
+            qvBtn('visit', 'ثبت ویزیت') +
+            qvBtn('invoice', 'ثبت فاکتور') +
+            qvBtn('payment', 'ثبت پرداخت') +
+          '</div>' +
+          '<button type="button" class="bp-qv-full">جزئیات بیشتر ›</button>' +
+        '</div>' +
+      '</div>';
+    var modalRoot = document.getElementById('modalRoot');
+    if (!modalRoot) return;
+    modalRoot.innerHTML = '';
+    modalRoot.appendChild(overlay);
+    try { document.body.classList.add('modal-open'); } catch(_e) {}
+
+    var card = overlay.querySelector('.bp-qv-card');
+    var previousFocus = document.activeElement;
+    var closed = false;
+    function close() {
+      if (closed) return;
+      closed = true;
+      overlay.classList.add('is-closing');
+      setTimeout(function () {
+        try { document.body.classList.remove('modal-open'); } catch(_e) {}
+        if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+        if (previousFocus && typeof previousFocus.focus === 'function') previousFocus.focus();
+      }, 180);
+      document.removeEventListener('keydown', onKeydown);
+    }
+    function onKeydown(e) { if (e.key === 'Escape') { e.preventDefault(); close(); } }
+    overlay.addEventListener('click', function (e) {
+      if (e.target === overlay || e.target.closest('.bp-qv-close')) { e.preventDefault(); close(); return; }
+      var action = e.target.closest('[data-action]');
+      if (action) {
+        e.preventDefault();
+        var type = action.getAttribute('data-action');
+        close();
+        setTimeout(function () {
+          if (type === 'visit' && typeof openAddVisit === 'function') openAddVisit(cid);
+          else if (type === 'invoice' && typeof openAddInvoice === 'function') openAddInvoice(cid);
+          else if (type === 'payment' && typeof openAddTransaction === 'function') openAddTransaction(cid);
+        }, 185);
+        return;
+      }
+      if (e.target.closest('.bp-qv-full') || e.target.closest('.bp-topic')) {
+        e.preventDefault();
+        close();
+        setTimeout(function () { if (typeof AppRouter !== 'undefined' && AppRouter.navigate) AppRouter.navigate('/customer', { id: cid }); }, 185);
+      }
+    });
+    document.addEventListener('keydown', onKeydown);
+    requestAnimationFrame(function () { overlay.classList.add('is-open'); });
+    var closeBtn = overlay.querySelector('.bp-qv-close');
+    if (closeBtn) closeBtn.focus();
+
+    // Lightweight downward swipe-to-close; no document-level gesture handling.
+    var startY = null;
+    if (card) {
+      // Only a swipe that starts AND ends with the content at the top may close; scrolling back up must not.
+      card.addEventListener('touchstart', function (e) { startY = (e.touches && e.touches[0] && card.scrollTop <= 0) ? e.touches[0].clientY : null; }, { passive: true });
+      card.addEventListener('touchend', function (e) {
+        if (startY == null || !e.changedTouches || !e.changedTouches[0]) return;
+        if (card.scrollTop <= 0 && e.changedTouches[0].clientY - startY > 70) close();
+        startY = null;
+      }, { passive: true });
+    }
+  }
+
+
+  /* Push sub-page: /customer?id=…&section=invoices|payments|checks|visits.
+     Reuses the already-rendered section list (moved, not re-rendered) so every
+     bound handler keeps working. The delegated handlers live on #main, which
+     stays the same element. */
+  var PUSH_SECTION_LABELS = { invoices: 'فاکتورها', payments: 'پرداخت‌ها', checks: 'چک‌ها', visits: 'ویزیت‌ها و ارزیابی‌ها' };
+  function applyPushSection(root) {
+    if (!root || !currentSection) return;
+    var det = root.querySelector('details[data-section="' + currentSection + '"]');
+    if (!det) return;
+    var page = document.createElement('div');
+    page.className = 'cd-push-page';
+    var ctxName = '';
+    try { var cust = (data.customers || []).find(function (x) { return String(x.id) === String(currentCustomerId); }); ctxName = cust ? cust.name : ''; } catch (_e) {}
+    if (ctxName) {
+      var ctx = document.createElement('div');
+      ctx.className = 'cd-push-context';
+      ctx.textContent = 'مشتری: ' + ctxName;
+      page.appendChild(ctx);
+    }
+    var kids = Array.prototype.slice.call(det.childNodes);
+    kids.forEach(function (n) { if (!(n.nodeName === 'SUMMARY')) page.appendChild(n); });
+    root.innerHTML = '';
+    root.appendChild(page);
+    /* Tap a row to expand clamped detail text (push sub-page only). */
+    page.addEventListener('click', function (e) {
+      var row = e.target && e.target.closest ? e.target.closest('.ledger-row') : null;
+      if (!row || row.tagName === 'A') return;
+      row.classList.toggle('is-open');
+    });
+    if (typeof setHeaderTitle === 'function') setHeaderTitle(PUSH_SECTION_LABELS[currentSection] || '', {});
+  }
+
+  function mount(root, params) {
+    let refreshToken = null;
+    if (!root) return function () {};
+    rootEl = root;
+
+    const nav = document.getElementById('nav');
+    if (nav) nav.style.display = '';
+
+    currentCustomerId = params && params.id ? params.id : null;
+    currentSection = params && params.section ? String(params.section) : null;
+    function refreshCustomer() {
+      // Per-cycle, RAM-only Context: shared only so that reconcileWatchLifecycle's
+      // Watch-observation pass and the subsequent Priority/Signals pass (both of
+      // which independently derive the same per-customer SKU aggregation) don't
+      // recompute _aggregatePairMap twice for the same data snapshot. Discarded
+      // after this refreshCustomer() call; never persisted, never reused elsewhere.
+      var ctx = typeof createComputationContext === 'function'
+        ? createComputationContext({ data: data })
+        : { aggregatePairMapCache: Object.create(null) };
+      function paint() { drawCustomerPage(rootEl || root, ctx); applyPushSection(rootEl || root); }
+      // Paint immediately so the page is never blank if lifecycle reconcile hangs.
+      paint();
+      if (typeof reconcileWatchLifecycle === 'function' && currentCustomerId) {
+        reconcileWatchLifecycle(currentCustomerId, ctx).then(paint).catch(function () { paint(); });
+      }
+    }
+    refreshCustomer();
+    refreshToken = ViewHost.setRefresh(refreshCustomer);
+
+    return function unmount() {
+      ViewHost.clearRefresh(refreshToken);
+      refreshToken = null;
+      currentCustomerId = null;
+      currentSection = null;
+      root.classList.remove('customer-detail-view'); // UPDATED: Added for CSS scoping cleanup
+      root.innerHTML = '';
+      rootEl = null;
+    };
+  }
+
+  global.CustomerView = { mount: mount, unmount: function () {} };
+  global.openCustomerQuickView = openCustomerQuickView;
+  global.buildCustomerVisitSummary = buildCustomerVisitSummary;
+  // Test / settings seams for Product Rejection Insight (UI-only)
+  global.getProductRejectionThreshold = getProductRejectionThreshold;
+  global.setProductRejectionThreshold = setProductRejectionThreshold;
+  global.buildProductRejectionInsights = buildProductRejectionInsights;
+
+})(typeof window !== 'undefined' ? window : this);
