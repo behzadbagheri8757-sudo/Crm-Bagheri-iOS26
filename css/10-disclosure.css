@@ -213,3 +213,22 @@ html[data-theme="dark"]{ --disc-sep: rgba(255,255,255,.14); }
   font-weight:500;
   color:var(--vg-color-text-muted);
 }
+
+/* ==========================================================================
+   Visits push list: long recommendation text is clamped to two lines per
+   detail (iOS secondary-text behaviour). Nothing is hidden: tapping the row
+   toggles .is-open to show the full text.
+   ========================================================================== */
+#main.customer-detail-view .cd-push-page .customer-visit-row-detail{
+  display:block;
+  max-height:2.7em;          /* two lines at the .sub line-height (1.35) */
+  overflow:hidden;
+  margin-top:2px;
+}
+#main.customer-detail-view .cd-push-page .ledger-row.is-open .customer-visit-row-detail{
+  max-height:none;
+  overflow:visible;
+}
+#main.customer-detail-view .cd-push-page .ledger-row:not(a){ cursor:pointer; }
+/* Action buttons above the list sit clear of the card. */
+#main.customer-detail-view .cd-push-page > .btn-row{ margin-bottom:14px; }
