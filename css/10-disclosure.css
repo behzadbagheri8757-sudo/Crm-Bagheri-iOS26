@@ -232,3 +232,53 @@ html[data-theme="dark"]{ --disc-sep: rgba(255,255,255,.14); }
 #main.customer-detail-view .cd-push-page .ledger-row:not(a){ cursor:pointer; }
 /* Action buttons above the list sit clear of the card. */
 #main.customer-detail-view .cd-push-page > .btn-row{ margin-bottom:14px; }
+
+/* ==========================================================================
+   Behavior push page: the summary cards become one inset-grouped card with
+   label (start) and value (end) rows; the last-visit card keeps its surface.
+   ========================================================================== */
+#main.customer-detail-view .cd-push-page .cards{
+  display:block;
+  margin:0 0 16px;
+  padding:0;
+  background:var(--vg-color-surface);
+  border-radius:14px;
+  overflow:hidden;
+}
+#main.customer-detail-view .cd-push-page .cards > .card{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin:0;
+  padding:13px 16px;
+  min-height:50px;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+  background-image:linear-gradient(var(--disc-sep), var(--disc-sep));
+  background-repeat:no-repeat;
+  background-size:calc(100% - 16px) .5px;
+  background-position:right bottom;
+}
+#main.customer-detail-view .cd-push-page .cards > .card:last-child{ background-image:none; }
+#main.customer-detail-view .cd-push-page .cards > .card .label{
+  margin:0;
+  font-size:.92rem;
+  font-weight:500;
+  color:var(--vg-color-text-muted);
+}
+#main.customer-detail-view .cd-push-page .cards > .card .value{
+  margin:0;
+  font-size:.98rem;
+  font-weight:600;
+  text-align:end;
+  font-variant-numeric:tabular-nums;
+  color:var(--vg-color-text);
+}
+#main.customer-detail-view .cd-push-page .customer-last-visit-card{
+  margin:16px 0 0;
+  padding:14px 16px;
+  border-radius:14px;
+}

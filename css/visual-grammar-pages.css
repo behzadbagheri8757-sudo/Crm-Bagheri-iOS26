@@ -2199,14 +2199,13 @@ html .sheet.inv-sheet-host .inv-mini-input:focus{
 #main.customer-detail-view .cards.cust-metrics > .cd-metric-cell:last-child:nth-child(odd){grid-column:1/-1;}
 
 /* Collapsed decisions + history */
-#main.customer-detail-view .cd-ack-details,
-#main.customer-detail-view .cd-history-details{
+#main.customer-detail-view .cd-ack-details{
   margin-bottom:var(--vg-space-group);
 }
-#main.customer-detail-view .cd-ack-details[open] > .customer-behavior-summary,
-#main.customer-detail-view .cd-history-details[open] > .customer-behavior-summary{
+#main.customer-detail-view .cd-ack-details[open] > .customer-behavior-summary{
   margin-bottom:10px;
 }
+/* .cd-history-details removed: history lists are push pages now (see 10-disclosure.css). */
 
 /* Quick View — the balance is the first number the eye should find */
 .bp-qv-balance.is-prominent{
