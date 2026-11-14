@@ -6,25 +6,33 @@
 
 :root{
   /* ---------- Color roles ---------- */
-  --vg-color-bg:               #F2F2F7;   /* Apple grouped-background grey */
+  --vg-color-bg:               #F4F5F8;   /* Apple grouped-background grey */
   --vg-color-surface:          #FFFFFF;
-  --vg-color-surface-soft:     #F7F8FA;
-  --vg-color-text:             #1F2937;
-  --vg-color-text-secondary:   #4B5563;
-  --vg-color-text-muted:       #667085;
-  --vg-color-border:           rgba(31,41,55,.06);
-  --vg-color-divider:          rgba(31,41,55,.055);
-  --vg-color-primary:          #0070D2;
-  --vg-color-primary-soft:     #E8F2FC;
-  --vg-color-success:          #00A068;
-  --vg-color-success-soft:     #E8F7F2;
+  --vg-color-surface-soft:     #F8F9FB;
+  --vg-color-text:             #171A21;
+  --vg-color-text-secondary:   #525B6B;
+  --vg-color-text-muted:       #687386;
+  --vg-color-border:           rgba(23,32,48,.075);
+  --vg-color-divider:          rgba(23,32,48,.065);
+  --vg-color-primary:          #0866C6;
+  --vg-color-primary-soft:     #EAF2FC;
+  --vg-color-success:          #087F5B;
+  --vg-color-success-soft:     #E8F5EF;
   --vg-color-warning:          #9A6700;
   --vg-color-warning-soft:     #FFF3DF;
-  --vg-color-danger:           #FA3946;
-  --vg-color-danger-soft:      #FFF0EC;
+  --vg-color-danger:           #D93645;
+  --vg-color-danger-soft:      #FCEDEF;
   --vg-color-neutral:          #6B7280;
   --vg-color-neutral-soft:     #F3F4F6;
-  --vg-color-icon:             #1C1C1E;
+  --vg-color-icon:             #202632;
+
+  /* Dashboard KPI surfaces: quiet tints, readable in both themes. */
+  --vg-kpi-blue-bg:             #EAF2FC;
+  --vg-kpi-blue-ink:            #174F91;
+  --vg-kpi-green-bg:            #E8F5EF;
+  --vg-kpi-green-ink:           #176348;
+  --vg-kpi-violet-bg:           #F0EDFA;
+  --vg-kpi-violet-ink:          #59468D;
 
   /* ---------- Spacing scale ---------- */
   --vg-space-tight:            6px;
@@ -36,23 +44,23 @@
   /* ---------- Radius scale (Capsule / Circle / Soft / Raised) ---------- */
   --vg-radius-control:         999px;   /* Capsule for inputs, buttons, chips */
   --vg-radius-circle:          50%;     /* Circle for icon-only controls */
-  --vg-radius-soft:            20px;    /* Soft surfaces: cards, panels */
+  --vg-radius-soft:            18px;    /* Soft surfaces: cards, panels */
   --vg-radius-raised:          22px;    /* Raised surfaces: sheets, modals */
   --vg-radius-pill:            999px;   /* Badges and small pills */
 
   /* ---------- Shadow scale ---------- */
-  --vg-shadow-group:           0 1px 2px rgba(20,30,50,.04), 0 8px 24px rgba(20,30,50,.05);
-  --vg-shadow-raised:          0 2px 4px rgba(20,30,50,.04), 0 12px 30px rgba(20,30,50,.07);
+  --vg-shadow-group:           0 1px 2px rgba(20,30,50,.025), 0 6px 20px rgba(20,30,50,.035);
+  --vg-shadow-raised:          0 2px 5px rgba(20,30,50,.035), 0 10px 26px rgba(20,30,50,.055);
   --vg-shadow-overlay:         0 12px 32px rgba(31,41,55,.12);
   --vg-shadow-glass:           0 6px 24px rgba(26,38,52,.12), 0 1px 3px rgba(26,38,52,.08);
 
   /* ---------- Typography roles ---------- */
-  --vg-type-page:              1.05rem;
-  --vg-type-section:           .88rem;
-  --vg-type-primary:           1.12rem;
-  --vg-type-secondary:         .92rem;
-  --vg-type-label:             .70rem;
-  --vg-type-meta:              .64rem;
+  --vg-type-page:              1.08rem;
+  --vg-type-section:           .90rem;
+  --vg-type-primary:           1.16rem;
+  --vg-type-secondary:         .94rem;
+  --vg-type-label:             .75rem;
+  --vg-type-meta:              .70rem;
   --vg-type-action:            .88rem;
 
   /* ---------- Font weights ----------
@@ -60,11 +68,11 @@
      baseline visual density now targets iPhone "Bold Text: ON" as the real-world
      rendering condition instead of "Bold Text: OFF". Floor kept at 400. */
   --vg-weight-regular:         400;
-  --vg-weight-medium:          400;
+  --vg-weight-medium:          500;
   --vg-weight-label:           500;
   --vg-weight-title:           600;
   --vg-weight-value:           700;
-  --vg-weight-emphasis:        800;
+  --vg-weight-emphasis:        700;
 
   /* ---------- Control height (minimum touch target) ---------- */
   --vg-control-height:         44px;
@@ -91,7 +99,7 @@ html{
 
 body{
   margin:0;
-  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display','Helvetica Neue',Arial,sans-serif;
+  font-family:'Vazirmatn',-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',Tahoma,Arial,sans-serif;
   background:var(--vg-color-bg);
   color:var(--vg-color-text);
   font-size:16px;
@@ -212,6 +220,12 @@ html[data-theme="dark"]{
   --vg-color-neutral:          #A7ABB5;
   --vg-color-neutral-soft:     #292C32;
   --vg-color-icon:             #E5E7EC;
+  --vg-kpi-blue-bg:             rgba(74,163,255,.14);
+  --vg-kpi-blue-ink:            #A8D2FF;
+  --vg-kpi-green-bg:            rgba(69,201,154,.13);
+  --vg-kpi-green-ink:           #9BE2C4;
+  --vg-kpi-violet-bg:           rgba(160,137,230,.15);
+  --vg-kpi-violet-ink:          #C8B9F5;
 
   --vg-shadow-group:           0 2px 10px rgba(0,0,0,.20);
   --vg-shadow-raised:          0 6px 20px rgba(0,0,0,.28);

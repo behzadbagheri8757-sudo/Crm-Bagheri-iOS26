@@ -18,10 +18,10 @@ header{
   min-height:calc(56px + env(safe-area-inset-top,0px)); /* compact row always contains the 44px glass circles */
   text-align:start;
   color:var(--vg-color-text);
-  background:rgba(242,242,247,.72);
+  background:var(--ios-glass,rgba(244,245,248,.78));
   backdrop-filter:saturate(180%) blur(20px);
   -webkit-backdrop-filter:saturate(180%) blur(20px);
-  border-bottom:0; /* no hard separator: content dissolves under the glass */
+  border-bottom:1px solid color-mix(in srgb,var(--vg-color-border) 72%,transparent); /* quiet glass edge */
 }
 header.header-root{
   padding-block-start:calc(env(safe-area-inset-top,0px) + 10px);
@@ -111,7 +111,7 @@ body.modal-open .hdr-add{ opacity:0; pointer-events:none; }
 
 /* ---- Dark theme ---- */
 html[data-theme="dark"] header{
-  background:rgba(28,28,30,.72);
+  background:var(--ios-glass,rgba(28,30,35,.78));
 }
 html[data-theme="dark"] .hdr-btn{
   color:#fff;
