@@ -303,3 +303,54 @@ html[data-theme="dark"]{ --disc-sep: rgba(255,255,255,.14); }
   background-position:left bottom;
 }
 #main.customer-detail-view .cd-records-nav > a.cd-push-row:last-child{ background-image:none; }
+
+/* Home screen: commitments as one grouped card (promises, deliveries, visit plans). */
+.dash-commitments{
+  box-sizing:border-box;
+  margin:0 0 16px;
+  background:var(--vg-color-surface);
+  border-radius:14px;
+  overflow:hidden;
+}
+.dash-commitments-head{
+  padding:14px 16px 8px;
+  font-size:.92rem;
+  font-weight:600;
+  color:var(--vg-color-text-muted);
+}
+.dash-commitments > *{ margin-top:0; }
+
+/* ---- Commitments group (home + push). One head, one footer link; module blocks lose their own chrome. ---- */
+.dash-commitments .dashboard-block{
+  margin:0;
+  padding:0;
+  border:0;
+  background:transparent;
+  box-shadow:none;
+}
+.dash-commitments .dashboard-block-head button,
+.dash-commitments .dashboard-block-head .section-action,
+.dash-push .dashboard-block-head button{
+  display:none;
+}
+.dash-commitments .pp-dash-card{
+  box-shadow:none;
+  border:0;
+}
+.dash-commitments-foot{
+  display:block;
+  padding:14px 16px;
+  border-top:.5px solid var(--disc-sep);
+  font-size:.92rem;
+  font-weight:600;
+  color:var(--vg-color-accent, #0070d2);
+  text-decoration:none;
+  text-align:center;
+}
+.dash-push-context{
+  margin:4px 4px 12px;
+  font-size:.85rem;
+  font-weight:500;
+  color:var(--vg-color-text-muted);
+}
+.dash-push .dashboard-block{ margin:0 0 16px; }
