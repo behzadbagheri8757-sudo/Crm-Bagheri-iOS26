@@ -354,3 +354,66 @@ html[data-theme="dark"]{ --disc-sep: rgba(255,255,255,.14); }
   color:var(--vg-color-text-muted);
 }
 .dash-push .dashboard-block{ margin:0 0 16px; }
+
+/* ---- Home polish: no nested card chrome inside the commitments group; no stray vertical gaps. ----
+   Selectors are scoped (section.dash-commitments …) instead of !important so they win by specificity. */
+section.dash-commitments .dashboard-block,
+section.dash-commitments .dashboard-block + .dashboard-block,
+section.dash-commitments .pp-dash-group{
+  margin:0;
+}
+section.dash-commitments .dashboard-block-head{
+  margin:0;
+  padding:12px 16px 6px;
+}
+section.dash-commitments .pp-dash-card{
+  margin:0;
+  padding:0;
+  background:transparent;
+  border:0;
+  border-radius:0;
+  box-shadow:none;
+}
+section.dash-commitments .pp-dash-group{
+  background:var(--vg-color-surface-muted, rgba(120,120,128,.08));
+  padding:8px 16px;
+  font-size:.82rem;
+  font-weight:600;
+}
+/* Keep the bottom navigation from covering the last card when scrolled to the end. */
+#main .dashboard-shell{
+  padding-bottom:calc(104px + env(safe-area-inset-bottom, 0px));
+}
+
+/* Disclosure chevron for real-link ledger rows: CSS borders instead of a mask-image.
+   Mask images render as solid squares on some iOS Safari builds; borders render everywhere.
+   Leading-edge chevron (points left in RTL = forward). */
+a.ledger-row:not(.action-row)::after{
+  content:'';
+  flex:none;
+  width:8px;
+  height:8px;
+  margin-inline:2px 4px;
+  -webkit-mask-image:none;
+  mask-image:none;
+  background:none;
+  border-left:2px solid currentColor;
+  border-bottom:2px solid currentColor;
+  transform:rotate(45deg);
+  opacity:.38;
+  align-self:center;
+}
+
+/* Specificity-correct spacing for the commitments group (beats #main .dashboard-shell .dashboard-block). */
+#main .dashboard-shell section.dash-commitments .dashboard-block,
+#main .dashboard-shell section.dash-commitments .dashboard-block + .dashboard-block{
+  margin:0;
+}
+#main .dashboard-shell section.dash-commitments .dashboard-block-head,
+#main section.dash-commitments .dashboard-block-head{
+  margin:0;
+  padding:12px 16px 8px;
+}
+#main .dash-push .dashboard-block{
+  margin:0 0 16px;
+}
