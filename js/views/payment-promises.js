@@ -240,10 +240,10 @@
   }
 
   /** One calm card, two groups (سررسیدگذشته / امروز); at most 5 rows, «همه» opens the full list. '' when nothing is due. */
-  function dashboardHtml() {
+  function dashboardHtml(opts) {
     var due = PP.dueList();
     if (!due.length) return '';
-    var shown = due.slice(0, DASH_MAX_ROWS);
+    var shown = due.slice(0, opts && opts.all ? due.length : DASH_MAX_ROWS);
     var groups = [
       { title: 'سررسیدگذشته', tone: 'danger', list: shown.filter(function (p) { return PP.phase(p).kind === 'overdue'; }) },
       { title: 'امروز', tone: 'warning', list: shown.filter(function (p) { return PP.phase(p).kind === 'today'; }) },

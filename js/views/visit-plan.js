@@ -75,10 +75,10 @@
   }
 
   /** One calm card: عقب‌افتاده / امروز. '' when no planned visit is due. */
-  function dashboardHtml() {
+  function dashboardHtml(opts) {
     var due = VP.dueList();
     if (!due.length) return '';
-    var shown = due.slice(0, DASH_MAX_ROWS);
+    var shown = due.slice(0, opts && opts.all ? due.length : DASH_MAX_ROWS);
     var groups = [
       { title: 'عقب‌افتاده', tone: 'danger', kind: 'overdue' },
       { title: 'امروز', tone: 'warning', kind: 'today' },

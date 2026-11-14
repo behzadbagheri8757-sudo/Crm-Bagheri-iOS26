@@ -625,9 +625,7 @@
       '<div class="dashboard-shell">' +
       '<div class="dashboard-eyebrow">مرکز فرماندهی روزانه</div>' +
       alertBar +
-      (typeof PromiseUI !== 'undefined' ? PromiseUI.dashboardHtml() : '') +
-      (typeof DeliveryUI !== 'undefined' ? DeliveryUI.dashboardHtml() : '') +
-      (typeof VisitPlanUI !== 'undefined' ? VisitPlanUI.dashboardHtml() : '') +
+      commitmentsGroupHtml() +
       todaySnapshot +
       targetHtml(metrics) +
 
@@ -668,11 +666,48 @@
   var DASH_SECTION_TITLES = {};
   function sectionTitle(section) { return DASH_SECTION_TITLES[section] || ''; }
 
+  /* Commitments (promises, deliveries, visit plans) share one grouped card on the home screen.
+     Each module keeps its own rows and bindings; this only groups them visually. */
+  function commitmentsGroupHtml() {
+    var parts = [];
+    if (typeof PromiseUI !== 'undefined') parts.push(PromiseUI.dashboardHtml() || '');
+    if (typeof DeliveryUI !== 'undefined') parts.push(DeliveryUI.dashboardHtml() || '');
+    if (typeof VisitPlanUI !== 'undefined') parts.push(VisitPlanUI.dashboardHtml() || '');
+    var body = parts.join('');
+    if (!body.trim()) return '';
+    return '<section class="dash-commitments">' +
+      '<div class="dash-commitments-head">تعهدات و پیگیری‌ها</div>' +
+      body +
+      '<a class="dash-commitments-foot" href="#/dashboard?section=commitments">مشاهدهٔ همهٔ تعهدات ›</a>' +
+      '</section>';
+  }
+
+  /* Push page: #/dashboard?section=commitments — the full lists of the three modules. */
+  function renderCommitmentsPage(root) {
+    var parts = [];
+    if (typeof PromiseUI !== 'undefined') parts.push(PromiseUI.dashboardHtml({ all: true }) || '');
+    if (typeof DeliveryUI !== 'undefined') parts.push(DeliveryUI.dashboardHtml({ all: true }) || '');
+    if (typeof VisitPlanUI !== 'undefined') parts.push(VisitPlanUI.dashboardHtml({ all: true }) || '');
+    var body = parts.join('');
+    root.innerHTML = '<div class="dashboard-shell dash-push">' +
+      '<div class="dash-push-context">همهٔ تعهدات باز: وعده‌های پرداخت، تحویل‌ها و ویزیت‌ها</div>' +
+      (body.trim() ? body : '<div class="empty" style="padding:12px 0;">تعهد بازی وجود ندارد.</div>') +
+      '</div>';
+    if (typeof PromiseUI !== 'undefined') PromiseUI.bindDashboard(root);
+    if (typeof DeliveryUI !== 'undefined') DeliveryUI.bindDashboard(root);
+    if (typeof VisitPlanUI !== 'undefined') VisitPlanUI.bindDashboard(root);
+  }
+
   function mount(root, params) {
     if (!root) return function () {};
     const nav = document.getElementById('nav');
     if (nav) nav.style.display = 'none';
     var section = params && params.section ? String(params.section) : null;
+    if (section === 'commitments') {
+      if (typeof setHeaderTitle === 'function') setHeaderTitle('تعهدات و پیگیری‌ها', {});
+      renderCommitmentsPage(root);
+      return function () {};
+    }
     if (section && typeof setHeaderTitle === 'function' && sectionTitle(section)) setHeaderTitle(sectionTitle(section), {});
     let cancelled = false;
     let refreshToken = null;
