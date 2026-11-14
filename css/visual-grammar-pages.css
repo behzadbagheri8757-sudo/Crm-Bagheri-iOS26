@@ -2448,31 +2448,30 @@ html .inv-sheet-v2 .inv-profit-summary .amount{font-size:14px;font-weight:600;}
 }
 #main .dashboard-shell .bp-dashboard-snapshot-item{
   position:relative;
-  padding:17px 8px 15px;
-  border:1px solid transparent;border-radius:20px;overflow:hidden;
-  color:var(--vg-color-text);
-  background:var(--vg-kpi-blue-bg);
-  box-shadow:none;
+  padding:18px 8px 16px;
+  border:0;border-radius:22px;overflow:hidden;
+  color:#fff;
+  background:linear-gradient(150deg,#5B9BFA,#3F7DEB);
+  box-shadow:0 12px 22px -12px #3F7DEB;
 }
 #main .dashboard-shell .bp-dashboard-snapshot-item + .bp-dashboard-snapshot-item{border-inline-start:0;}
 #main .dashboard-shell .bp-dashboard-snapshot-item:nth-child(2){
-  background:var(--vg-kpi-green-bg);
+  background:linear-gradient(150deg,#33BF88,#1C9F6E);box-shadow:0 12px 22px -12px #1C9F6E;
 }
 #main .dashboard-shell .bp-dashboard-snapshot-item:nth-child(3){
-  background:var(--vg-kpi-violet-bg);
+  background:linear-gradient(150deg,#9C7DF6,#7C59E4);box-shadow:0 12px 22px -12px #7C59E4;
 }
 #main .dashboard-shell .bp-dashboard-snapshot-item span,
-#main .dashboard-shell .bp-dashboard-snapshot-item small{color:var(--vg-color-text-secondary);opacity:1;}
-#main .dashboard-shell .bp-dashboard-snapshot-item strong{color:var(--vg-color-text);font-weight:700;letter-spacing:-.25px;}
-#main .dashboard-shell .bp-dashboard-snapshot-item:nth-child(1) strong{color:var(--vg-kpi-blue-ink);}
-#main .dashboard-shell .bp-dashboard-snapshot-item:nth-child(2) strong{color:var(--vg-kpi-green-ink);}
-#main .dashboard-shell .bp-dashboard-snapshot-item:nth-child(3) strong{color:var(--vg-kpi-violet-ink);}
+#main .dashboard-shell .bp-dashboard-snapshot-item strong,
+#main .dashboard-shell .bp-dashboard-snapshot-item small{color:#fff;}
+#main .dashboard-shell .bp-dashboard-snapshot-item span,
+#main .dashboard-shell .bp-dashboard-snapshot-item small{opacity:.9;}
 #main .dashboard-shell .bp-dashboard-snapshot-item::after{
-  content:'';position:absolute;top:11px;inset-inline-end:11px;
-  width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.18;
+  content:'';position:absolute;top:10px;inset-inline-end:10px;
+  width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.34);
 }
 html[data-theme="dark"] #main .dashboard-shell .bp-dashboard-snapshot-item{
-  border-color:var(--vg-color-border);box-shadow:none;
+  box-shadow:none;filter:saturate(.92) brightness(.94);
 }
 
 /* ---------- Monthly target: soft card, slim rounded bar, calmer colours ---------- */

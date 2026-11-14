@@ -375,7 +375,7 @@ section.dash-commitments .pp-dash-card{
   box-shadow:none;
 }
 section.dash-commitments .pp-dash-group{
-  background:var(--vg-color-surface-muted, rgba(120,120,128,.08));
+  background:var(--vg-color-surface-soft); /* theme token: #F7F8FA light, #202329 dark */
   padding:8px 16px;
   font-size:.82rem;
   font-weight:600;
@@ -416,4 +416,110 @@ a.ledger-row:not(.action-row)::after{
 }
 #main .dash-push .dashboard-block{
   margin:0 0 16px;
+}
+
+/* Light mode: the white group card sat on a near-white page with no edge, so the gray bars read as
+   page-coloured gaps cutting the card into pieces. A hairline edge + soft shadow defines the card,
+   and the bars get hairlines so the section structure stays visible in both themes. */
+section.dash-commitments{
+  box-shadow:0 0 0 .5px var(--disc-sep), 0 1px 3px rgba(0,0,0,.04);
+}
+html[data-theme="dark"] section.dash-commitments{ box-shadow:none; }
+section.dash-commitments .pp-dash-group{
+  border-top:.5px solid var(--disc-sep);
+  border-bottom:.5px solid var(--disc-sep);
+}
+
+/* ==========================================================================
+   Home: «کارهای پیشنهادی امروز» and «هشدارهای زودهنگام» as iOS grouped lists.
+   One card per section, hairline separators, border chevron (no mask-image: it
+   renders as a solid square on some iOS Safari builds), light-mode card edge.
+   ========================================================================== */
+
+/* -- shared card edge in light mode (white on #F2F2F7 has no visible boundary) -- */
+#main .dashboard-shell .dash-act,
+#main .dashboard-shell .dash-activity,
+#main .dashboard-shell .bp-dashboard-watch-list{
+  box-shadow:0 0 0 .5px var(--disc-sep), 0 1px 3px rgba(0,0,0,.04);
+}
+html[data-theme="dark"] #main .dashboard-shell .dash-act,
+html[data-theme="dark"] #main .dashboard-shell .dash-activity,
+html[data-theme="dark"] #main .dashboard-shell .bp-dashboard-watch-list{ box-shadow:none; }
+
+/* -- action queue rows -- */
+#main .dashboard-shell a.action-row::after{
+  content:'';
+  flex:none;
+  position:static;
+  width:8px;
+  height:8px;
+  margin-inline:2px 4px;
+  align-self:center;
+  -webkit-mask:none;
+  mask:none;
+  background:none;
+  border-radius:0;
+  border-left:2px solid currentColor;
+  border-bottom:2px solid currentColor;
+  transform:rotate(45deg);
+  opacity:.38;
+}
+#main .dashboard-shell .dash-action-queue .action-row{
+  border-bottom:.5px solid var(--disc-sep);
+}
+#main .dashboard-shell .dash-action-queue .action-row:last-child{ border-bottom:0; }
+/* Reason: one line. The numeric «الان» restatement lives on the customer page. */
+#main .dashboard-shell .action-row .action-why{
+  display:-webkit-box;
+  -webkit-line-clamp:1;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+}
+#main .dashboard-shell .action-row .action-why-now{ display:none; }
+#main .dashboard-shell .action-row .action-main{
+  display:-webkit-box;
+  -webkit-line-clamp:2;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+}
+
+/* -- early alerts: one grouped card instead of separate cards -- */
+#main .dashboard-shell .bp-dashboard-watch-list{
+  gap:0;
+  padding:0;
+  background:var(--vg-color-surface);
+  border-radius:14px;
+  overflow:hidden;
+}
+#main .dashboard-shell .bp-dashboard-watch-card{
+  margin:0;
+  padding:14px 16px;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+  align-items:center;
+  gap:12px;
+  border-bottom:.5px solid var(--disc-sep);
+}
+#main .dashboard-shell .bp-dashboard-watch-card:last-child{ border-bottom:0; }
+#main .dashboard-shell .bp-dashboard-watch-card::after{
+  content:'';
+  flex:none;
+  width:8px;
+  height:8px;
+  margin-inline:2px 0;
+  border-left:2px solid var(--vg-color-text-muted);
+  border-bottom:2px solid var(--vg-color-text-muted);
+  transform:rotate(45deg);
+  opacity:.5;
+}
+#main .dashboard-shell .bp-dashboard-watch-title{ font-size:.92rem; }
+#main .dashboard-shell .bp-dashboard-watch-reason{
+  font-size:.8rem;
+  line-height:1.55;
+  display:-webkit-box;
+  -webkit-line-clamp:2;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
 }

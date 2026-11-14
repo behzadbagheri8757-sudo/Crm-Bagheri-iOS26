@@ -25,12 +25,12 @@
    Only aliases required by protected systems (not owned by VG).
    -------------------------------------------------------------------------- */
 :root{
-  --olive-dark:#0866C6;
+  --olive-dark:#0070D2;
   --gold:#FF5C35;
-  --ink:#171A21;
-  --ink-soft:#687386;
+  --ink:#1F2937;
+  --ink-soft:#667085;
   --card:#FFFFFF;
-  --line:rgba(23,32,48,.075);
+  --line:rgba(31,41,55,.08);
   --accent-dark:#D94725;
   --accent-soft:#FFF0EC;
 }
@@ -51,7 +51,7 @@ html{
 }
 body{
   margin:0;
-  font-family:'Vazirmatn',-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',Tahoma,Arial,sans-serif;
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display','Helvetica Neue',Arial,sans-serif;
   background:var(--vg-color-bg);
   color:var(--vg-color-text);
   min-height:100vh;
