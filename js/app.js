@@ -1042,6 +1042,7 @@ function openAddTransaction(cid, opts){
   renderSheet();
 }
 
+const EDITABLE_STANDALONE_METHODS = ['cash','card','transfer','discount'];
 function openEditStandalonePayment(cid, paymentId){
   const p = (data.payments||[]).find(x=>x.id===paymentId && x.customerId===cid);
   if(!p || p.invoiceId || p.method==='return' || !['cash','card','transfer','discount'].includes(p.method)) return;
@@ -1060,16 +1061,27 @@ function openEditStandalonePayment(cid, paymentId){
     <div class="field"><label>تاریخ</label>${shamsiDateInputHTML('ep-date', dateStr)}</div>
     <div class="field"><label>مبلغ (تومان)</label><input id="ep-amount" type="text" inputmode="decimal" value="${esc(amountStr)}"></div>
     <div class="field"><label>توضیح (اختیاری)</label><input id="ep-note" value="${esc(noteStr)}"></div>
+    <div id="ep-method-warn" class="ep-method-warn" role="alert" style="display:none;">تغییر بین «دریافت» و «تخفیف» روی سود گزارش‌شدهٔ مشتری اثر مستقیم می‌گذارد: تخفیف از سود کم می‌شود، دریافت نه.</div>
     <div class="btn-row"><button class="btn" id="ep-save">ذخیره</button><button class="btn danger secondary" id="ep-delete">حذف دریافت</button></div>
   `, {dirtyCheck:true});
-  document.getElementById('ep-method').addEventListener('change', e=>{ method=e.target.value; });
+  const originalWasDiscount = p.method === 'discount';
+  document.getElementById('ep-method').addEventListener('change', e=>{
+    method=e.target.value;
+    const warn=document.getElementById('ep-method-warn');
+    if(warn) warn.style.display = ((method==='discount') !== originalWasDiscount) ? '' : 'none';
+  });
   document.getElementById('ep-date').addEventListener('input', e=>{ dateStr=e.target.value; });
   document.getElementById('ep-amount').addEventListener('input', e=>{ amountStr=e.target.value; });
   document.getElementById('ep-note').addEventListener('input', e=>{ noteStr=e.target.value; });
   document.getElementById('ep-save').addEventListener('click', async e=>{
+    // Navigation happens only after withSubmitGuard has finished (window.__sheetSaveInFlight back to 0);
+    // doing it inside the guard is what made the route change get deferred.
+    let saved=false;
     await withSubmitGuard(e.currentTarget, async()=>{
       const amount=numVal(document.getElementById('ep-amount'));
       if(amount<=0){ showToast('مبلغ باید بیشتر از صفر باشد'); throw new Error('validation'); }
+      // Second check at save time: only the four independent methods may enter data.payments.
+      if(!EDITABLE_STANDALONE_METHODS.includes(method)){ showToast('نوع دریافت نامعتبر است'); throw new Error('validation'); }
       const previousData=JSON.parse(JSON.stringify(data));
       try{
         const livePayment = (data.payments||[]).find(x=>x.id===paymentId && x.customerId===cid);
@@ -1079,14 +1091,23 @@ function openEditStandalonePayment(cid, paymentId){
         // (بدون دست‌زدن به debtAllocations بقیهٔ دریافت‌ها؛ excludeId یعنی تخصیص قبلیِ
         // خودش در محاسبهٔ «مصرف‌شده» حساب نشود).
         if(typeof computeDebtAllocationForAmount === 'function'
-          && ['cash','card','transfer','discount'].includes(livePayment.method)){
+          && EDITABLE_STANDALONE_METHODS.includes(livePayment.method)){
           livePayment.debtAllocations = computeDebtAllocationForAmount(cid, livePayment.amount, livePayment.id);
         }
         await saveData();
       }catch(err){ restoreDataInPlace(previousData); throw err; }
-      closeModal();
-      openCustomerDetail(cid); render(); showToast('دریافت ویرایش شد');
+      saved=true;
     });
+    if(!saved) return; // failed save: stay on this page, keep the sheet open
+    closeModal();
+    if(location.hash.indexOf('#/payments') === 0){
+      // Edited from the payments list → open this customer's detail.
+      openCustomerDetail(cid);
+    } else {
+      // Edited from the customer detail → one refresh of the current page.
+      render();
+    }
+    showToast('دریافت ویرایش شد');
   });
   document.getElementById('ep-delete').addEventListener('click', async e=>{
     await withSubmitGuard(e.currentTarget, async()=>{
