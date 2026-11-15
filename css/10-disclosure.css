@@ -523,3 +523,37 @@ html[data-theme="dark"] #main .dashboard-shell .bp-dashboard-watch-list{ box-sha
   -webkit-box-orient:vertical;
   overflow:hidden;
 }
+
+/* Reports: custom date range (from / to Shamsi fields under the period segment). */
+#main .rp-range{
+  display:flex;
+  gap:8px;
+  margin:8px 0 12px;
+}
+#main .rp-range-item{
+  flex:1 1 0;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  min-width:0;
+  padding:6px 10px;
+  background:var(--vg-color-surface);
+  border-radius:12px;
+  font-size:.85rem;
+  color:var(--vg-color-text-muted);
+}
+#main .rp-range-item .shamsi-date{ flex:1 1 auto; min-width:0; }
+#main .rp-range{ flex-wrap:nowrap; }
+#main .rp-range-item input.shamsi-date-field{
+  width:100%;
+  min-width:0;
+  padding:4px 6px;
+  border:0;
+  background:transparent;
+  font-size:.85rem;
+  text-align:center;
+}
+#main .rp-seg{ flex-wrap:nowrap; }
+#main .rp-seg-btn{ padding-inline:6px; white-space:nowrap; }
+#main .rp-seg{ display:flex; }
+#main .rp-seg-btn{ flex:1 1 0; min-width:0; }
