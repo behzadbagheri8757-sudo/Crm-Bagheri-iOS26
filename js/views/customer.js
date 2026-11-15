@@ -859,9 +859,31 @@
     });
   }
 
+  /* Independent payments (cash/card/transfer/discount) open the existing edit sheet.
+     Bound once per root; survives redraws and push-page moves because it sits on #main. */
+  function bindPaymentEditOnce(root) {
+    if (!root || root._payEditBound) return;
+    root._payEditBound = true;
+    function open(el) {
+      const id = el.getAttribute('data-edit-payment');
+      if (!id || typeof openEditStandalonePayment !== 'function') return;
+      openEditStandalonePayment(currentCustomerId, id);
+    }
+    root.addEventListener('click', function (e) {
+      const el = e.target && e.target.closest ? e.target.closest('[data-edit-payment]') : null;
+      if (el) { e.preventDefault(); open(el); }
+    });
+    root.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const el = e.target && e.target.closest ? e.target.closest('[data-edit-payment]') : null;
+      if (el) { e.preventDefault(); open(el); }
+    });
+  }
+
   function drawCustomerPage(root, ctx) {
     if (!root) return;
     root.classList.add('customer-detail-view'); // UPDATED: Added for CSS scoping
+    bindPaymentEditOnce(root);
 
     const id = currentCustomerId;
 
@@ -1037,9 +1059,13 @@
           .map(function (p) {
             const tagOpen = p.invoiceId ? '<a class="ledger-row" href="#/invoice?id=' + encodeURIComponent(p.invoiceId) + '&fromCustomer=' + encodeURIComponent(c.id) + '&fromSection=payments" style="text-decoration:none;color:inherit;">' : '<div class="ledger-row">';
             const tagClose = p.invoiceId ? '</a>' : '</div>';
+            const isEditable = !p.invoiceId && ['cash','card','transfer','discount'].includes(p.method);
+            const tagOpenFinal = isEditable
+              ? '<div class="ledger-row" data-edit-payment="' + esc(p.id) + '" role="button" tabindex="0" style="cursor:pointer;">'
+              : tagOpen;
             const method = paymentMethodLabel(p.method);
             return (
-              tagOpen +
+              tagOpenFinal +
               '<span class="name">' +
               esc(method) +
               (p.note ? '<span class="sub">' + esc(p.note) + '</span>' : '') +

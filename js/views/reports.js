@@ -39,8 +39,35 @@
     { id: 'week', label: 'این هفته' },
     { id: 'month', label: 'این ماه' },
     { id: 'all', label: 'همه' },
+    { id: 'range', label: 'بازه' },
   ];
-  const PERIOD_LABEL = { today: 'امروز', week: 'این هفته', month: 'این ماه', all: 'همه زمان‌ها' };
+  const PERIOD_LABEL = { today: 'امروز', week: 'این هفته', month: 'این ماه', all: 'همه زمان‌ها', range: 'بازه انتخابی' };
+  /* Custom range: { from, to } as ISO dates (inclusive). Compared with the equal-length span just before it. */
+  let reportRange = null;
+  let reportProductSort = 'sales'; // 'sales' | 'profit' — top-products ordering
+  function rangeDefault() {
+    const t = new Date();
+    const f = new Date(t);
+    f.setDate(f.getDate() - 29);
+    return { from: isoOfLocalDate(f), to: isoOfLocalDate(t) };
+  }
+  function rangeDays(r) {
+    const a = new Date(r.from + 'T00:00:00');
+    const b = new Date(r.to + 'T00:00:00');
+    return Math.round((b - a) / 86400000) + 1;
+  }
+  function prevRangeOf(r) {
+    const n = rangeDays(r);
+    const b = new Date(r.from + 'T00:00:00');
+    b.setDate(b.getDate() - 1);
+    const a = new Date(b);
+    a.setDate(a.getDate() - (n - 1));
+    return { from: isoOfLocalDate(a), to: isoOfLocalDate(b) };
+  }
+  function inRange(iso, r) {
+    const d = String(iso || '').slice(0, 10);
+    return !!r && d >= r.from && d <= r.to;
+  }
   const WEEKDAYS = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنجشنبه', 'جمعه'];
   const MONTHS =
     (typeof SHAMSI_MONTH_NAMES !== 'undefined' && SHAMSI_MONTH_NAMES) ||
@@ -93,6 +120,7 @@
   function dateInPeriod(iso, period, now) {
     if (period === 'all') return true;
     if (!iso) return false;
+    if (period === 'range') return inRange(iso, reportRange);
     if (period === 'today') return isSameDay(iso, now);
     if (period === 'month') return isSameMonth(iso, now);
     if (period === 'week') {
@@ -110,6 +138,61 @@
   }
   function key10(iso) {
     return String(iso || '').slice(0, 10);
+  }
+
+  /* Product-level gross profit. Uses the exact per-line and per-invoice terms of
+     periodInvoiceGrossProfit (line: (price−buyPrice)×qty − line discount; invoice:
+     − invoiceDiscountAmount). The invoice discount is ALLOCATED to lines in proportion
+     to their net line value, so the sum over products equals the period total exactly.
+     Returns are not netted from profit (same convention as the period headline); they
+     are attributed to products separately in topProductsForPeriod. */
+  function productProfitRows(invoices, retPays, discountTotal) {
+    const map = {};
+    let unallocated = 0;
+    invoices.forEach(function (inv) {
+      const items = inv.items || [];
+      const subtotal = items.reduce(function (a, it) {
+        return a + (it.qty || 0) * (it.price || 0) - (it.discount || 0);
+      }, 0);
+      const invDisc = invoiceDiscountAmount(inv);
+      if (subtotal <= 0 && invDisc) unallocated += invDisc;
+      items.forEach(function (it) {
+        const lineNet = (it.qty || 0) * (it.price || 0) - (it.discount || 0);
+        const alloc = subtotal > 0 ? (invDisc * lineNet) / subtotal : 0;
+        const profit = ((it.price || 0) - (it.buyPrice || 0)) * (it.qty || 0) - (it.discount || 0) - alloc;
+        const sales = lineNet - alloc;
+        const k = it.productId || it.name;
+        if (!map[k]) map[k] = { productId: it.productId, name: it.name || '—', sales: 0, profit: 0, qty: 0 };
+        map[k].sales += sales;
+        map[k].profit += profit;
+        map[k].qty += it.qty || 0;
+      });
+    });
+    /* Returns of the period (by PAYMENT date, the dashboard KPI rule). Profit reversal per
+       returned line = _ccReturnMarginForPayment, the exact function the KPI uses (FIFO cost). */
+    let returnsMargin = 0;
+    (retPays || []).forEach(function (p) {
+      (p.returnItems || []).forEach(function (ri) {
+        if (!(Number(ri.qty) > 0)) return;
+        const margin = typeof _ccReturnMarginForPayment === 'function'
+          ? _ccReturnMarginForPayment(p.customerId, Object.assign({}, p, { returnItems: [ri] }))
+          : 0;
+        returnsMargin += margin;
+        const k = ri.productId || ri.name;
+        if (!map[k]) map[k] = { productId: ri.productId, name: ri.name || '—', sales: 0, profit: 0, qty: 0 };
+        map[k].profit -= margin;
+        map[k].sales -= (Number(ri.qty) || 0) * (Number(ri.price) || 0);
+        map[k].qty -= Number(ri.qty) || 0;
+      });
+    });
+
+    const rows = Object.keys(map).map(function (k) {
+      const r = map[k];
+      r.margin = r.sales > 0 ? (r.profit / r.sales) * 100 : null;
+      return r;
+    });
+    const netTotal = rows.reduce(function (a, r) { return a + r.profit; }, 0) - (discountTotal || 0);
+    return { rows: rows, unallocated: unallocated, returnsMargin: returnsMargin, discountTotal: discountTotal || 0, netTotal: netTotal };
   }
 
   // Same formula the previous Reports page used for «سود ناخالص فاکتورهای دوره».
@@ -149,13 +232,13 @@
   /* minus returned value (returnItems qty × price) of the same period.  */
   /* ------------------------------------------------------------------ */
   function topProductsForPeriod(invs, returns, limit) {
+    /* Revenue = net sales of the invoices: line value minus the invoice-level discount,
+       allocated to lines (same allocation as the product profit table). Invoice totals
+       are already net of that discount, so the product bars now add up to the headline. */
     const map = {};
-    invs.forEach(function (inv) {
-      (inv.items || []).forEach(function (it) {
-        const k = it.productId || it.name;
-        if (!map[k]) map[k] = { productId: it.productId, name: it.name || '—', revenue: 0 };
-        map[k].revenue += (it.qty || 0) * (it.price || 0) - (it.discount || 0);
-      });
+    productProfitRows(invs, [], 0).rows.forEach(function (r) {
+      if (r.sales === 0 && r.qty === 0) return;
+      map[r.productId || r.name] = { productId: r.productId, name: r.name, revenue: r.sales };
     });
     let returnsWithoutItems = 0;
     let appliedReturns = 0;
@@ -338,6 +421,18 @@
       return { points: pts, hasPrev: false };
     }
 
+    if (period === 'range' && reportRange) {
+      const n = rangeDays(reportRange);
+      if (n > 62) return { points: [], hasPrev: false };
+      for (let i = 0; i < n; i++) {
+        const d = new Date(reportRange.from + 'T00:00:00');
+        d.setDate(d.getDate() + i);
+        const iso = isoOfLocalDate(d);
+        pts.push({ label: fa(d.getDate()), title: faDate(iso), value: byDay[iso] || 0 });
+      }
+      return { points: pts, hasPrev: false };
+    }
+
     // today: invoices carry a date only (no time) → no meaningful intra-day series
     return { points: [], hasPrev: false };
   }
@@ -348,7 +443,11 @@
   /*   week  → previous week, same elapsed days                          */
   /*   today / all → not shown (partial day / no baseline)               */
   /* ------------------------------------------------------------------ */
-  function salesComparison(period, now, periodSales, trend) {
+  function salesComparison(period, now, periodSales, trend, prevSum) {
+    if (period === 'range') {
+      if (prevSum > 0) return { pct: ((periodSales - prevSum) / prevSum) * 100, text: 'نسبت به ' + fa(rangeDays(reportRange)) + ' روز قبل از این بازه' };
+      return null;
+    }
     if (period === 'month' && typeof commandCenterMetrics === 'function') {
       const m = commandCenterMetrics(now);
       if (m && m.salesDeltaPct !== null && isFinite(m.salesDeltaPct) && Math.abs((m.mtdSales || 0) - periodSales) < 0.5) {
@@ -389,6 +488,14 @@
     );
   }
 
+  function rangeBarHtml() {
+    if (!reportRange) reportRange = rangeDefault();
+    return '<div class="rp-range" id="rp-range">' +
+      '<label class="rp-range-item"><span>از</span>' + shamsiDateInputHTML('rp-range-from', reportRange.from) + '</label>' +
+      '<label class="rp-range-item"><span>تا</span>' + shamsiDateInputHTML('rp-range-to', reportRange.to) + '</label>' +
+      '</div>';
+  }
+
   function contextText(period, now, hasCompare) {
     let main = PERIOD_LABEL[period];
     if (period === 'month') {
@@ -400,6 +507,8 @@
       main = 'این هفته · از ' + faDate(isoOfLocalDate(startOfWeek(now)));
     } else if (period === 'all') {
       main = 'از ابتدا تا امروز';
+    } else if (period === 'range' && reportRange) {
+      main = faDate(reportRange.from) + ' تا ' + faDate(reportRange.to);
     }
     return main + (hasCompare ? ' · مقایسه با دورهٔ قبل' : '');
   }
@@ -559,9 +668,9 @@
       '<div class="rp-stats">' +
       '<div class="rp-stat"><div class="rp-stat-val">' + fa(count) + '</div><div class="rp-stat-lab">تعداد فاکتور</div></div>' +
       '<div class="rp-stat"><div class="rp-stat-val">' + compact(avg) + '</div><div class="rp-stat-lab">میانگین فاکتور</div></div>' +
-      '<div class="rp-stat"><div class="rp-stat-val' + (grossProfit < 0 ? ' is-neg' : '') + '">' + compact(grossProfit) + '</div><div class="rp-stat-lab">سود ناخالص</div></div>' +
+      '<div class="rp-stat"><div class="rp-stat-val' + (grossProfit < 0 ? ' is-neg' : '') + '">' + compact(grossProfit) + '</div><div class="rp-stat-lab">سود خالص</div></div>' +
       '</div>' +
-      '<div class="rp-note">سود ناخالص = قیمت فروش − بهای خرید ثبت‌شده در فاکتور − تخفیف‌ها (بدون احتساب برگشتی‌ها).</div>' +
+      '<div class="rp-note">سود خالص = سود فاکتورها − سود برگشتی‌ها (بهای خرید FIFO) − تخفیف‌های نقدی؛ همان تعریف «سود این ماه» داشبورد.</div>' +
       (returnsTotal > 0
         ? '<div class="rp-row rp-row-flat"><span>برگشت از فروش این دوره</span><span class="rp-row-val rp-neg">' + fullToman(returnsTotal) + '</span></div>'
         : '') +
@@ -569,24 +678,47 @@
     );
   }
 
-  function topProductsHtml(res) {
-    const list = res.top;
+  function topProductsHtml(res, profit) {
+    const byProfit = reportProductSort === 'profit';
+    let list;
+    let key;
+    if (byProfit) {
+      list = profit.rows.slice().sort(function (a, b) { return b.profit - a.profit; }).slice(0, 5);
+      key = 'profit';
+    } else {
+      const byKey = {};
+      profit.rows.forEach(function (r) { byKey[r.productId || r.name] = r; });
+      list = res.top.map(function (p) {
+        const pr = byKey[p.productId || p.name] || { profit: 0, margin: null };
+        return { name: p.name, revenue: p.revenue, profit: pr.profit, margin: pr.margin };
+      });
+      key = 'revenue';
+    }
     if (!list.length) return '';
-    const max = list[0].revenue || 1;
+    const max = Math.max.apply(null, list.map(function (p) { return Math.abs(p[key]); })) || 1;
+    const seg =
+      '<div class="rp-seg rp-seg-sm" role="tablist" aria-label="ترتیب کالاها">' +
+      '<button type="button" role="tab" class="rp-seg-btn' + (!byProfit ? ' is-active' : '') + '" aria-selected="' + (!byProfit) + '" data-pp="sales">بر اساس فروش</button>' +
+      '<button type="button" role="tab" class="rp-seg-btn' + (byProfit ? ' is-active' : '') + '" aria-selected="' + byProfit + '" data-pp="profit">بر اساس سود</button>' +
+      '</div>';
     return (
       '<section class="rp-card" aria-label="پرفروش‌ترین کالاها">' +
-      '<div class="rp-sec-head"><h3 class="rp-sec-title">پرفروش‌ترین کالاها</h3><span class="rp-sec-hint">بر اساس مبلغ فروش</span></div>' +
+      '<div class="rp-sec-head"><h3 class="rp-sec-title">پرفروش‌ترین کالاها</h3></div>' +
+      seg +
       '<div class="rp-bars">' +
       list
         .map(function (p) {
-          const w = Math.max(3, Math.round((p.revenue / max) * 100));
+          const w = Math.max(3, Math.round((Math.abs(p[key]) / max) * 100));
+          const margin = p.margin === null || p.margin === undefined ? '—' : faNum(p.margin, 1) + '٪';
+          const sub = 'سود ' + compact(p.profit) + ' · حاشیه ' + margin;
           return (
             '<div class="rp-bar">' +
             '<div class="rp-bar-top"><span class="rp-bar-name">' +
             esc(p.name) +
             '</span><span class="rp-bar-amt">' +
-            compact(p.revenue) +
+            compact(p[key]) +
             '</span></div>' +
+            '<div class="rp-note" style="margin:0 0 4px">' + esc(sub) + '</div>' +
             '<div class="rp-bar-track"><div class="rp-bar-fill" style="width:' +
             w +
             '%"></div></div></div>'
@@ -825,9 +957,20 @@
     }, 0);
     const periodCount = invsPeriod.length;
     const periodAvg = periodCount ? periodSales / periodCount : 0;
-    const periodGrossProfit = periodCount ? periodInvoiceGrossProfit(invsPeriod) : 0;
+    /* One rule for every return figure on this page: a return belongs to the period of its
+       PAYMENT date (the dashboard KPI rule). Product bars, customer totals, the returns line
+       and the profit all read the same list. */
+    const retPaysPeriod = (data.payments || []).filter(function (p) {
+      return p && p.method === 'return' && dateInPeriod(p.date, reportPeriod, now);
+    });
+    const returns = retPaysPeriod;
+    const discountTotal = (data.payments || []).reduce(function (s, p) {
+      return p && p.method === 'discount' && dateInPeriod(p.date, reportPeriod, now) ? s + (Number(p.amount) || 0) : s;
+    }, 0);
+    const profitRes = productProfitRows(invsPeriod, retPaysPeriod, discountTotal);
+    const periodGrossProfit = profitRes.netTotal;
 
-    const returns = periodReturns(reportPeriod, now);
+
     const returnsTotal = returns.reduce(function (s, p) {
       return s + (p.amount || 0);
     }, 0);
@@ -844,7 +987,11 @@
     const received = byMethod.cash + byMethod.card + byMethod.transfer;
 
     const trend = buildTrend(reportPeriod, now, invsAll);
-    const cmp = periodCount ? salesComparison(reportPeriod, now, periodSales, trend) : null;
+    const prevSum = reportPeriod === 'range' && reportRange
+      ? invsAll.filter(function (i) { return inRange(i.date, prevRangeOf(reportRange)); })
+          .reduce(function (s, i) { return s + (i.total || 0); }, 0)
+      : null;
+    const cmp = periodCount ? salesComparison(reportPeriod, now, periodSales, trend, prevSum) : null;
 
     const topProd = topProductsForPeriod(invsPeriod, returns, 5);
     const topCust = topCustomersForPeriod(invsPeriod, returns, 5);
@@ -886,7 +1033,7 @@
       heroHtml(periodSales, periodCount, periodAvg, cmp) +
       (periodCount ? trendHtml(trend) : '') +
       snapshotHtml(periodCount, periodAvg, periodGrossProfit, returnsTotal) +
-      (periodCount ? topProductsHtml(topProd) : '') +
+      (periodCount ? topProductsHtml(topProd, profitRes) : '') +
       customersHtml(periodCount ? topCust : [], netSales, debtors.length, g.customerDebt) +
       collectionsHtml(received, byMethod, debtors.length, g.customerDebt, topDebtors) +
       inventoryHtml(inventoryValue(), low, zero, negative) +
@@ -942,9 +1089,22 @@
       '</div>';
 
     rootClickHandler = function (e) {
+      const pp = e.target.closest ? e.target.closest('[data-pp]') : null;
+      if (pp) {
+        reportProductSort = pp.getAttribute('data-pp') === 'profit' ? 'profit' : 'sales';
+        renderBody();
+        return;
+      }
       const btn = e.target.closest ? e.target.closest('[data-rp]') : null;
       if (!btn) return;
       reportPeriod = btn.getAttribute('data-rp');
+      const seg = root.querySelector('.rp-seg');
+      const bar = root.querySelector('#rp-range');
+      if (reportPeriod === 'range') {
+        if (!bar && seg) seg.insertAdjacentHTML('afterend', rangeBarHtml());
+      } else if (bar) {
+        bar.remove();
+      }
       root.querySelectorAll('.rp-seg-btn').forEach(function (b) {
         const on = b.getAttribute('data-rp') === reportPeriod;
         b.classList.toggle('is-active', on);
@@ -952,7 +1112,20 @@
       });
       renderBody();
     };
+    if (typeof window !== 'undefined' && window.__rpTest) {
+      window.__rpDebug = { productProfitRows: productProfitRows, periodInvoiceGrossProfit: periodInvoiceGrossProfit, topProductsForPeriod: topProductsForPeriod, periodReturns: periodReturns, invoiceDiscountAmount: invoiceDiscountAmount };
+    }
     root.addEventListener('click', rootClickHandler);
+    root.addEventListener('change', function (e) {
+      const t = e.target;
+      if (!t || (t.id !== 'rp-range-from' && t.id !== 'rp-range-to')) return;
+      if (!reportRange) reportRange = rangeDefault();
+      if (t.id === 'rp-range-from') reportRange.from = t.value; else reportRange.to = t.value;
+      if (reportRange.from > reportRange.to) {
+        const tmp = reportRange.from; reportRange.from = reportRange.to; reportRange.to = tmp;
+      }
+      renderBody();
+    });
 
     // <details> 'toggle' does not bubble → capture, so open/closed state survives re-renders
     rootToggleHandler = function (e) {

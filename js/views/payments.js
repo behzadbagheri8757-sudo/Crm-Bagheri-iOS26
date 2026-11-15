@@ -140,6 +140,13 @@
       return;
     }
 
+    listEl.onclick = function (e) {
+      const b = e.target && e.target.closest ? e.target.closest('[data-edit-payment]') : null;
+      if (!b) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (typeof openEditStandalonePayment === 'function') openEditStandalonePayment(b.getAttribute('data-edit-cid'), b.getAttribute('data-edit-payment'));
+    };
     listEl.innerHTML = rows
       .map(r => {
         const href =
@@ -159,6 +166,12 @@
           ? '<span class="sub tx-row-ctx">' + esc(r.note) + '</span>'
           : '';
 
+        /* Independent customer payments (not invoice-linked, not returns) get an edit affordance
+           that opens the existing edit sheet; the row itself keeps its navigation. */
+        const editable = r.kind === 'customer' && !r.invoiceId && ['cash','card','transfer','discount'].includes(r.method);
+        const editBtn = editable
+          ? `<button type="button" class="tx-row-edit" data-edit-payment="${esc(r.id)}" data-edit-cid="${esc(r.partyId)}">ویرایش</button>`
+          : '';
         return `
           <a
             class="ledger-row tx-row"
@@ -175,6 +188,7 @@
 
             <span class="amount tx-row-amount">
               <span class="tx-row-total">${toman(r.amount)} ت</span>
+              ${editBtn}
             </span>
           </a>
         `;
