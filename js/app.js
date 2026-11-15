@@ -868,7 +868,7 @@ function openAddTransaction(cid, opts){
       </div>
       ${method ? `
         <div class="field"><label>تاریخ</label>${shamsiDateInputHTML('f-date', dateStr)}</div>
-        <div class="field"><label>مبلغ (تومان)</label><input id="f-amount" type="text" inputmode="decimal" value="${amountStr}"></div>
+        <div class="field"><label>مبلغ (تومان)</label><input id="f-amount" type="text" inputmode="decimal" value="${amountStr}" ${(method==='return' && returnRows.length)?'readonly':''}></div>
         <div class="field"><label>توضیح (اختیاری)</label><input id="f-note" value="${esc(noteStr)}"></div>
         ${promiseRowHtml()}
         ${returnItemsSectionHtml()}
@@ -890,7 +890,14 @@ function openAddTransaction(cid, opts){
     });
     if(!method) return;
     document.getElementById('f-date').addEventListener('input', e=>{ dateStr = e.target.value; });
-    document.getElementById('f-amount').addEventListener('input', e=>{ amountStr = e.target.value; });
+    if(method==='return'){
+      // Derived from the lines whenever they exist; cleared (and editable) when the last line is removed.
+      const derived = returnRows.reduce((sum, r)=> sum + (Number(r.qty)||0)*(Number(r.price)||0), 0);
+      amountStr = returnRows.length ? String(derived) : '';
+      const amountEl = document.getElementById('f-amount');
+      if(amountEl){ amountEl.value = amountStr; amountEl.readOnly = returnRows.length > 0; }
+    }
+    document.getElementById('f-amount').addEventListener('input', e=>{ if(method==='return' && returnRows.length) return; amountStr = e.target.value; });
     document.getElementById('f-note').addEventListener('input', e=>{ noteStr = e.target.value; });
     const linkBox = document.getElementById('f-link-promise');
     if(linkBox) linkBox.addEventListener('change', e=>{ linkPromise = !!e.target.checked; });
@@ -928,15 +935,25 @@ function openAddTransaction(cid, opts){
       row.price = defaultReturnPrice(row.productId);
       renderSheet();
     }));
+    // Live amount: whenever a return line changes, the amount is recomputed from the lines right away.
+    const syncReturnAmount = ()=>{
+      if(method!=='return') return;
+      amountStr = returnRows.length ? String(returnRows.reduce((sum, r)=> sum + (Number(r.qty)||0)*(Number(r.price)||0), 0)) : '';
+      const amountEl = document.getElementById('f-amount');
+      if(amountEl){ amountEl.value = amountStr; amountEl.readOnly = returnRows.length > 0; }
+    };
     document.querySelectorAll('.ret-qty').forEach(el=>el.addEventListener('input', e=>{
       returnRows[e.target.dataset.ridx].qty = parseFloat(faToEnDigits(e.target.value))||0;
+      syncReturnAmount();
     }));
     document.querySelectorAll('.ret-price').forEach(el=>el.addEventListener('input', e=>{
       returnRows[e.target.dataset.ridx].price = parseFloat(faToEnDigits(e.target.value))||0;
+      syncReturnAmount();
     }));
     document.querySelectorAll('[id^="ret-del-"]').forEach(btn=>{
       btn.addEventListener('click', ()=>{
         returnRows.splice(parseInt(btn.dataset.ridx,10), 1);
+        if(method==='return' && !returnRows.length) amountStr = '';
         renderSheet();
       });
     });
@@ -947,6 +964,7 @@ function openAddTransaction(cid, opts){
         const date = dateStr || todayISO();
         const note = (noteStr||'').trim();
         if(amount<=0){ showToast('مبلغ رو وارد کن'); throw new Error('validation'); }
+        if(date > todayISO()){ showToast('تاریخ تراکنش نمی‌تواند بعد از امروز باشد'); throw new Error('validation'); }
 
         let returnItems = [];
         let returnInvoiceId;
@@ -988,9 +1006,9 @@ function openAddTransaction(cid, opts){
           }
 
           const expectedReturnAmount = returnItems.reduce((s,ri)=>s+(ri.qty*(ri.price||0)),0);
-          if(expectedReturnAmount>0 && Math.abs(expectedReturnAmount-amount)>1){
-            const proceedAmount = await appConfirm('⚠️ مبلغ واردشده با «مقدار × قیمت واحد» کالاهای برگشتی هم‌خوانی ندارد.\n\nمبلغ واردشده: '+toman(amount)+' تومان\nمبلغ منطقی طبق کالاها: '+toman(expectedReturnAmount)+' تومان\n\nمطمئنی می‌خوای همینطور ثبت کنی؟');
-            if(!proceedAmount) throw new Error('validation');
+          if(returnItems.length && Math.abs(expectedReturnAmount-amount)>0.5){
+            showToast('مبلغ برگشت باید برابر مجموع «مقدار × قیمت» کالاهای برگشتی باشد');
+            throw new Error('validation');
           }
         }
 
@@ -3593,6 +3611,7 @@ function openInvoiceForm(cid, editInv, opts){
       if(btn.disabled) return; // جلوگیری از ثبت دوباره با کلیک سریع/پی‌درپی
       btn.disabled = true;
       const date = document.getElementById('f-date').value || todayISO();
+      if(date > todayISO()){ btn.disabled = false; showToast('تاریخ فاکتور نمی‌تواند بعد از امروز باشد'); return; }
       // Optional due date: use the closure state updated by the toggle and date picker listeners.
       // A due date before the invoice date is rejected; a disabled toggle never persists dueDate.
       let invDueDate = '';
