@@ -661,14 +661,15 @@
     );
   }
 
-  function snapshotHtml(count, avg, grossProfit, returnsTotal) {
-    if (!count) return '';
+  function snapshotHtml(count, avg, grossProfit, returnsTotal, receipts) {
+    if (!count && !receipts) return '';
     return (
       '<section class="rp-card" aria-label="خلاصه عملکرد">' +
       '<div class="rp-stats">' +
       '<div class="rp-stat"><div class="rp-stat-val">' + fa(count) + '</div><div class="rp-stat-lab">تعداد فاکتور</div></div>' +
       '<div class="rp-stat"><div class="rp-stat-val">' + compact(avg) + '</div><div class="rp-stat-lab">میانگین فاکتور</div></div>' +
       '<div class="rp-stat"><div class="rp-stat-val' + (grossProfit < 0 ? ' is-neg' : '') + '">' + compact(grossProfit) + '</div><div class="rp-stat-lab">سود خالص</div></div>' +
+      '<div class="rp-stat"><div class="rp-stat-val">' + compact(receipts || 0) + '</div><div class="rp-stat-lab">دریافتی</div></div>' +
       '</div>' +
       '<div class="rp-note">سود خالص = سود فاکتورها − سود برگشتی‌ها (بهای خرید FIFO) − تخفیف‌های نقدی؛ همان تعریف «سود این ماه» داشبورد.</div>' +
       (returnsTotal > 0
@@ -960,6 +961,12 @@
     /* One rule for every return figure on this page: a return belongs to the period of its
        PAYMENT date (the dashboard KPI rule). Product bars, customer totals, the returns line
        and the profit all read the same list. */
+    /* Receipts of the period: cash, card and transfer payments (same definition as the dashboard
+       «دریافتی»). Returns and cash discounts are excluded; invoice-linked receipts are included. */
+    const periodReceipts = (data.payments || []).reduce(function (sum, p) {
+      return p && ['cash','card','transfer'].indexOf(p.method) !== -1 && dateInPeriod(p.date, reportPeriod, now)
+        ? sum + (Number(p.amount) || 0) : sum;
+    }, 0);
     const retPaysPeriod = (data.payments || []).filter(function (p) {
       return p && p.method === 'return' && dateInPeriod(p.date, reportPeriod, now);
     });
@@ -1032,7 +1039,7 @@
     body.innerHTML =
       heroHtml(periodSales, periodCount, periodAvg, cmp) +
       (periodCount ? trendHtml(trend) : '') +
-      snapshotHtml(periodCount, periodAvg, periodGrossProfit, returnsTotal) +
+      snapshotHtml(periodCount, periodAvg, periodGrossProfit, returnsTotal, periodReceipts) +
       (periodCount ? topProductsHtml(topProd, profitRes) : '') +
       customersHtml(periodCount ? topCust : [], netSales, debtors.length, g.customerDebt) +
       collectionsHtml(received, byMethod, debtors.length, g.customerDebt, topDebtors) +
