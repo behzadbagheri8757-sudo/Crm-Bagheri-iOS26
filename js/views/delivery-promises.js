@@ -97,7 +97,7 @@
     function chip(label, n) { return '<button type="button" class="chip-opt" data-dp-days="' + n + '">' + label + '</button>'; }
     return '<div class="q-block"><div class="q-title">' + (label || 'تاریخ تحویل') + '</div><div class="chip-wrap">' +
       (withToday ? chip('امروز', 0) : '') + chip('فردا', 1) + chip('۳ روز دیگر', 3) + chip('هفتهٔ دیگر', 7) + '</div></div>' +
-      '<div class="field">' + shamsiDateInputHTML('dp-date', defIso) +
+      '<div class="field">' + shamsiDateInputHTML('dp-date', defIso, { mode: 'calendar' }) +
       '<div class="pp-error" id="dp-date-error" hidden>تاریخ نمی‌تواند قبل از امروز باشد</div></div>';
   }
   function wireDateBlock(onChange) {
