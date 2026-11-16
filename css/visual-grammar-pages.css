@@ -457,7 +457,7 @@ details[open]>summary .rp-sum-chev{transform:rotate(90deg);}
 #main.customer-detail-view .bp-customer-secondary-actions summary::after{float:none;}
 #main.customer-detail-view .bp-customer-secondary-actions .cust-actions-secondary{margin:0;padding-bottom:12px;}
 #main.customer-detail-view .cards.cust-metrics,
-#main.customer-detail-view details>.cards{display:grid;grid-template-columns:1fr 1fr;gap:1px;padding:0;overflow:hidden;background:var(--vg-color-divider);border:1px solid var(--vg-color-border);border-radius:var(--vg-radius-raised);box-shadow:none;margin-bottom:var(--vg-space-group);}
+#main.customer-detail-view details>.cards{display:grid;grid-template-columns:1fr 1fr;gap:.5px;padding:0;overflow:hidden;background:var(--vg-color-divider);border:0;border-radius:var(--vg-radius-raised);box-shadow:none;margin-bottom:var(--vg-space-group);}
 #main.customer-detail-view .cards.cust-metrics>.card,
 #main.customer-detail-view details>.cards>.card{background:var(--vg-color-surface);border:0;border-radius:0;box-shadow:none;padding:12px 14px;min-width:0;}
 #main.customer-detail-view .cards.cust-metrics>.card.wide,
@@ -495,7 +495,7 @@ html[data-theme="dark"] #main #invoice-chips .chip.active{box-shadow:0 1px 3px r
 #main .inv-detail .tx-identity.card{padding:16px;border-radius:var(--vg-radius-raised);box-shadow:none;margin-bottom:var(--vg-space-group);}
 #main .inv-detail .tx-identity-title{font-size:1.2rem;}
 #main .inv-detail .tx-identity-meta{margin-top:6px;gap:6px;line-height:1.7;}
-#main .inv-detail .tx-finance.cards{display:grid;grid-template-columns:1fr 1fr;gap:1px;padding:0;overflow:hidden;background:var(--vg-color-divider);border:1px solid var(--vg-color-border);border-radius:var(--vg-radius-raised);box-shadow:none;margin-bottom:var(--vg-space-group);}
+#main .inv-detail .tx-finance.cards{display:grid;grid-template-columns:1fr 1fr;gap:.5px;padding:0;overflow:hidden;background:var(--vg-color-divider);border:0;border-radius:var(--vg-radius-raised);box-shadow:none;margin-bottom:var(--vg-space-group);}
 #main .inv-detail .tx-finance.cards>.card{background:var(--vg-color-surface);border:0;border-radius:0;box-shadow:none;padding:12px 14px;min-width:0;}
 #main .inv-detail .tx-finance.cards>.card.wide{grid-column:1/-1;padding:16px 14px 14px;}
 #main .inv-detail .tx-finance.cards>.card.wide .value{font-size:1.45rem;font-weight:var(--vg-weight-value);}
@@ -509,7 +509,7 @@ html[data-theme="dark"] #main #invoice-chips .chip.active{box-shadow:0 1px 3px r
 #main .inv-detail .tx-details>summary::-webkit-details-marker{display:none;}
 #main .inv-detail .tx-details>summary::after{content:'';flex:0 0 auto;width:7px;height:7px;margin-inline-end:3px;border-inline-end:2px solid var(--vg-color-text-muted);border-bottom:2px solid var(--vg-color-text-muted);transform:rotate(45deg);transition:transform .2s ease;}
 #main .inv-detail .tx-details[open]>summary::after{transform:rotate(-135deg);}
-#main .inv-detail .tx-details>.cards{display:grid;grid-template-columns:1fr 1fr;gap:1px;padding:0;overflow:hidden;background:var(--vg-color-divider);border:1px solid var(--vg-color-border);border-radius:12px;box-shadow:none;}
+#main .inv-detail .tx-details>.cards{display:grid;grid-template-columns:1fr 1fr;gap:.5px;padding:0;overflow:hidden;background:var(--vg-color-divider);border:0;border-radius:12px;box-shadow:none;}
 #main .inv-detail .tx-details>.cards>.card{background:var(--vg-color-surface);border:0;border-radius:0;box-shadow:none;padding:11px 12px;min-width:0;}
 #main .inv-detail .tx-details>.cards>.card.wide,
 #main .inv-detail .tx-details>.cards>.card:last-child:nth-child(odd){grid-column:1/-1;}
