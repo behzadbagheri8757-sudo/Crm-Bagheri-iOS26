@@ -61,12 +61,13 @@
 
     var previousActive = document.activeElement;
 
-    var iso = (hid.value && parseISODateParts(hid.value)) ? String(hid.value).slice(0, 10) : todayISO();
+    var hasStoredDate = !!(hid.value && parseISODateParts(hid.value));
+    var iso = hasStoredDate ? String(hid.value).slice(0, 10) : todayISO();
     var j = isoToJalali(iso) || gregorianToJalali(
       new Date().getFullYear(), new Date().getMonth() + 1, new Date().getDate()
     );
     var viewJy = j[0], viewJm = j[1];
-    var selJy = j[0], selJm = j[1], selJd = j[2];
+    var selJy = hasStoredDate ? j[0] : null, selJm = hasStoredDate ? j[1] : null, selJd = hasStoredDate ? j[2] : null;
 
     var tIso = todayISO();
     var tJ = isoToJalali(tIso) || gregorianToJalali(
@@ -114,7 +115,7 @@
       var html = '';
       for(var i = 0; i < cells.length; i++){
         var c = cells[i];
-        var isSel = (c.jy === selJy && c.jm === selJm && c.jd === selJd);
+        var isSel = (selJy !== null && c.jy === selJy && c.jm === selJm && c.jd === selJd);
         var isToday = (c.jy === tJ[0] && c.jm === tJ[1] && c.jd === tJ[2]);
         var cls = 'shamsi-calendar-day';
         if(c.outside) cls += ' is-outside';
@@ -207,7 +208,7 @@
       closed = true;
       document.removeEventListener('keydown', onKey, true);
 
-      if(applyValues){
+      if(applyValues && selJy !== null && selJm !== null && selJd !== null){
         var newIso = jalaliToISO(selJy, selJm, selJd);
         var old = hid.value;
         hid.value = newIso;
