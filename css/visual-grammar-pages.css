@@ -352,11 +352,11 @@ html[data-theme="dark"] .rp-seg-btn.is-active{box-shadow:0 1px 3px rgba(0,0,0,.4
 .rp-guide{position:absolute;top:8%;bottom:8%;width:0;border-inline-start:1px solid var(--vg-color-border);transform:translateX(50%);pointer-events:none;}
 .rp-dot{position:absolute;width:10px;height:10px;border-radius:50%;border:2px solid var(--vg-color-surface);transform:translate(50%,-50%);pointer-events:none;}
 .rp-axis{display:flex;justify-content:space-between;direction:rtl;margin-top:8px;font-size:11px;color:var(--vg-color-text-muted);}
-.rp-stats{display:grid;grid-template-columns:repeat(3,1fr);}
+.rp-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:.5px;background:var(--vg-color-divider);overflow:hidden;border-radius:16px;}
 .rp-stats-2{grid-template-columns:repeat(2,1fr);}
 .rp-stats-1{grid-template-columns:1fr;}
-.rp-stat{text-align:center;padding:2px 6px;min-width:0;}
-.rp-stat+.rp-stat{border-inline-start:.5px solid var(--vg-color-divider);}
+.rp-stat{text-align:center;padding:10px 6px;min-width:0;background:var(--vg-color-surface);}
+.rp-stat+.rp-stat{border-inline-start:0;}
 .rp-stat-val{font-size:17px;font-weight:var(--vg-weight-value);color:var(--vg-color-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .rp-stat-lab{margin-top:3px;font-size:11px;color:var(--vg-color-text-muted);}
 .rp-list{margin-top:6px;}
@@ -773,7 +773,7 @@ h2.section-title::after{display:none;}
 #payment-summary>.card,
 #check-summary>.card,
 #visit-summary>.card,
-#prospect-summary>.card{margin:0;border:0;border-radius:0;background:transparent;box-shadow:inset 0 0 0 .5px var(--vg-color-divider);}
+#prospect-summary>.card{margin:0;border:0;border-radius:0;background:transparent;box-shadow:none;}
 html[data-theme="dark"] #payment-summary,
 html[data-theme="dark"] #check-summary,
 html[data-theme="dark"] #visit-summary,
