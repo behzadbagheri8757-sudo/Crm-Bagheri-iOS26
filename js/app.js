@@ -1884,7 +1884,7 @@ function openAddVisit(cid){
     '<div class="field" id="visit-note-wrap" style="display:none;margin-top:12px;"><label>یادداشت کوتاه (اختیاری)</label><input id="f-visit-note" placeholder="اختیاری" autocomplete="off"></div>' +
     '<div class="field" id="closed-next-date-wrap" style="display:none;margin-top:12px;"><label>ویزیت بعدی (اختیاری)</label><div id="closed-next-date-options" class="chip-wrap">' +
       '<button type="button" class="chip-opt" data-next-days="1">فردا</button><button type="button" class="chip-opt" data-next-days="2">۲ روز دیگر</button><button type="button" class="chip-opt" data-next-days="3">۳ روز دیگر</button><button type="button" class="chip-opt" data-next-days="7">هفتهٔ بعد</button><button type="button" class="chip-opt" data-next-custom>تاریخ دلخواه</button></div>' +
-      '<div id="closed-next-custom" style="display:none;margin-top:8px;">' + shamsiDateInputHTML('f-next-visit-date', '', { mode: 'calendar' }) + '</div></div>' +
+      '<div id="closed-next-custom" style="display:none;margin-top:8px;">' + shamsiDateInputHTML('f-next-visit-date', '') + '</div></div>' +
     '<div class="btn-row visit-save-actions" id="visit-save-actions" style="display:none;margin-top:8px;">' +
       '<button type="button" class="btn" id="save-visit">ثبت و پایان</button>' +
       '<button type="button" class="btn secondary" id="save-visit-invoice" style="display:none;">ثبت و ایجاد فاکتور</button>' +

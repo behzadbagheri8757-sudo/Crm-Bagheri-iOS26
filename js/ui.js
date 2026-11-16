@@ -511,19 +511,15 @@ function isSameJalaliMonth(iso, ref){
  * Backward compatible: existing 2-arg callers are unchanged.
  */
 function shamsiDateInputHTML(id, valueISO, opts){
-  const hasValue = !!(valueISO && parseISODateParts(valueISO));
-  const iso = hasValue ? String(valueISO).slice(0,10) : todayISO();
+  const iso = (valueISO && parseISODateParts(valueISO)) ? String(valueISO).slice(0,10) : todayISO();
   const j = isoToJalali(iso) || gregorianToJalali(
     new Date().getFullYear(), new Date().getMonth()+1, new Date().getDate()
   );
-  const label = (!hasValue && opts && opts.mode === 'calendar') ? '' : enToFaDigits(j[0] + '/' + j[1] + '/' + j[2]);
+  const label = enToFaDigits(j[0] + '/' + j[1] + '/' + j[2]);
   const modeAttr = (opts && opts.mode) ? (' data-shamsi-mode="' + esc(opts.mode) + '"') : '';
-  // A blank calendar-mode field may display today's month/date as its initial view,
-  // but its stored value stays blank until the user explicitly confirms a date.
-  const storedISO = (!hasValue && opts && opts.mode === 'calendar') ? '' : iso;
   return `<div class="shamsi-date" data-shamsi-root="1"${modeAttr}>
-    <input type="hidden" id="${esc(id)}" value="${esc(storedISO)}" data-shamsi-hidden="1">
-    <input type="text" class="shamsi-date-field" data-shamsi-field="1" readonly inputmode="none" value="${esc(label)}" placeholder="انتخاب تاریخ" aria-label="تاریخ شمسی">
+    <input type="hidden" id="${esc(id)}" value="${esc(iso)}" data-shamsi-hidden="1">
+    <input type="text" class="shamsi-date-field" data-shamsi-field="1" readonly inputmode="none" value="${esc(label)}" aria-label="تاریخ شمسی">
   </div>`;
 }
 
