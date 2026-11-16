@@ -117,7 +117,7 @@ button[data-toggle-check]{min-height:44px;min-width:44px;}
 .tx-row:last-child{border-bottom-color:transparent;}
 .tx-list>.ledger-row+.ledger-row::before,
 .tx-list>.tx-row+.tx-row::before,
-#customer-list>.customer-list-row+.customer-list-row::before{content:'';position:absolute;top:0;inset-inline-start:0;inset-inline-end:20px;height:1px;background:var(--vg-color-divider);pointer-events:none;}
+#customer-list>.customer-list-row+.customer-list-row::before{content:'';position:absolute;top:0;inset-inline-start:0;inset-inline-end:20px;height:.5px;background:var(--vg-color-divider);pointer-events:none;}
 .ledger-row .name,
 .tx-row-title,
 .customer-list-row .name{color:var(--vg-color-text);font-weight:var(--vg-weight-title);}

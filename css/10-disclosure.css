@@ -440,7 +440,7 @@ section.dash-commitments .pp-dash-group{
 #main .dashboard-shell .dash-act,
 #main .dashboard-shell .dash-activity,
 #main .dashboard-shell .bp-dashboard-watch-list{
-  box-shadow:0 0 0 .5px var(--disc-sep), 0 1px 3px rgba(0,0,0,.04);
+  box-shadow:none;
 }
 html[data-theme="dark"] #main .dashboard-shell .dash-act,
 html[data-theme="dark"] #main .dashboard-shell .dash-activity,
