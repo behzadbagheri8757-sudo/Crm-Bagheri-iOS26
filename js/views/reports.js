@@ -665,7 +665,7 @@
     if (!count && !receipts) return '';
     return (
       '<section class="rp-card" aria-label="خلاصه عملکرد">' +
-      '<div class="rp-stats">' +
+      '<div class="rp-stats rp-stats-2">' +
       '<div class="rp-stat"><div class="rp-stat-val">' + fa(count) + '</div><div class="rp-stat-lab">تعداد فاکتور</div></div>' +
       '<div class="rp-stat"><div class="rp-stat-val">' + compact(avg) + '</div><div class="rp-stat-lab">میانگین فاکتور</div></div>' +
       '<div class="rp-stat"><div class="rp-stat-val' + (grossProfit < 0 ? ' is-neg' : '') + '">' + compact(grossProfit) + '</div><div class="rp-stat-lab">سود خالص</div></div>' +
