@@ -795,7 +795,7 @@
     const hasBaseline = !!(cmp && (cmp.previous.count || cmp.previous.netProfit));
     if (!count && !receipts && !netProfit && !returnsTotal && !hasBaseline) return '';
     return (
-      '<section class="rp-card" aria-label="خلاصه عملکرد">' +
+      '<section class="rp-card rp-snapshot" aria-label="خلاصه عملکرد">' +
       '<div class="rp-stats rp-stats-2">' +
       '<div class="rp-stat"><div class="rp-stat-val">' + fa(count) + '</div><div class="rp-stat-lab">تعداد فاکتور</div>' + (cmp ? deltaTileHtml({ current: cmp.current.count, previous: cmp.previous.count, metric: 'count', label: cmp.label }) : '') + '</div>' +
       '<div class="rp-stat"><div class="rp-stat-val">' + compact(avg) + '</div><div class="rp-stat-lab">میانگین فاکتور</div></div>' +
@@ -850,8 +850,10 @@
     const list = ranked.list;
     const total = list.length;
     const shown = limitProductRanking(list, reportProductLimit);
-    const maxAbs = shown.reduce(function (m, p) { return Math.max(m, Math.abs(Number(p[key]))); }, 0);
-    const max = maxAbs || 1;
+    const maxPositive = shown.reduce(function (m, p) { return Math.max(m, Number(p[key]) > 0 ? Number(p[key]) : 0); }, 0);
+    const maxNegative = shown.reduce(function (m, p) { return Math.max(m, Number(p[key]) < 0 ? Math.abs(Number(p[key])) : 0); }, 0);
+    const span = maxPositive + maxNegative;
+    const zeroPct = span > 0 ? (maxPositive / span) * 100 : 100;
     const unknown = ranked.unknown;
     function clean(v) { return Number.isFinite(Number(v)) ? Number(v) : 0; }
     const metric = '<label class="rp-product-control">معیار' +
@@ -864,7 +866,7 @@
       '</select></label>';
     const rows = shown.map(function (p) {
       const value = clean(p[key]);
-      const pct = maxAbs ? Math.abs(value) / max * 50 : 0;
+      const pct = span > 0 ? (Math.abs(value) / span) * 100 : 0;
       const negative = value < 0;
       const margin = p.margin === null || p.margin === undefined || !Number.isFinite(Number(p.margin)) ? '—' : faNum(p.margin, 1) + '٪';
       const sub = byProfit ? ('فروش ' + compact(p.revenue) + ' · حاشیه ' + margin) :
@@ -872,7 +874,7 @@
       return '<div class="rp-bar-row">' +
         '<div class="rp-bar-meta"><span class="rp-bar-name" title="' + esc(p.name) + '" aria-label="' + esc(p.name) + '">' + esc(p.name) + '</span><span class="rp-bar-amount">' + (negative ? '−' : '') + compact(Math.abs(value)) + '</span></div>' +
         '<div class="rp-bar-track" role="img" aria-label="' + esc(p.name) + ': ' + esc(compact(value)) + '">' +
-          '<span class="rp-bar-zero"></span><span class="rp-bar-fill ' + (negative ? 'is-negative' : 'is-positive') + '" style="width:' + pct + '%"></span>' +
+          '<span class="rp-bar-zero" style="left:' + zeroPct + '%"></span><span class="rp-bar-fill ' + (negative ? 'is-negative' : 'is-positive') + '" style="--bar-zero:' + zeroPct + '%;width:' + pct + '%"></span>' +
         '</div><div class="rp-bar-sub">' + esc(sub) + '</div></div>';
     }).join('');
     const countLabel = total > 0 ? (shown.length < total ? 'نمایش ' + fa(shown.length) + ' از ' + fa(total) + ' محصول دارای فعالیت در این دوره' : 'نمایش ' + fa(shown.length) + ' محصول دارای فعالیت در این دوره') : 'محصول دارای فعالیت در این دوره وجود ندارد';
