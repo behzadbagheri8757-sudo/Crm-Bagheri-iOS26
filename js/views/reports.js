@@ -122,12 +122,12 @@
     if (!iso) return false;
     if (period === 'range') return inRange(iso, reportRange);
     if (period === 'today') return isSameDay(iso, now);
-    if (period === 'month') return isSameMonth(iso, now);
+    /* Week and month end at today: a future-dated invoice must not lengthen only the current span. */
+    if (period === 'month') return isSameMonth(iso, now) && String(iso).slice(0, 10) <= isoOfLocalDate(now);
     if (period === 'week') {
       const d = new Date(iso);
       const start = startOfWeek(now);
-      const end = new Date(start);
-      end.setDate(end.getDate() + 7);
+      const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
       return d >= start && d < end;
     }
     return true;
@@ -465,6 +465,123 @@
   }
 
   /* ------------------------------------------------------------------ */
+  /* Period comparison: invoice count and net profit.                     */
+  /* Both spans use one predicate per span, so the current figure and the */
+  /* baseline are always counted with the same rule:                      */
+  /*   range → equal-length span before it                                */
+  /*   week  → same elapsed days of last week                             */
+  /*   month → same elapsed Jalali days of last Jalali month             */
+  /*   today / all → no valid baseline: no comparison is shown            */
+  /* ------------------------------------------------------------------ */
+  function createPreviousPeriodPredicate(period, now) {
+    const DAY = 86400000;
+    if (period === 'range' && reportRange) {
+      const pr = prevRangeOf(reportRange);
+      return function (iso) { return !!iso && inRange(iso, pr); };
+    }
+    if (period === 'week') {
+      const start = startOfWeek(now);
+      const startMs = new Date(start.getFullYear(), start.getMonth(), start.getDate()).getTime();
+      const todayMs = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+      const elapsed = Math.round((todayMs - startMs) / DAY) + 1;
+      const prevStartMs = startMs - 7 * DAY;
+      return function (iso) {
+        if (!iso) return false;
+        const t = new Date(String(iso).slice(0, 10) + 'T00:00:00').getTime();
+        return t >= prevStartMs && t < prevStartMs + elapsed * DAY;
+      };
+    }
+    if (period === 'month' && typeof _ccJalaliParts === 'function' && typeof _ccPreviousJalaliMonth === 'function') {
+      const cur = _ccJalaliParts(now);
+      if (!cur) return null;
+      const prev = _ccPreviousJalaliMonth(cur.jy, cur.jm);
+      return function (iso) {
+        if (!iso) return false;
+        const j = _ccJalaliParts(String(iso).slice(0, 10));
+        /* jd <= today's jd: the previous month stops at the same elapsed day (or its own last day). */
+        return !!j && j.jy === prev.jy && j.jm === prev.jm && j.jd <= cur.jd;
+      };
+    }
+    return null;
+  }
+
+  /* Invoices by invoice date; returns and cash discounts by payment date; net profit through
+     productProfitRows. Used for both the current span and the baseline. */
+  function calculateTotalsForPredicate(test) {
+    const pays = data.payments || [];
+    const invs = (data.invoices || []).filter(function (i) { return test(i.date); });
+    const rets = pays.filter(function (p) { return p && p.method === 'return' && test(p.date); });
+    const disc = pays.reduce(function (sum, p) {
+      return p && p.method === 'discount' && test(p.date) ? sum + (Number(p.amount) || 0) : sum;
+    }, 0);
+    return { count: invs.length, netProfit: productProfitRows(invs, rets, disc).netTotal };
+  }
+
+  function buildPeriodComparison(period, now) {
+    const prevTest = createPreviousPeriodPredicate(period, now);
+    if (!prevTest) return null;
+    const curTest = function (iso) { return dateInPeriod(iso, period, now); };
+    const label = period === 'range' ? 'بازهٔ قبل'
+      : period === 'week' ? 'همین روزهای هفتهٔ قبل'
+      : 'همین بازه از ماه قبل';
+    return {
+      label: label,
+      current: calculateTotalsForPredicate(curTest),
+      previous: calculateTotalsForPredicate(prevTest)
+    };
+  }
+
+  /* Count: neutral colour with a direction arrow (more invoices is not automatically better). */
+  function describeCountChange(current, previous, label) {
+    const cur = Math.round(current), prev = Math.round(previous);
+    if (cur === prev) return { text: 'بدون تغییر نسبت به ' + label, cls: '' };
+    if (prev === 0) return { text: 'دورهٔ قبل صفر بوده (' + (cur > 0 ? '+' : '') + fa(cur) + ' فاکتور)', cls: '' };
+    const pct = ((cur - prev) / prev) * 100;
+    return { text: percentPhrase(pct) + ' نسبت به ' + label, cls: '', arrow: pct > 0 ? '↑ ' : '↓ ' };
+  }
+
+  /* Net profit: colour follows real improvement or decline; loss reduction counts as improvement. */
+  function describeNetChange(current, previous, label) {
+    const cur = Math.round(current), prev = Math.round(previous);
+    if (cur === prev) return { text: 'بدون تغییر نسبت به ' + label, cls: '' };
+    if (prev === 0) return cur > 0
+      ? { text: 'دورهٔ قبل صفر بوده؛ سود این دوره ' + fullToman(cur), cls: '' }
+      : { text: 'دورهٔ قبل صفر بوده؛ زیان این دوره ' + fullToman(-cur), cls: '' };
+    if (cur === 0) {
+      return prev > 0
+        ? { text: 'سود به صفر رسید؛ افت ' + fullToman(prev), cls: 'is-down', arrow: '↓ ' }
+        : { text: 'زیان به صفر رسید؛ بهبود ' + fullToman(-prev), cls: 'is-up', arrow: '↑ ' };
+    }
+    if (prev > 0 && cur > 0) {
+      const pct = ((cur - prev) / prev) * 100;
+      return { text: percentPhrase(pct) + ' نسبت به ' + label, cls: pct > 0 ? 'is-up' : 'is-down', arrow: pct > 0 ? '↑ ' : '↓ ' };
+    }
+    if (prev < 0 && cur > 0) return { text: 'از زیان به سود؛ بهبود ' + fullToman(cur - prev), cls: 'is-up', arrow: '↑ ' };
+    if (prev > 0 && cur < 0) return { text: 'از سود به زیان؛ افت ' + fullToman(prev - cur), cls: 'is-down', arrow: '↓ ' };
+    /* both negative */
+    return cur > prev
+      ? { text: 'کاهش زیان؛ بهبود ' + fullToman(cur - prev), cls: 'is-up', arrow: '↑ ' }
+      : { text: 'افزایش زیان؛ افت ' + fullToman(prev - cur), cls: 'is-down', arrow: '↓ ' };
+  }
+
+  /* Percent with one decimal; a real but tiny change is never shown as «no change». */
+  function percentPhrase(pct) {
+    const abs = Math.abs(pct);
+    if (abs < 0.1) return (pct > 0 ? 'افزایش' : 'کاهش') + ' کمتر از ۰٫۱٪';
+    const p = Math.round(abs * 10) / 10;
+    return (pct > 0 ? 'افزایش ' : 'کاهش ') + faNum(p, 1) + '٪';
+  }
+
+  /* One renderer for both metrics: { current, previous, metric: 'count' | 'net', label }. */
+  function deltaTileHtml(args) {
+    const model = args.metric === 'net'
+      ? describeNetChange(args.current, args.previous, args.label)
+      : describeCountChange(args.current, args.previous, args.label);
+    return '<div class="rp-delta' + (model.cls ? ' ' + model.cls : '') + '">' +
+      (model.arrow || '') + model.text + '</div>';
+  }
+
+  /* ------------------------------------------------------------------ */
   /* Renderers                                                           */
   /* ------------------------------------------------------------------ */
   function segHtml() {
@@ -661,14 +778,15 @@
     );
   }
 
-  function snapshotHtml(count, avg, grossProfit, returnsTotal, receipts) {
-    if (!count && !receipts) return '';
+  function snapshotHtml(count, avg, netProfit, returnsTotal, receipts, cmp) {
+    const hasBaseline = !!(cmp && (cmp.previous.count || cmp.previous.netProfit));
+    if (!count && !receipts && !netProfit && !returnsTotal && !hasBaseline) return '';
     return (
       '<section class="rp-card" aria-label="خلاصه عملکرد">' +
       '<div class="rp-stats rp-stats-2">' +
-      '<div class="rp-stat"><div class="rp-stat-val">' + fa(count) + '</div><div class="rp-stat-lab">تعداد فاکتور</div></div>' +
+      '<div class="rp-stat"><div class="rp-stat-val">' + fa(count) + '</div><div class="rp-stat-lab">تعداد فاکتور</div>' + (cmp ? deltaTileHtml({ current: cmp.current.count, previous: cmp.previous.count, metric: 'count', label: cmp.label }) : '') + '</div>' +
       '<div class="rp-stat"><div class="rp-stat-val">' + compact(avg) + '</div><div class="rp-stat-lab">میانگین فاکتور</div></div>' +
-      '<div class="rp-stat"><div class="rp-stat-val' + (grossProfit < 0 ? ' is-neg' : '') + '">' + compact(grossProfit) + '</div><div class="rp-stat-lab">سود خالص</div></div>' +
+      '<div class="rp-stat"><div class="rp-stat-val' + (netProfit < 0 ? ' is-neg' : '') + '">' + compact(netProfit) + '</div><div class="rp-stat-lab">سود خالص</div>' + (cmp ? deltaTileHtml({ current: cmp.current.netProfit, previous: cmp.previous.netProfit, metric: 'net', label: cmp.label }) : '') + '</div>' +
       '<div class="rp-stat"><div class="rp-stat-val">' + compact(receipts || 0) + '</div><div class="rp-stat-lab">دریافتی</div></div>' +
       '</div>' +
       '<div class="rp-note">سود خالص = سود فاکتورها − سود برگشتی‌ها (بهای خرید FIFO) − تخفیف‌های نقدی؛ همان تعریف «سود این ماه» داشبورد.</div>' +
@@ -975,7 +1093,9 @@
       return p && p.method === 'discount' && dateInPeriod(p.date, reportPeriod, now) ? s + (Number(p.amount) || 0) : s;
     }, 0);
     const profitRes = productProfitRows(invsPeriod, retPaysPeriod, discountTotal);
-    const periodGrossProfit = profitRes.netTotal;
+    const periodNetProfit = profitRes.netTotal;
+    const comparison = (reportPeriod === 'today' || reportPeriod === 'all') ? null
+      : buildPeriodComparison(reportPeriod, now);
 
 
     const returnsTotal = returns.reduce(function (s, p) {
@@ -1039,7 +1159,7 @@
     body.innerHTML =
       heroHtml(periodSales, periodCount, periodAvg, cmp) +
       (periodCount ? trendHtml(trend) : '') +
-      snapshotHtml(periodCount, periodAvg, periodGrossProfit, returnsTotal, periodReceipts) +
+      snapshotHtml(periodCount, periodAvg, periodNetProfit, returnsTotal, periodReceipts, comparison) +
       (periodCount ? topProductsHtml(topProd, profitRes) : '') +
       customersHtml(periodCount ? topCust : [], netSales, debtors.length, g.customerDebt) +
       collectionsHtml(received, byMethod, debtors.length, g.customerDebt, topDebtors) +
