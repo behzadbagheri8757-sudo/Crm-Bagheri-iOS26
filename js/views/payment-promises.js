@@ -113,7 +113,7 @@
         '<div class="pp-amount-echo" id="pp-amount-echo"></div></div>' +
       '<div class="q-block"><div class="q-title">تاریخ وعده</div>' +
         '<div class="chip-wrap">' + chip('امروز', 0) + chip('فردا', 1) + chip('۳ روز دیگر', 3) + chip('هفتهٔ دیگر', 7) + '</div></div>' +
-      '<div class="field">' + shamsiDateInputHTML('pp-date', defDate, { mode: 'calendar' }) +
+      '<div class="field">' + shamsiDateInputHTML('pp-date', defDate) +
         '<div class="pp-error" id="pp-date-error" hidden>تاریخ وعده نمی‌تواند قبل از امروز باشد</div></div>' +
       '<div class="field"><label>' + (isOneOff(cid) ? 'نام پرداخت‌کننده / یادداشت' : 'یادداشت (اختیاری)') + '</label><input id="pp-note" autocomplete="off" value="' + (from ? esc(from.note || '') : '') + '"></div>' +
       '<div class="btn-row"><button type="button" class="btn" id="pp-save">ثبت</button></div>',

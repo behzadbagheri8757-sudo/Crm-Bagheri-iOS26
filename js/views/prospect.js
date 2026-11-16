@@ -273,7 +273,7 @@
       <div class="field">
         <label>پیگیری بعدی (اختیاری)</label>
         <div id="ff-next-date-wrap" class="ff-date-field is-empty">
-          ${typeof shamsiDateInputHTML === 'function' ? shamsiDateInputHTML('ff-next-date', null, { mode: 'calendar' }) : '<input type="date" id="ff-next-date" aria-label="تاریخ پیگیری بعدی">'}
+          ${typeof shamsiDateInputHTML === 'function' ? shamsiDateInputHTML('ff-next-date', null) : '<input type="date" id="ff-next-date" aria-label="تاریخ پیگیری بعدی">'}
         </div>
       </div>
       ${isV2 ? `
@@ -393,7 +393,7 @@
       <div class="field">
         <label>پیگیری بعدی (اختیاری)</label>
         <div id="edit-visit-date-wrap" class="ff-date-field${visit.nextFollowUpDate ? '' : ' is-empty'}">
-          ${typeof shamsiDateInputHTML === 'function' ? shamsiDateInputHTML('edit-visit-next-date', visit.nextFollowUpDate || null, { mode: 'calendar' }) : '<input type="date" id="edit-visit-next-date" aria-label="تاریخ پیگیری بعدی">'}
+          ${typeof shamsiDateInputHTML === 'function' ? shamsiDateInputHTML('edit-visit-next-date', visit.nextFollowUpDate || null) : '<input type="date" id="edit-visit-next-date" aria-label="تاریخ پیگیری بعدی">'}
         </div>
       </div>
       <div class="btn-row" style="margin-top:14px;">

@@ -45,7 +45,6 @@
   /* Custom range: { from, to } as ISO dates (inclusive). Compared with the equal-length span just before it. */
   let reportRange = null;
   let reportProductSort = 'sales'; // 'sales' | 'profit' — top-products ordering
-  let reportProductLimit = '10'; // 5 | 10 | 15 | all
   function rangeDefault() {
     const t = new Date();
     const f = new Date(t);
@@ -68,9 +67,6 @@
   function inRange(iso, r) {
     const d = String(iso || '').slice(0, 10);
     return !!r && d >= r.from && d <= r.to;
-  }
-  function isValidReportRange(r) {
-    return !!(r && r.from && r.to && r.from <= r.to);
   }
   const WEEKDAYS = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنجشنبه', 'جمعه'];
   const MONTHS =
@@ -144,81 +140,59 @@
     return String(iso || '').slice(0, 10);
   }
 
-  /* Product-level gross profit. Uses the existing per-line and per-invoice terms:
-     (price−buyPrice)×qty − line discount − allocated invoice discount. Return margin
-     reversals use the existing FIFO helper. Cash discounts remain period-level only
-     because they have no product attribution; product ranking excludes rows whose
-     purchase cost cannot be established, while netTotal preserves the existing headline
-     formula and its legacy missing-buyPrice fallback. */
+  /* Product-level gross profit. Uses the exact per-line and per-invoice terms of
+     periodInvoiceGrossProfit (line: (price−buyPrice)×qty − line discount; invoice:
+     − invoiceDiscountAmount). The invoice discount is ALLOCATED to lines in proportion
+     to their net line value, so the sum over products equals the period total exactly.
+     Returns are not netted from profit (same convention as the period headline); they
+     are attributed to products separately in topProductsForPeriod. */
   function productProfitRows(invoices, retPays, discountTotal) {
     const map = {};
     let unallocated = 0;
-    function rowFor(productId, name) {
-      const k = productId || name || '—';
-      if (!map[k]) map[k] = { productId: productId, name: name || '—', sales: 0, profit: 0, qty: 0, profitKnown: true };
-      return map[k];
-    }
     invoices.forEach(function (inv) {
       const items = inv.items || [];
       const subtotal = items.reduce(function (a, it) {
-        const q = Number(it.qty), price = Number(it.price), discount = Number(it.discount || 0);
-        return a + (Number.isFinite(q) && Number.isFinite(price) && Number.isFinite(discount) ? q * price - discount : 0);
+        return a + (it.qty || 0) * (it.price || 0) - (it.discount || 0);
       }, 0);
-      const invDisc = Number(invoiceDiscountAmount(inv)) || 0;
+      const invDisc = invoiceDiscountAmount(inv);
       if (subtotal <= 0 && invDisc) unallocated += invDisc;
       items.forEach(function (it) {
-        const r = rowFor(it.productId, it.name);
-        const q = Number(it.qty), price = Number(it.price), lineDiscount = Number(it.discount || 0);
-        if (!Number.isFinite(q) || !Number.isFinite(price) || !Number.isFinite(lineDiscount)) {
-          r.profitKnown = false;
-          return;
-        }
-        const lineNet = q * price - lineDiscount;
+        const lineNet = (it.qty || 0) * (it.price || 0) - (it.discount || 0);
         const alloc = subtotal > 0 ? (invDisc * lineNet) / subtotal : 0;
-        r.sales += lineNet - alloc;
-        r.qty += q;
-        if (it.buyPrice === null || it.buyPrice === undefined || it.buyPrice === '' || !Number.isFinite(Number(it.buyPrice))) {
-          r.profitKnown = false;
-        }
-        // Preserve the report's existing total-profit formula (legacy missing buyPrice => 0),
-        // while keeping this product out of the definitive product-profit ranking.
-        r.profit += (price - (Number(it.buyPrice) || 0)) * q - lineDiscount - alloc;
+        const profit = ((it.price || 0) - (it.buyPrice || 0)) * (it.qty || 0) - (it.discount || 0) - alloc;
+        const sales = lineNet - alloc;
+        const k = it.productId || it.name;
+        if (!map[k]) map[k] = { productId: it.productId, name: it.name || '—', sales: 0, profit: 0, qty: 0 };
+        map[k].sales += sales;
+        map[k].profit += profit;
+        map[k].qty += it.qty || 0;
       });
     });
+    /* Returns of the period (by PAYMENT date, the dashboard KPI rule). Profit reversal per
+       returned line = _ccReturnMarginForPayment, the exact function the KPI uses (FIFO cost). */
+    let returnsMargin = 0;
     (retPays || []).forEach(function (p) {
       (p.returnItems || []).forEach(function (ri) {
-        const q = Number(ri.qty);
-        if (!Number.isFinite(q) || q <= 0) return;
-        const r = rowFor(ri.productId, ri.name);
-        const price = Number(ri.price);
-        if (Number.isFinite(price)) r.sales -= q * price;
-        else r.profitKnown = false;
-        r.qty -= q;
-        if (typeof _ccReturnMarginForPayment === 'function') {
-          const margin = _ccReturnMarginForPayment(p.customerId, Object.assign({}, p, { returnItems: [ri] }));
-          if (Number.isFinite(Number(margin))) r.profit -= Number(margin);
-          else r.profitKnown = false;
-          const sourceItems = (data.invoices || []).filter(function (inv) { return !p.invoiceId || inv.id === p.invoiceId; })
-            .flatMap(function (inv) { return (inv.items || []).filter(function (it) { return it.productId === ri.productId; }); });
-          const product = (data.products || []).find(function (x) { return x.id === ri.productId; });
-          const hasAllocatedCost = sourceItems.some(function (it) {
-            return Array.isArray(it.costAllocations) && it.costAllocations.some(function (a) { return Number(a.qty) > 0 && Number.isFinite(Number(a.unitCost)); });
-          });
-          const hasStoredCost = sourceItems.some(function (it) { return it.buyPrice !== null && it.buyPrice !== undefined && it.buyPrice !== '' && Number.isFinite(Number(it.buyPrice)); });
-          const hasProductCost = product && product.buy !== null && product.buy !== undefined && product.buy !== '' && Number.isFinite(Number(product.buy));
-          if (!hasAllocatedCost && !hasStoredCost && !hasProductCost) r.profitKnown = false;
-        } else {
-          r.profitKnown = false;
-        }
+        if (!(Number(ri.qty) > 0)) return;
+        const margin = typeof _ccReturnMarginForPayment === 'function'
+          ? _ccReturnMarginForPayment(p.customerId, Object.assign({}, p, { returnItems: [ri] }))
+          : 0;
+        returnsMargin += margin;
+        const k = ri.productId || ri.name;
+        if (!map[k]) map[k] = { productId: ri.productId, name: ri.name || '—', sales: 0, profit: 0, qty: 0 };
+        map[k].profit -= margin;
+        map[k].sales -= (Number(ri.qty) || 0) * (Number(ri.price) || 0);
+        map[k].qty -= Number(ri.qty) || 0;
       });
     });
+
     const rows = Object.keys(map).map(function (k) {
       const r = map[k];
-      r.margin = r.profitKnown && r.sales > 0 ? (r.profit / r.sales) * 100 : null;
+      r.margin = r.sales > 0 ? (r.profit / r.sales) * 100 : null;
       return r;
     });
     const netTotal = rows.reduce(function (a, r) { return a + r.profit; }, 0) - (discountTotal || 0);
-    return { rows: rows, unallocated: unallocated, discountTotal: discountTotal || 0, netTotal: netTotal };
+    return { rows: rows, unallocated: unallocated, returnsMargin: returnsMargin, discountTotal: discountTotal || 0, netTotal: netTotal };
   }
 
   // Same formula the previous Reports page used for «سود ناخالص فاکتورهای دوره».
@@ -257,28 +231,42 @@
   /* Sales value = qty × price − line discount (same as topProducts),    */
   /* minus returned value (returnItems qty × price) of the same period.  */
   /* ------------------------------------------------------------------ */
-  function topProductsForPeriod(invs, returns) {
+  function topProductsForPeriod(invs, returns, limit) {
+    /* Revenue = net sales of the invoices: line value minus the invoice-level discount,
+       allocated to lines (same allocation as the product profit table). Invoice totals
+       are already net of that discount, so the product bars now add up to the headline. */
     const map = {};
     productProfitRows(invs, [], 0).rows.forEach(function (r) {
+      if (r.sales === 0 && r.qty === 0) return;
       map[r.productId || r.name] = { productId: r.productId, name: r.name, revenue: r.sales };
     });
     let returnsWithoutItems = 0;
     let appliedReturns = 0;
-    (returns || []).forEach(function (p) {
+    returns.forEach(function (p) {
       const items = p.returnItems || [];
-      if (!items.length) { returnsWithoutItems++; return; }
+      if (!items.length) {
+        returnsWithoutItems++;
+        return;
+      }
       items.forEach(function (ri) {
         const k = ri.productId || ri.name;
-        if (!map[k]) map[k] = { productId: ri.productId, name: ri.name || '—', revenue: 0 };
-        const q = Number(ri.qty), price = Number(ri.price);
-        if (Number.isFinite(q) && q > 0 && Number.isFinite(price)) {
-          map[k].revenue -= q * price;
+        if (map[k]) {
+          map[k].revenue -= (ri.qty || 0) * (ri.price || 0);
           appliedReturns++;
         }
       });
     });
-    const list = Object.keys(map).map(function (k) { return map[k]; });
-    return { top: list, returnsWithoutItems: returnsWithoutItems, appliedReturns: appliedReturns };
+    const list = Object.keys(map)
+      .map(function (k) {
+        return map[k];
+      })
+      .filter(function (x) {
+        return x.revenue > 0;
+      })
+      .sort(function (a, b) {
+        return b.revenue - a.revenue;
+      });
+    return { top: list.slice(0, limit || 5), returnsWithoutItems: returnsWithoutItems, appliedReturns: appliedReturns };
   }
 
   /* Period-aware Top Customers: invoice totals in the period minus the   */
@@ -589,8 +577,10 @@
     const model = args.metric === 'net'
       ? describeNetChange(args.current, args.previous, args.label)
       : describeCountChange(args.current, args.previous, args.label);
+    /* Tiles carry only the short clause; the full baseline is named once under the card. */
+    const text = args.short ? model.text.replace(/ نسبت به .*$/, '').split('؛')[0] : model.text;
     return '<div class="rp-delta' + (model.cls ? ' ' + model.cls : '') + '">' +
-      (model.arrow || '') + model.text + '</div>';
+      (model.arrow || '') + text + '</div>';
   }
 
   /* ------------------------------------------------------------------ */
@@ -620,9 +610,8 @@
   function rangeBarHtml() {
     if (!reportRange) reportRange = rangeDefault();
     return '<div class="rp-range" id="rp-range">' +
-      '<label class="rp-range-item"><span>از</span>' + shamsiDateInputHTML('rp-range-from', reportRange.from, { mode: 'calendar' }) + '</label>' +
-      '<label class="rp-range-item"><span>تا</span>' + shamsiDateInputHTML('rp-range-to', reportRange.to, { mode: 'calendar' }) + '</label>' +
-      '<div id="rp-range-error" class="rp-range-error" role="alert" hidden></div>' +
+      '<label class="rp-range-item"><span>از</span>' + shamsiDateInputHTML('rp-range-from', reportRange.from) + '</label>' +
+      '<label class="rp-range-item"><span>تا</span>' + shamsiDateInputHTML('rp-range-to', reportRange.to) + '</label>' +
       '</div>';
   }
 
@@ -795,13 +784,14 @@
     const hasBaseline = !!(cmp && (cmp.previous.count || cmp.previous.netProfit));
     if (!count && !receipts && !netProfit && !returnsTotal && !hasBaseline) return '';
     return (
-      '<section class="rp-card rp-snapshot" aria-label="خلاصه عملکرد">' +
+      '<section class="rp-card" aria-label="خلاصه عملکرد">' +
       '<div class="rp-stats rp-stats-2">' +
-      '<div class="rp-stat"><div class="rp-stat-val">' + fa(count) + '</div><div class="rp-stat-lab">تعداد فاکتور</div>' + (cmp ? deltaTileHtml({ current: cmp.current.count, previous: cmp.previous.count, metric: 'count', label: cmp.label }) : '') + '</div>' +
+      '<div class="rp-stat"><div class="rp-stat-val">' + fa(count) + '</div><div class="rp-stat-lab">تعداد فاکتور</div>' + (cmp ? deltaTileHtml({ current: cmp.current.count, previous: cmp.previous.count, metric: 'count', label: cmp.label, short: true }) : '') + '</div>' +
       '<div class="rp-stat"><div class="rp-stat-val">' + compact(avg) + '</div><div class="rp-stat-lab">میانگین فاکتور</div></div>' +
-      '<div class="rp-stat"><div class="rp-stat-val' + (netProfit < 0 ? ' is-neg' : '') + '">' + compact(netProfit) + '</div><div class="rp-stat-lab">سود خالص</div>' + (cmp ? deltaTileHtml({ current: cmp.current.netProfit, previous: cmp.previous.netProfit, metric: 'net', label: cmp.label }) : '') + '</div>' +
+      '<div class="rp-stat"><div class="rp-stat-val' + (netProfit < 0 ? ' is-neg' : '') + '">' + compact(netProfit) + '</div><div class="rp-stat-lab">سود خالص</div>' + (cmp ? deltaTileHtml({ current: cmp.current.netProfit, previous: cmp.previous.netProfit, metric: 'net', label: cmp.label, short: true }) : '') + '</div>' +
       '<div class="rp-stat"><div class="rp-stat-val">' + compact(receipts || 0) + '</div><div class="rp-stat-lab">دریافتی</div></div>' +
       '</div>' +
+      (cmp ? '<div class="rp-note">مقایسه با ' + cmp.label + '</div>' : '') +
       '<div class="rp-note">سود خالص = سود فاکتورها − سود برگشتی‌ها (بهای خرید FIFO) − تخفیف‌های نقدی؛ همان تعریف «سود این ماه» داشبورد.</div>' +
       (returnsTotal > 0
         ? '<div class="rp-row rp-row-flat"><span>برگشت از فروش این دوره</span><span class="rp-row-val rp-neg">' + fullToman(returnsTotal) + '</span></div>'
@@ -810,83 +800,61 @@
     );
   }
 
-  function buildProductRanking(res, profit, sortMode) {
-    const byProfit = sortMode === 'profit';
-    const key = byProfit ? 'profit' : 'revenue';
-    const byKey = {};
-    (profit.rows || []).forEach(function (r) { byKey[r.productId || r.name] = r; });
-    let list;
-    if (byProfit) {
-      list = (profit.rows || []).filter(function (r) { return r.profitKnown === true; }).map(function (r) {
-        return { productId: r.productId, name: r.name, revenue: r.sales, profit: r.profit, margin: r.margin, profitKnown: true };
-      });
-    } else {
-      list = (res.top || []).map(function (p) {
-        const pr = byKey[p.productId || p.name] || { profit: 0, margin: null, profitKnown: false };
-        return { productId: p.productId, name: p.name, revenue: p.revenue, profit: pr.profit, margin: pr.margin, profitKnown: !!pr.profitKnown };
-      });
-    }
-    list = list.filter(function (p) {
-      return p[key] !== null && p[key] !== undefined && p[key] !== '' && Number.isFinite(Number(p[key]));
-    });
-    list.sort(function (a, b) {
-      const delta = Number(b[key]) - Number(a[key]);
-      if (delta) return delta;
-      const byName = String(a.name || '').localeCompare(String(b.name || ''), 'fa');
-      return byName || String(a.productId || '').localeCompare(String(b.productId || ''));
-    });
-    return { list: list, key: key, unknown: byProfit ? (profit.rows || []).filter(function (r) { return r.profitKnown !== true; }).length : 0 };
-  }
-
-  function limitProductRanking(list, selectedLimit) {
-    const limit = selectedLimit === 'all' ? list.length : Math.max(1, parseInt(selectedLimit, 10) || 10);
-    return list.slice(0, limit);
-  }
-
   function topProductsHtml(res, profit) {
     const byProfit = reportProductSort === 'profit';
-    const ranked = buildProductRanking(res, profit, reportProductSort);
-    const key = ranked.key;
-    const list = ranked.list;
-    const total = list.length;
-    const shown = limitProductRanking(list, reportProductLimit);
-    const maxPositive = shown.reduce(function (m, p) { return Math.max(m, Number(p[key]) > 0 ? Number(p[key]) : 0); }, 0);
-    const maxNegative = shown.reduce(function (m, p) { return Math.max(m, Number(p[key]) < 0 ? Math.abs(Number(p[key])) : 0); }, 0);
-    const span = maxPositive + maxNegative;
-    const zeroPct = span > 0 ? (maxPositive / span) * 100 : 100;
-    const unknown = ranked.unknown;
-    function clean(v) { return Number.isFinite(Number(v)) ? Number(v) : 0; }
-    const metric = '<label class="rp-product-control">معیار' +
-      '<select data-rp-product-sort aria-label="معیار رتبه‌بندی محصولات">' +
-      '<option value="sales"' + (!byProfit ? ' selected' : '') + '>فروش</option>' +
-      '<option value="profit"' + (byProfit ? ' selected' : '') + '>سود</option></select></label>';
-    const count = '<label class="rp-product-control">تعداد' +
-      '<select data-rp-product-limit aria-label="تعداد محصولات قابل نمایش">' +
-      ['5','10','15','all'].map(function (v) { return '<option value="' + v + '"' + (reportProductLimit === v ? ' selected' : '') + '>' + (v === 'all' ? 'همه' : fa(v)) + '</option>'; }).join('') +
-      '</select></label>';
-    const rows = shown.map(function (p) {
-      const value = clean(p[key]);
-      const pct = span > 0 ? (Math.abs(value) / span) * 100 : 0;
-      const negative = value < 0;
-      const margin = p.margin === null || p.margin === undefined || !Number.isFinite(Number(p.margin)) ? '—' : faNum(p.margin, 1) + '٪';
-      const sub = byProfit ? ('فروش ' + compact(p.revenue) + ' · حاشیه ' + margin) :
-        (p.profitKnown ? ('سود ' + compact(clean(p.profit)) + ' · حاشیه ' + margin) : 'سود این محصول قابل محاسبه نیست');
-      return '<div class="rp-bar-row">' +
-        '<div class="rp-bar-meta"><span class="rp-bar-name" title="' + esc(p.name) + '" aria-label="' + esc(p.name) + '">' + esc(p.name) + '</span><span class="rp-bar-amount">' + (negative ? '−' : '') + compact(Math.abs(value)) + '</span></div>' +
-        '<div class="rp-bar-track" role="img" aria-label="' + esc(p.name) + ': ' + esc(compact(value)) + '">' +
-          '<span class="rp-bar-zero" style="left:' + zeroPct + '%"></span><span class="rp-bar-fill ' + (negative ? 'is-negative' : 'is-positive') + '" style="--bar-zero:' + zeroPct + '%;width:' + pct + '%"></span>' +
-        '</div><div class="rp-bar-sub">' + esc(sub) + '</div></div>';
-    }).join('');
-    const countLabel = total > 0 ? (shown.length < total ? 'نمایش ' + fa(shown.length) + ' از ' + fa(total) + ' محصول دارای فعالیت در این دوره' : 'نمایش ' + fa(shown.length) + ' محصول دارای فعالیت در این دوره') : 'محصول دارای فعالیت در این دوره وجود ندارد';
-    return '<section class="rp-card" aria-label="فروش و سود محصولات">' +
-      '<div class="rp-sec-head"><h3 class="rp-sec-title">عملکرد محصولات</h3></div>' +
-      '<div class="rp-product-controls">' + metric + count + '</div>' +
-      '<div class="rp-note">' + countLabel + '</div>' +
-      (byProfit && unknown ? '<div class="rp-note rp-product-unknown">سود ' + fa(unknown) + ' محصول قابل محاسبه نیست؛ این محصولات در رتبه‌بندی سود قطعی نمایش داده نمی‌شوند.</div>' : '') +
-      (rows ? '<div class="rp-bars">' + rows + '</div>' : '<div class="rp-note">' + (byProfit ? 'سود قطعی برای رتبه‌بندی در این دوره موجود نیست.' : 'فروش قابل محاسبه‌ای برای این دوره وجود ندارد.') + '</div>') +
-      (res.appliedReturns || res.returnsWithoutItems ? '<div class="rp-note">فروش محصول پس از کسر برگشت‌های دارای ردیف کالا محاسبه شده است.' + (res.returnsWithoutItems ? ' ' + fa(res.returnsWithoutItems) + ' برگشت بدون ردیف کالا در رتبه‌بندی محصول قابل تخصیص نیست.' : '') + '</div>' : '') +
-      (byProfit && profit.discountTotal ? '<div class="rp-note">تخفیف نقدی به‌صورت کل ثبت شده و به محصول تخصیص داده نشده است؛ بنابراین جمع سود محصولات می‌تواند با سود خالص کل گزارش متفاوت باشد.</div>' : '') +
-      '</section>';
+    let list;
+    let key;
+    if (byProfit) {
+      list = profit.rows.slice().sort(function (a, b) { return b.profit - a.profit; }).slice(0, 5);
+      key = 'profit';
+    } else {
+      const byKey = {};
+      profit.rows.forEach(function (r) { byKey[r.productId || r.name] = r; });
+      list = res.top.map(function (p) {
+        const pr = byKey[p.productId || p.name] || { profit: 0, margin: null };
+        return { name: p.name, revenue: p.revenue, profit: pr.profit, margin: pr.margin };
+      });
+      key = 'revenue';
+    }
+    if (!list.length) return '';
+    const max = Math.max.apply(null, list.map(function (p) { return Math.abs(p[key]); })) || 1;
+    const seg =
+      '<div class="rp-seg rp-seg-sm" role="tablist" aria-label="ترتیب کالاها">' +
+      '<button type="button" role="tab" class="rp-seg-btn' + (!byProfit ? ' is-active' : '') + '" aria-selected="' + (!byProfit) + '" data-pp="sales">بر اساس فروش</button>' +
+      '<button type="button" role="tab" class="rp-seg-btn' + (byProfit ? ' is-active' : '') + '" aria-selected="' + byProfit + '" data-pp="profit">بر اساس سود</button>' +
+      '</div>';
+    return (
+      '<section class="rp-card" aria-label="پرفروش‌ترین کالاها">' +
+      '<div class="rp-sec-head"><h3 class="rp-sec-title">پرفروش‌ترین کالاها</h3></div>' +
+      seg +
+      '<div class="rp-bars">' +
+      list
+        .map(function (p) {
+          const w = Math.max(3, Math.round((Math.abs(p[key]) / max) * 100));
+          const margin = p.margin === null || p.margin === undefined ? '—' : faNum(p.margin, 1) + '٪';
+          const sub = 'سود ' + compact(p.profit) + ' · حاشیه ' + margin;
+          return (
+            '<div class="rp-bar">' +
+            '<div class="rp-bar-top"><span class="rp-bar-name">' +
+            esc(p.name) +
+            '</span><span class="rp-bar-amt">' +
+            compact(p[key]) +
+            '</span></div>' +
+            '<div class="rp-note" style="margin:0 0 4px">' + esc(sub) + '</div>' +
+            '<div class="rp-bar-track"><div class="rp-bar-fill" style="width:' +
+            w +
+            '%"></div></div></div>'
+          );
+        })
+        .join('') +
+      '</div>' +
+      (res.appliedReturns || res.returnsWithoutItems
+        ? '<div class="rp-note">مبالغ پس از کسر برگشتی‌های ثبت‌شده با ردیف کالا است' +
+          (res.returnsWithoutItems ? ' (برگشتی‌های بدون ردیف کالا در این رتبه‌بندی لحاظ نشده‌اند).' : '.') +
+          '</div>'
+        : '') +
+      '</section>'
+    );
   }
 
   function customersHtml(topList, netTotal, debtorCount, customerDebt) {
@@ -1155,7 +1123,7 @@
       : null;
     const cmp = periodCount ? salesComparison(reportPeriod, now, periodSales, trend, prevSum) : null;
 
-    const topProd = topProductsForPeriod(invsPeriod, returns);
+    const topProd = topProductsForPeriod(invsPeriod, returns, 5);
     const topCust = topCustomersForPeriod(invsPeriod, returns, 5);
     const netSales = periodSales - returnsTotal;
 
@@ -1251,6 +1219,12 @@
       '</div>';
 
     rootClickHandler = function (e) {
+      const pp = e.target.closest ? e.target.closest('[data-pp]') : null;
+      if (pp) {
+        reportProductSort = pp.getAttribute('data-pp') === 'profit' ? 'profit' : 'sales';
+        renderBody();
+        return;
+      }
       const btn = e.target.closest ? e.target.closest('[data-rp]') : null;
       if (!btn) return;
       reportPeriod = btn.getAttribute('data-rp');
@@ -1269,33 +1243,17 @@
       renderBody();
     };
     if (typeof window !== 'undefined' && window.__rpTest) {
-      window.__rpDebug = { productProfitRows: productProfitRows, periodInvoiceGrossProfit: periodInvoiceGrossProfit, topProductsForPeriod: topProductsForPeriod, buildProductRanking: buildProductRanking, limitProductRanking: limitProductRanking, isValidReportRange: isValidReportRange, periodReturns: periodReturns, invoiceDiscountAmount: invoiceDiscountAmount };
+      window.__rpDebug = { productProfitRows: productProfitRows, periodInvoiceGrossProfit: periodInvoiceGrossProfit, topProductsForPeriod: topProductsForPeriod, periodReturns: periodReturns, invoiceDiscountAmount: invoiceDiscountAmount };
     }
     root.addEventListener('click', rootClickHandler);
     root.addEventListener('change', function (e) {
       const t = e.target;
-      if (!t) return;
-      if (t.matches && t.matches('[data-rp-product-sort]')) {
-        reportProductSort = t.value === 'profit' ? 'profit' : 'sales';
-        renderBody();
-        return;
-      }
-      if (t.matches && t.matches('[data-rp-product-limit]')) {
-        reportProductLimit = ['5','10','15','all'].indexOf(t.value) >= 0 ? t.value : '10';
-        renderBody();
-        return;
-      }
-      if (t.id !== 'rp-range-from' && t.id !== 'rp-range-to') return;
+      if (!t || (t.id !== 'rp-range-from' && t.id !== 'rp-range-to')) return;
       if (!reportRange) reportRange = rangeDefault();
-      const next = { from: reportRange.from, to: reportRange.to };
-      if (t.id === 'rp-range-from') next.from = t.value; else next.to = t.value;
-      const err = root.querySelector('#rp-range-error');
-      if (!isValidReportRange(next)) {
-        if (err) { err.textContent = 'تاریخ پایان نمی‌تواند قبل از تاریخ شروع باشد.'; err.hidden = false; }
-        return;
+      if (t.id === 'rp-range-from') reportRange.from = t.value; else reportRange.to = t.value;
+      if (reportRange.from > reportRange.to) {
+        const tmp = reportRange.from; reportRange.from = reportRange.to; reportRange.to = tmp;
       }
-      reportRange = next;
-      if (err) { err.textContent = ''; err.hidden = true; }
       renderBody();
     });
 
