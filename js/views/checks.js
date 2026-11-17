@@ -222,7 +222,18 @@
         ${sideChip('customer', 'دریافتی از مشتری')}
         ${sideChip('supplier', 'پرداختی به تامین‌کننده')}
       </div>
-      <div class="field"><input id="check-search" placeholder="${isSup ? 'جستجوی تامین‌کننده، شماره چک، مبلغ...' : 'جستجوی مشتری، شماره چک، مبلغ...'}" value="${esc(chkQuery)}" autocomplete="off"></div>
+      <div class="check-tools-row">
+        <div class="field"><input id="check-search" placeholder="${isSup ? 'جستجوی تامین‌کننده، شماره چک، مبلغ...' : 'جستجوی مشتری، شماره چک، مبلغ...'}" value="${esc(chkQuery)}" autocomplete="off"></div>
+        <div class="tx-toolbar">
+          <label class="tx-toolbar-label" for="check-sort">مرتب‌سازی</label>
+          <select id="check-sort" class="tx-toolbar-select">
+            <option value="dueAsc" ${chkSort === 'dueAsc' ? 'selected' : ''}>نزدیک‌ترین سررسید</option>
+            <option value="dueDesc" ${chkSort === 'dueDesc' ? 'selected' : ''}>دورترین سررسید</option>
+            <option value="amountDesc" ${chkSort === 'amountDesc' ? 'selected' : ''}>بیشترین مبلغ</option>
+            <option value="newest" ${chkSort === 'newest' ? 'selected' : ''}>جدیدترین ثبت</option>
+          </select>
+        </div>
+      </div>
       <div class="chip-row segmented-control" id="check-chips">
         ${chip('all','همه')}
         ${chip('pending','در جریان')}
@@ -230,15 +241,6 @@
         ${isSup ? chip('bounced','برگشتی') : ''}
         ${chip('dueSoon','سررسید نزدیک')}
         ${chip('overdue','چک سررسیدگذشته')}
-      </div>
-      <div class="tx-toolbar">
-        <label class="tx-toolbar-label" for="check-sort">مرتب‌سازی</label>
-        <select id="check-sort" class="tx-toolbar-select">
-          <option value="dueAsc" ${chkSort === 'dueAsc' ? 'selected' : ''}>نزدیک‌ترین سررسید</option>
-          <option value="dueDesc" ${chkSort === 'dueDesc' ? 'selected' : ''}>دورترین سررسید</option>
-          <option value="amountDesc" ${chkSort === 'amountDesc' ? 'selected' : ''}>بیشترین مبلغ</option>
-          <option value="newest" ${chkSort === 'newest' ? 'selected' : ''}>جدیدترین ثبت</option>
-        </select>
       </div>
       <div id="check-summary" class="cards" style="margin-bottom:12px;"></div>
       <p class="tx-hint">${isSup ? 'برای تغییر وضعیت یا ویرایش چک، روی ردیف بزنید تا صفحهٔ همان تامین‌کننده باز شود.' : 'برای تغییر وضعیت وصول، روی دکمه وضعیت هر چک بزنید.'}</p>

@@ -454,7 +454,6 @@
     var custName = customerNameById(occ.customerId), prodName = productNameForOccurrence(occ), catLabel = categoryLabel(occ.watchCategory), sentence = humanSentence(occ);
     var reasonHtml = occ.reason ? '<div class="watch-detail-block"><div class="label">علت ثبت‌شده</div><div class="watch-detail-value">' + esc((typeof watchReasonLabel === 'function') ? watchReasonLabel(occ.reason.code) : occ.reason.code) + (occ.reason.comment ? ' — ' + esc(occ.reason.comment) : '') + '</div></div>' : '';
     root.innerHTML =
-      '<div class="watch-detail-top"><button type="button" class="btn secondary small" data-watch-back>‹&nbsp; بازگشت به هشدارها</button></div>' +
       '<div class="card wide watch-detail-card" data-watch-open-customer="' + esc(occ.customerId) + '" role="link" tabindex="0">' +
         '<div class="watch-detail-head"><div class="watch-detail-customer"><div class="watch-detail-kicker">مشتری</div><div class="watch-detail-customer-name">' + esc(custName) + '</div></div><span class="watch-severity-badge watch-severity-' + esc(occ.level || 'low') + '">' + esc(levelLabel(occ.level)) + '</span></div>' +
         (prodName ? '<div class="watch-detail-block"><div class="label">محصول</div><div class="watch-detail-value">' + esc(prodName) + '</div></div>' : '') +
@@ -521,8 +520,6 @@
     var refreshToken = (typeof ViewHost !== 'undefined' && ViewHost.setRefresh) ? ViewHost.setRefresh(refresh) : null;
 
     function onDetailClick(e) {
-      var back = e.target.closest('[data-watch-back]');
-      if (back) { e.preventDefault(); navigateToWatches(); return; }
       var reasonBtn = e.target.closest('[data-watch-reason-open]');
       if (reasonBtn) { e.preventDefault(); watchReasonSheet(reasonBtn.getAttribute('data-watch-reason-open'), function () {
         // A closing decision leaves nothing active to show here -> back to the list.

@@ -1471,7 +1471,7 @@
         detailBtn('payment', 'ثبت پرداخت', 'act-pay') +
         detailBtn('visit', 'ثبت ویزیت', 'act-visit') +
       '</div>' +
-      '<div class="bp-customer-secondary-actions"><div class="bp-customer-secondary-title">سایر عملیات</div>' +
+      '<div class="bp-customer-secondary-title">سایر عملیات</div><div class="bp-customer-secondary-actions">' +
         '<div class="btn-row cust-actions-secondary" style="margin-bottom:0;">' +
           '<button type="button" class="btn small secondary" id="act-check">ثبت چک</button>' +
           '<button type="button" class="btn small secondary" id="act-edit">ویرایش مشتری</button>' +
@@ -1481,7 +1481,7 @@
         '</div>' +
       '</div>' +
 
-      '<h3 class="sub-title">خلاصه مالی</h3>' +
+      '<h3 class="sub-title customer-detail-helper-title">خلاصه مالی</h3>' +
       '<div class="cards cust-metrics">' +
         '<div class="cd-metric-cell"><div class="label">مجموع خرید</div><div class="value">' + toman(t.invTotal) + ' ت</div></div>' +
         '<div class="cd-metric-cell"><div class="label">مجموع پرداخت‌ها</div><div class="value">' + toman(t.payTotal) + ' ت</div></div>' +
@@ -2010,6 +2010,7 @@
     }
     var page = document.createElement('div');
     page.className = 'cd-push-page';
+    page.setAttribute('data-section', currentSection);
     var ctxName = '';
     try { var cust = (data.customers || []).find(function (x) { return String(x.id) === String(currentCustomerId); }); ctxName = cust ? cust.name : ''; } catch (_e) {}
     if (ctxName) {
