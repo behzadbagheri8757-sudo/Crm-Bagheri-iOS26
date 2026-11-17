@@ -610,8 +610,8 @@
   function rangeBarHtml() {
     if (!reportRange) reportRange = rangeDefault();
     return '<div class="rp-range" id="rp-range">' +
-      '<label class="rp-range-item"><span>از</span>' + shamsiDateInputHTML('rp-range-from', reportRange.from) + '</label>' +
-      '<label class="rp-range-item"><span>تا</span>' + shamsiDateInputHTML('rp-range-to', reportRange.to) + '</label>' +
+      '<label class="rp-range-item"><span>از</span>' + shamsiDateInputHTML('rp-range-from', reportRange.from, { mode: 'calendar' }) + '</label>' +
+      '<label class="rp-range-item"><span>تا</span>' + shamsiDateInputHTML('rp-range-to', reportRange.to, { mode: 'calendar' }) + '</label>' +
       '</div>';
   }
 
@@ -1250,10 +1250,15 @@
       const t = e.target;
       if (!t || (t.id !== 'rp-range-from' && t.id !== 'rp-range-to')) return;
       if (!reportRange) reportRange = rangeDefault();
-      if (t.id === 'rp-range-from') reportRange.from = t.value; else reportRange.to = t.value;
-      if (reportRange.from > reportRange.to) {
-        const tmp = reportRange.from; reportRange.from = reportRange.to; reportRange.to = tmp;
+      const next = { from: t.id === 'rp-range-from' ? t.value : reportRange.from,
+                     to: t.id === 'rp-range-to' ? t.value : reportRange.to };
+      if (!next.from || !next.to || next.from > next.to) {
+        showToast('تاریخ پایان نمی‌تواند قبل از تاریخ شروع باشد', { type: 'error' });
+        const bar = document.getElementById('rp-range');
+        if (bar) bar.outerHTML = rangeBarHtml();  /* redraw the pickers with the saved dates */
+        return;
       }
+      reportRange = next;
       renderBody();
     });
 

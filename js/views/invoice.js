@@ -69,7 +69,7 @@
   }
   function acctRow(html, sub, first) {
     return '<div class="ledger-row" style="cursor:default;align-items:flex-start;' +
-      (first ? '' : 'border-top:1px solid var(--vg-color-divider);') + '">' +
+      (first ? '' : 'border-top:0.5px solid var(--vg-color-divider);') + '">' +
       '<span class="name" style="font-weight:400;line-height:1.8;">' + html +
       (sub ? '<span class="sub" style="display:block;">' + sub + '</span>' : '') + '</span></div>';
   }
@@ -78,7 +78,7 @@
   }
   /* A tappable row (plain <details>, existing look): sentence + list of real records. */
   function acctExpandable(sentenceHtml, sub, itemsHtml, first) {
-    return '<details style="' + (first ? '' : 'border-top:1px solid var(--vg-color-divider);') + '">' +
+    return '<details style="' + (first ? '' : 'border-top:0.5px solid var(--vg-color-divider);') + '">' +
       '<summary style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;min-height:52px;padding:12px 2px;cursor:pointer;">' +
       '<span class="name" style="font-weight:400;line-height:1.8;">' + sentenceHtml +
       (sub ? '<span class="sub" style="display:block;">' + sub + '</span>' : '') + '</span>' +
@@ -88,7 +88,7 @@
   }
   function acctItem(title, sub, amount, first) {
     return '<div class="ledger-row" style="cursor:default;min-height:44px;padding:8px 0;' +
-      (first ? '' : 'border-top:1px solid var(--vg-color-divider);') + '">' +
+      (first ? '' : 'border-top:0.5px solid var(--vg-color-divider);') + '">' +
       '<span class="name" style="font-weight:400;">' + title +
       (sub ? '<span class="sub" style="display:block;">' + sub + '</span>' : '') + '</span>' +
       '<span class="filler"></span><span class="amount">' + toman(amount) + ' ت</span></div>';
@@ -263,7 +263,7 @@
       atHtml +
       (after.length ? acctHeading(storyOk ? 'از آن تاریخ تا الان' : 'رکوردهای ثبت‌شده بعد از تاریخ این خرید') + '<div>' + after.join('') + '</div>' : '') +
       (same.length ? acctHeading('در همین تاریخ') + '<div>' + same.join('') + '</div>' : '') +
-      (lastPayRow ? '<div style="margin-top:12px;border-top:1px solid var(--vg-color-divider);">' + lastPayRow + '</div>' : '') +
+      (lastPayRow ? '<div style="margin-top:12px;border-top:0.5px solid var(--vg-color-divider);">' + lastPayRow + '</div>' : '') +
       liveHero + allocBtn;
 
     return '<div class="inv-surface" style="padding-top:12px;padding-bottom:14px;">' +
@@ -378,7 +378,6 @@
 
     root.innerHTML = `<div class="inv-detail">
       <div class="btn-row" style="margin-bottom:10px;">
-        <a class="btn secondary small" href="#/invoices">← فاکتورها</a>
         ${cust ? `<a class="btn secondary small" href="#/customer?id=${encodeURIComponent(cust.id)}&fromInv=${encodeURIComponent(inv.id)}">مشتری</a>` : ''}
       </div>
 
@@ -520,7 +519,7 @@
       </details>
 
       <!-- DANGER ZONE -->
-      <div style="margin-top:24px;margin-bottom:16px;padding-top:16px;border-top:1px solid var(--vg-color-divider);">
+      <div style="margin-top:24px;margin-bottom:16px;padding-top:16px;border-top:0.5px solid var(--vg-color-divider);">
         <button type="button" class="btn danger" style="width:100%;" data-inv-action="del">حذف فاکتور</button>
       </div>
     </div>`;

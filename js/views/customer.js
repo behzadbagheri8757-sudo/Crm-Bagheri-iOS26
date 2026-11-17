@@ -1416,8 +1416,6 @@
       : currentSection === 'watches' ? watchSectionHtml(c.id, ctx, watchData)
       : '';
     root.innerHTML =
-      '<div class="btn-row" style="margin-bottom:10px;">' +
-      '<a class="btn secondary small" href="' + customersHref() + '">← مشتریان</a></div>' +
 
       '<div class="card customer-identity-card">' +
         '<div class="customer-identity-name">' + esc(c.name) + '</div>' +

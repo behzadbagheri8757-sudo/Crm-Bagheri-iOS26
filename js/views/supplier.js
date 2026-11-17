@@ -1171,9 +1171,6 @@
     const section = (title, n, rows) => `<details class="cd-history-details sup-history"><summary class="customer-behavior-summary">${title} (${fa(n)})</summary><div class="tx-list">${rows}</div></details>`;
 
     root.innerHTML = `
-      <div class="btn-row" style="margin-bottom:10px;">
-        <a class="btn secondary small" href="${suppliersHref()}">← تامین‌کنندگان</a>
-      </div>
 
       <div class="card sup-identity">
         <div class="sup-identity-name">${esc(s.name)}${s.active === false ? ' <span class="badge tone-muted">غیرفعال</span>' : ''}</div>
