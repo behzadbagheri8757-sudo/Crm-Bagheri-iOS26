@@ -229,7 +229,7 @@
   }
 
   function filtersHtml(sets) {
-    return '<div class="bp-watch-filters" id="watch-filters" role="group" aria-label="فیلتر هشدارها">' +
+    return '<div class="bp-watch-filters segmented-control" id="watch-filters" role="group" aria-label="فیلتر هشدارها">' +
       WATCH_FILTERS.map(function (f) {
         var n = sets[f.id].length;
         var on = watchFilter === f.id;

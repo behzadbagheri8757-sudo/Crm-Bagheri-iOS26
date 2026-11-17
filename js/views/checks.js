@@ -218,12 +218,12 @@
       return `<button type="button" class="chip ${chkSide === id ? 'active' : ''}" data-side="${id}">${label}</button>`;
     };
     root.innerHTML = `
-      <div class="chip-row" id="check-sides">
+      <div class="chip-row segmented-control" id="check-sides">
         ${sideChip('customer', 'دریافتی از مشتری')}
         ${sideChip('supplier', 'پرداختی به تامین‌کننده')}
       </div>
       <div class="field"><input id="check-search" placeholder="${isSup ? 'جستجوی تامین‌کننده، شماره چک، مبلغ...' : 'جستجوی مشتری، شماره چک، مبلغ...'}" value="${esc(chkQuery)}" autocomplete="off"></div>
-      <div class="chip-row" id="check-chips">
+      <div class="chip-row segmented-control" id="check-chips">
         ${chip('all','همه')}
         ${chip('pending','در جریان')}
         ${chip('cleared', isSup ? 'پرداخت‌شده' : 'وصول‌شده')}

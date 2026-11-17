@@ -283,7 +283,7 @@
         >
       </div>
 
-      <div class="chip-row" id="payment-chips">
+      <div class="chip-row segmented-control" id="payment-chips">
         ${chip('all', 'همه')}
         ${chip('cash', 'نقد')}
         ${chip('card', 'کارت')}

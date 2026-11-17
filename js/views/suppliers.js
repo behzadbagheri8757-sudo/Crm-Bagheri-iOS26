@@ -75,7 +75,7 @@
     };
     root.innerHTML = `
       <div class="field"><input id="supplier-search" placeholder="جستجوی نام یا تلفن..." value="${esc(supQuery)}" autocomplete="off"></div>
-      <div class="chip-row" id="supplier-chips">
+      <div class="chip-row segmented-control" id="supplier-chips">
         ${chip('all', 'همه')}
         ${chip('debt', 'بدهکار')}
         ${chip('settled', 'تسویه')}

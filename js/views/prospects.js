@@ -188,7 +188,7 @@
       </div>
       <div id="prospect-target" class="cards" style="margin-bottom:12px;"></div>
       <div class="field"><input id="prospect-search" placeholder="جستجوی نام مغازه..." value="${esc(pQuery)}" autocomplete="off"></div>
-      <div class="chip-row" id="prospect-chips">
+      <div class="chip-row segmented-control" id="prospect-chips">
         ${chip('all','همه')}
         ${chip('active','فعال')}
         ${chip('converted','تبدیل‌شده')}

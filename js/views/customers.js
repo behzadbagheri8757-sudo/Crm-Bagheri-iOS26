@@ -325,7 +325,7 @@
     };
     root.innerHTML =
       '<div class="field"><input id="customer-search" placeholder="جستجوی نام، آدرس، تلفن، منطقه و…" value="' + esc(custQuery) + '" autocomplete="off"></div>' +
-      '<div class="chip-row" id="customer-chips">' + chip('all','همه') + chip('debt','بدهکار') + chip('settled','تسویه') + chip('credit','بستانکار') + '</div>' +
+      '<div class="chip-row segmented-control" id="customer-chips">' + chip('all','همه') + chip('debt','بدهکار') + chip('settled','تسویه') + chip('credit','بستانکار') + '</div>' +
       '<div class="bp-customer-secondary-filters">' +
       '<div class="btn-row cl-tools">' +
       '<button type="button" class="btn small secondary" id="customer-filter">فیلتر منطقه</button>' +

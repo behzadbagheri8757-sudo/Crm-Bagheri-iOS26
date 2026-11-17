@@ -118,7 +118,7 @@
     };
     root.innerHTML = `
       <div class="field"><input id="invoice-search" placeholder="جستجوی شماره فاکتور یا نام مشتری..." value="${esc(invQuery)}" autocomplete="off"></div>
-      <div class="chip-row" id="invoice-chips">
+      <div class="chip-row segmented-control" id="invoice-chips">
         ${chip('all','همه')}
         ${chip('paid','پرداخت‌شده')}
         ${chip('debt','بدهکار')}
