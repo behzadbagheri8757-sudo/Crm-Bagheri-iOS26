@@ -1,11 +1,11 @@
 .shamsi-sheet-overlay{position:fixed;inset:0;z-index:110;display:flex;align-items:flex-end;justify-content:center;background:rgba(11,31,58,.42);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);opacity:0;transition:opacity 220ms cubic-bezier(.22,1,.36,1);overscroll-behavior:contain;}
 .shamsi-sheet-overlay.show{opacity:1;}
-.shamsi-sheet{position:relative;width:100%;max-width:520px;box-sizing:border-box;background:#FFFFFF;border-top-left-radius:20px;border-top-right-radius:20px;padding:6px 12px calc(12px + env(safe-area-inset-bottom,0px));transform:translateY(110%);transition:transform 320ms cubic-bezier(.22,1,.36,1);will-change:transform;max-height:min(88vh, calc(100dvh - env(safe-area-inset-top,0px) - 12px));display:flex;flex-direction:column;box-shadow:0 -10px 34px rgba(31,41,55,.14);overflow:hidden;}
+.shamsi-sheet{position:relative;width:100%;max-width:520px;box-sizing:border-box;background:var(--vg-color-surface);border-top-left-radius:20px;border-top-right-radius:20px;padding:6px 12px calc(12px + env(safe-area-inset-bottom,0px));transform:translateY(110%);transition:transform 320ms cubic-bezier(.22,1,.36,1);will-change:transform;max-height:min(88vh, calc(100dvh - env(safe-area-inset-top,0px) - 12px));display:flex;flex-direction:column;box-shadow:0 -10px 34px rgba(31,41,55,.14);overflow:hidden;}
 .shamsi-sheet-overlay.show .shamsi-sheet{transform:translateY(0);}
 .shamsi-sheet-handle{flex:none;width:40px;height:4px;border-radius:999px;background:rgba(31,41,55,.14);margin:6px auto 4px;touch-action:none;}
 .shamsi-sheet-toolbar{flex:none;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 4px 8px;}
-.shamsi-sheet-title{flex:1 1 auto;text-align:center;font-size:15px;font-weight:600;color:#1F2937;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.shamsi-sheet-btn{appearance:none;-webkit-appearance:none;border:0;background:transparent;color:#0070D2;font-family:inherit;font-size:15px;font-weight:600;padding:8px 12px;min-height:44px;min-width:60px;border-radius:999px;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background-color 140ms ease;}
+.shamsi-sheet-title{flex:1 1 auto;text-align:center;font-size:15px;font-weight:600;color:var(--vg-color-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.shamsi-sheet-btn{appearance:none;-webkit-appearance:none;border:0;background:transparent;color:var(--vg-color-primary);font-family:inherit;font-size:15px;font-weight:600;padding:8px 12px;min-height:44px;min-width:60px;border-radius:999px;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background-color 140ms ease;}
 .shamsi-sheet-btn:active{background:rgba(0,112,210,.08);}
 .shamsi-sheet-done{font-weight:600;}
 .shamsi-wheels-wrap{position:relative;flex:1 1 auto;min-height:216px;overflow:hidden;padding:0 4px;}
@@ -25,38 +25,24 @@
     rgba(0,0,0,.15) 88%,
     transparent 100%);}
 .shamsi-wheel::-webkit-scrollbar{display:none;}
-.shamsi-wheel-item{height:36px;line-height:36px;scroll-snap-align:center;font-size:17px;font-weight:500;color:#667085;font-variant-numeric:tabular-nums;user-select:none;-webkit-user-select:none;transition:color 120ms ease,font-weight 120ms ease;}
-.shamsi-wheel-item[data-selected="1"]{color:#1F2937;font-weight:600;}
+.shamsi-wheel-item{height:36px;line-height:36px;scroll-snap-align:center;font-size:17px;font-weight:500;color:var(--vg-color-text-muted);font-variant-numeric:tabular-nums;user-select:none;-webkit-user-select:none;transition:color 120ms ease,font-weight 120ms ease;}
+.shamsi-wheel-item[data-selected="1"]{color:var(--vg-color-text);font-weight:600;}
 .shamsi-wheel-spacer{opacity:0;pointer-events:none;}
 .shamsi-calendar{flex:1 1 auto;display:flex;flex-direction:column;padding:0 4px 4px;min-height:0;}
 .shamsi-calendar-header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 4px 10px;}
-.shamsi-calendar-title{flex:1 1 auto;text-align:center;font-size:15px;font-weight:600;color:#1F2937;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.shamsi-calendar-nav{flex:none;width:44px;height:44px;display:inline-flex;align-items:center;justify-content:center;border:0;background:rgba(31,41,55,.04);color:#0070D2;font-family:inherit;font-size:22px;line-height:1;border-radius:50%;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background-color 140ms ease;}
+.shamsi-calendar-title{flex:1 1 auto;text-align:center;font-size:15px;font-weight:600;color:var(--vg-color-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.shamsi-calendar-nav{flex:none;width:44px;height:44px;display:inline-flex;align-items:center;justify-content:center;border:0;background:var(--vg-color-neutral-soft);color:var(--vg-color-primary);font-family:inherit;font-size:22px;line-height:1;border-radius:50%;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background-color 140ms ease;}
 .shamsi-calendar-nav:active{background:rgba(0,112,210,.12);}
-.shamsi-calendar-weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;padding:0 0 6px;font-size:11px;font-weight:500;color:#667085;text-align:center;}
+.shamsi-calendar-weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;padding:0 0 6px;font-size:11px;font-weight:500;color:var(--vg-color-text-muted);text-align:center;}
 .shamsi-calendar-weekdays span{padding:4px 0;}
 .shamsi-calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;touch-action:pan-y;}
-.shamsi-calendar-day{appearance:none;-webkit-appearance:none;border:0;background:transparent;font-family:inherit;font-size:15px;font-weight:500;color:#1F2937;height:44px;min-height:44px;display:flex;align-items:center;justify-content:center;border-radius:12px;cursor:pointer;-webkit-tap-highlight-color:transparent;font-variant-numeric:tabular-nums;transition:background-color 120ms ease,color 120ms ease,box-shadow 120ms ease;}
+.shamsi-calendar-day{appearance:none;-webkit-appearance:none;border:0;background:transparent;font-family:inherit;font-size:15px;font-weight:500;color:var(--vg-color-text);height:44px;min-height:44px;display:flex;align-items:center;justify-content:center;border-radius:12px;cursor:pointer;-webkit-tap-highlight-color:transparent;font-variant-numeric:tabular-nums;transition:background-color 120ms ease,color 120ms ease,box-shadow 120ms ease;}
 .shamsi-calendar-day:active{background:rgba(0,112,210,.08);}
-.shamsi-calendar-day.is-outside{color:#C4CAD3;}
-.shamsi-calendar-day.is-today{color:#0070D2;font-weight:600;box-shadow:inset 0 0 0 1.5px rgba(0,112,210,.32);}
-.shamsi-calendar-day.is-selected{background:#0070D2;color:#FFFFFF;box-shadow:none;font-weight:600;}
+.shamsi-calendar-day.is-outside{color:var(--vg-color-text-muted);}
+.shamsi-calendar-day.is-today{color:var(--vg-color-primary);font-weight:600;box-shadow:inset 0 0 0 1.5px rgba(0,112,210,.32);}
+.shamsi-calendar-day.is-selected{background:var(--vg-color-primary);color:#FFFFFF;box-shadow:none;font-weight:600;}
 .shamsi-calendar-day.is-selected.is-today{box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.6);}
-@media (prefers-color-scheme: dark){
-.shamsi-sheet-overlay{background:rgba(0,0,0,.5);}
-.shamsi-sheet{background:#1C1C1E;box-shadow:0 -10px 34px rgba(0,0,0,.4);}
-.shamsi-sheet-title,
-.shamsi-wheel-item[data-selected="1"],
-.shamsi-calendar-title,
-.shamsi-calendar-day{color:#F2F2F7;}
-.shamsi-wheel-item{color:#8E8E93;}
-.shamsi-calendar-day.is-outside{color:#5A5A5E;}
-.shamsi-calendar-nav{background:rgba(255,255,255,.06);color:#5AA9F0;}
-.shamsi-calendar-nav:active{background:rgba(90,169,240,.22);}
-.shamsi-sheet-btn{color:#5AA9F0;}
-.shamsi-wheels-highlight{background:rgba(90,169,240,.10);border-color:rgba(90,169,240,.20);}
-.shamsi-sheet-handle{background:rgba(255,255,255,.2);}
-}
+
 @media (prefers-reduced-motion: reduce){
 .shamsi-sheet-overlay,
 .shamsi-sheet{transition:none;}
@@ -72,7 +58,7 @@ html[data-theme="dark"] .shamsi-wheel-item[data-selected="1"],
 html[data-theme="dark"] .shamsi-calendar-title,
 html[data-theme="dark"] .shamsi-calendar-day{color:var(--vg-color-text);}
 html[data-theme="dark"] .shamsi-wheel-item{color:var(--vg-color-text-muted);}
-html[data-theme="dark"] .shamsi-calendar-day.is-outside{color:#5E626B;}
+html[data-theme="dark"] .shamsi-calendar-day.is-outside{color:var(--vg-color-text-muted);}
 html[data-theme="dark"] .shamsi-calendar-nav{background:rgba(255,255,255,.07);color:var(--vg-color-primary);}
 html[data-theme="dark"] .shamsi-calendar-nav:active{background:rgba(90,169,240,.20);}
 html[data-theme="dark"] .shamsi-sheet-btn{color:var(--vg-color-primary);}
@@ -82,20 +68,3 @@ html[data-theme="dark"] .shamsi-calendar-weekdays{color:var(--vg-color-text-mute
 html[data-theme="dark"] .shamsi-calendar-day.is-today{color:var(--vg-color-primary);box-shadow:inset 0 0 0 1.5px rgba(90,169,240,.34);}
 html[data-theme="dark"] .shamsi-calendar-day.is-selected{background:var(--vg-color-primary);color:#FFFFFF;}
 html[data-theme="dark"] .shamsi-calendar-day.is-selected.is-today{box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.60);}
-html[data-theme="light"] .shamsi-sheet-overlay{background:rgba(11,31,58,.42);}
-html[data-theme="light"] .shamsi-sheet{background:#FFFFFF;color:#1F2937;box-shadow:0 -10px 34px rgba(31,41,55,.14);}
-html[data-theme="light"] .shamsi-sheet-title,
-html[data-theme="light"] .shamsi-wheel-item[data-selected="1"],
-html[data-theme="light"] .shamsi-calendar-title,
-html[data-theme="light"] .shamsi-calendar-day{color:#1F2937;}
-html[data-theme="light"] .shamsi-wheel-item{color:#667085;}
-html[data-theme="light"] .shamsi-calendar-day.is-outside{color:#C4CAD3;}
-html[data-theme="light"] .shamsi-calendar-nav{background:rgba(31,41,55,.04);color:#0070D2;}
-html[data-theme="light"] .shamsi-calendar-nav:active{background:rgba(0,112,210,.12);}
-html[data-theme="light"] .shamsi-sheet-btn{color:#0070D2;}
-html[data-theme="light"] .shamsi-wheels-highlight{background:rgba(0,112,210,.06);border-color:rgba(0,112,210,.12);}
-html[data-theme="light"] .shamsi-sheet-handle{background:rgba(31,41,55,.14);}
-html[data-theme="light"] .shamsi-calendar-weekdays{color:#667085;}
-html[data-theme="light"] .shamsi-calendar-day.is-today{color:#0070D2;box-shadow:inset 0 0 0 1.5px rgba(0,112,210,.32);}
-html[data-theme="light"] .shamsi-calendar-day.is-selected{background:#0070D2;color:#FFFFFF;}
-html[data-theme="light"] .shamsi-calendar-day.is-selected.is-today{box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.60);}
