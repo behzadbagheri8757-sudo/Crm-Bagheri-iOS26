@@ -45,6 +45,7 @@
   /* Custom range: { from, to } as ISO dates (inclusive). Compared with the equal-length span just before it. */
   let reportRange = null;
   let reportProductSort = 'sales'; // 'sales' | 'profit' — top-products ordering
+  let reportProductsAll = false;   // false: top five; true: every product in the period
   function rangeDefault() {
     const t = new Date();
     const f = new Date(t);
@@ -800,19 +801,30 @@
     );
   }
 
-  function topProductsHtml(res, profit) {
+  function topProductsHtml(res, profit, opts) {
+    opts = opts || {};
+    const limit = opts.all ? profit.rows.length : 5;
+    const prevByKey = {};
+    if (opts.prev) opts.prev.rows.forEach(function (r) { prevByKey[r.productId || r.name] = r; });
+    const deltaText = function (key, profitNow) {
+      if (!opts.prev) return '';
+      const pr = prevByKey[key];
+      const model = describeNetChange(profitNow, pr ? pr.profit : 0, opts.label);
+      const short = model.text.replace(/ نسبت به .*$/, '').split('؛')[0];
+      return ' · <span class="rp-delta' + (model.cls ? ' ' + model.cls : '') + '">' + (model.arrow || '') + esc(short) + '</span>';
+    };
     const byProfit = reportProductSort === 'profit';
     let list;
     let key;
     if (byProfit) {
-      list = profit.rows.slice().sort(function (a, b) { return b.profit - a.profit; }).slice(0, 5);
+      list = profit.rows.slice().sort(function (a, b) { return b.profit - a.profit; }).slice(0, limit);
       key = 'profit';
     } else {
       const byKey = {};
       profit.rows.forEach(function (r) { byKey[r.productId || r.name] = r; });
       list = res.top.map(function (p) {
         const pr = byKey[p.productId || p.name] || { profit: 0, margin: null };
-        return { name: p.name, revenue: p.revenue, profit: pr.profit, margin: pr.margin };
+        return { name: p.name, revenue: p.revenue, profit: pr.profit, margin: pr.margin, key: p.productId || p.name };
       });
       key = 'revenue';
     }
@@ -833,6 +845,7 @@
           const w = Math.max(3, Math.round((Math.abs(p[key]) / max) * 100));
           const margin = p.margin === null || p.margin === undefined ? '—' : faNum(p.margin, 1) + '٪';
           const sub = 'سود ' + compact(p.profit) + ' · حاشیه ' + margin;
+          const delta = deltaText(p.key || p.productId || p.name, p.profit);
           return (
             '<div class="rp-bar">' +
             '<div class="rp-bar-top"><span class="rp-bar-name">' +
@@ -840,7 +853,7 @@
             '</span><span class="rp-bar-amt">' +
             compact(p[key]) +
             '</span></div>' +
-            '<div class="rp-note" style="margin:0 0 4px">' + esc(sub) + '</div>' +
+            '<div class="rp-note" style="margin:0 0 4px">' + esc(sub) + delta + '</div>' +
             '<div class="rp-bar-track"><div class="rp-bar-fill" style="width:' +
             w +
             '%"></div></div></div>'
@@ -848,6 +861,10 @@
         })
         .join('') +
       '</div>' +
+      (profit.rows.length > 5
+        ? '<div class="rp-more"><button type="button" class="btn secondary small" data-pp-all="1" aria-expanded="' + (opts.all ? 'true' : 'false') + '">' +
+          (opts.all ? 'نمایش ۵ کالای برتر' : 'نمایش همه (' + faNum(profit.rows.length, 0) + ' کالا)') + '</button></div>'
+        : '') +
       (res.appliedReturns || res.returnsWithoutItems
         ? '<div class="rp-note">مبالغ پس از کسر برگشتی‌های ثبت‌شده با ردیف کالا است' +
           (res.returnsWithoutItems ? ' (برگشتی‌های بدون ردیف کالا در این رتبه‌بندی لحاظ نشده‌اند).' : '.') +
@@ -1096,6 +1113,14 @@
       return p && p.method === 'discount' && dateInPeriod(p.date, reportPeriod, now) ? s + (Number(p.amount) || 0) : s;
     }, 0);
     const profitRes = productProfitRows(invsPeriod, retPaysPeriod, discountTotal);
+    /* Same product profit for the previous equivalent span (for per-product change). */
+    const prevTest = (reportPeriod === 'today' || reportPeriod === 'all') ? null : createPreviousPeriodPredicate(reportPeriod, now);
+    const prevProfitRes = prevTest ? productProfitRows(
+      (data.invoices || []).filter(function (i) { return prevTest(i.date); }),
+      (data.payments || []).filter(function (p) { return p && p.method === 'return' && prevTest(p.date); }),
+      (data.payments || []).reduce(function (s, p) { return p && p.method === 'discount' && prevTest(p.date) ? s + (Number(p.amount) || 0) : s; }, 0)
+    ) : null;
+    const prevLabel = reportPeriod === 'range' ? 'بازهٔ قبل' : reportPeriod === 'week' ? 'همین روزهای هفتهٔ قبل' : 'همین بازه از ماه قبل';
     const periodNetProfit = profitRes.netTotal;
     const comparison = (reportPeriod === 'today' || reportPeriod === 'all') ? null
       : buildPeriodComparison(reportPeriod, now);
@@ -1123,7 +1148,7 @@
       : null;
     const cmp = periodCount ? salesComparison(reportPeriod, now, periodSales, trend, prevSum) : null;
 
-    const topProd = topProductsForPeriod(invsPeriod, returns, 5);
+    const topProd = topProductsForPeriod(invsPeriod, returns, reportProductsAll ? 100000 : 5);
     const topCust = topCustomersForPeriod(invsPeriod, returns, 5);
     const netSales = periodSales - returnsTotal;
 
@@ -1163,7 +1188,7 @@
       heroHtml(periodSales, periodCount, periodAvg, cmp) +
       (periodCount ? trendHtml(trend) : '') +
       snapshotHtml(periodCount, periodAvg, periodNetProfit, returnsTotal, periodReceipts, comparison) +
-      (periodCount ? topProductsHtml(topProd, profitRes) : '') +
+      (periodCount ? topProductsHtml(topProd, profitRes, { prev: prevProfitRes, label: prevLabel, all: reportProductsAll }) : '') +
       customersHtml(periodCount ? topCust : [], netSales, debtors.length, g.customerDebt) +
       collectionsHtml(received, byMethod, debtors.length, g.customerDebt, topDebtors) +
       inventoryHtml(inventoryValue(), low, zero, negative) +
@@ -1219,6 +1244,12 @@
       '</div>';
 
     rootClickHandler = function (e) {
+      const all = e.target.closest ? e.target.closest('[data-pp-all]') : null;
+      if (all) {
+        reportProductsAll = !reportProductsAll;
+        renderBody();
+        return;
+      }
       const pp = e.target.closest ? e.target.closest('[data-pp]') : null;
       if (pp) {
         reportProductSort = pp.getAttribute('data-pp') === 'profit' ? 'profit' : 'sales';
