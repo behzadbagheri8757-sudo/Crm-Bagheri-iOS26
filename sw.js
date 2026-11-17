@@ -42,7 +42,7 @@
 /* CHANGED: v99 -> v100 (Quick View pre-visit summary: customer.js, app.js BagheriPresent.lastOfferMap export, additive CSS. No asset list or route changed.) */
 /* CHANGED: v110 -> v111 — 00-chrome.css and 10-disclosure.css were missing from PRECACHE_URLS (first load / offline showed unstyled header and disclosure surfaces until the network fetch finished). Both added; cache bumped so devices re-fetch the updated CSS instead of serving the stale cached copy. */
 /* CHANGED: v98 -> v99 (Soft iOS look: CSS-only visual refresh — tokens in visual-grammar.css and a new layer at the end of visual-grammar-pages.css. No asset list, route or business logic changed.) */
-const CACHE_NAME = 'baqeri-shell- v110';
+const CACHE_NAME = 'baqeri-shell- v109';
 
 /** App Shell — paths relative to this SW (same directory as index.html). */
 const PRECACHE_URLS = [
