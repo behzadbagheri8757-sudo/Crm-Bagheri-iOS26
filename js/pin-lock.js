@@ -159,7 +159,7 @@
     /* Always refresh CSS so SW/cache of old JS does not leave stale look */
     st.textContent =
       '#pin-lock-overlay{position:fixed;inset:0;z-index:99999;background:#1A2634;display:flex;align-items:center;justify-content:center;padding:24px 18px;' +
-        'font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Tahoma,sans-serif;-webkit-font-smoothing:antialiased;}' +
+        'font-family:-apple-system,BlinkMacSystemFont,\'SF Pro Text\',\'SF Pro Display\',\'SF Arabic\',sans-serif;-webkit-font-smoothing:antialiased;}' +
       '#pin-lock-overlay[hidden]{display:none !important;}' +
       '#pin-lock-overlay .pin-box{width:100%;max-width:360px;background:#fff;border-radius:24px;padding:36px 24px 28px;' +
         'box-shadow:0 20px 56px rgba(0,0,0,.32);text-align:center;}' +

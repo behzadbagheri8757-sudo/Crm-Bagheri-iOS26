@@ -1094,7 +1094,7 @@ async function _restoreParsedBackup(parsed){
       try{ window.__bagheriRestoreRecoveryBlocked = true; }catch(_e){}
       try{
         if(typeof document !== 'undefined' && document.body){
-          document.body.innerHTML = '<div style="padding:28px 18px;text-align:center;direction:rtl;font-family:sans-serif;"><h2>بازیابی کامل نشد</h2><p style="line-height:1.8">برای جلوگیری از کار روی داده‌ی ناهماهنگ، برنامه متوقف شد. برنامه را دوباره باز کنید تا بازیابی ایمن خودکار انجام شود.</p></div>';
+          document.body.innerHTML = '<div style="padding:28px 18px;text-align:center;direction:rtl;font-family:inherit;"><h2>بازیابی کامل نشد</h2><p style="line-height:1.8">برای جلوگیری از کار روی داده‌ی ناهماهنگ، برنامه متوقف شد. برنامه را دوباره باز کنید تا بازیابی ایمن خودکار انجام شود.</p></div>';
         }
       }catch(_e){}
       throw new Error('بازیابی انجام نشد و بازگردانی کامل نشد؛ برنامه متوقف شد تا بازیابی ایمن انجام شود.');

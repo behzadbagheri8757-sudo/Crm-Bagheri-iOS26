@@ -1436,7 +1436,7 @@ async function bootSpaShell() {
       if (pinConfigured) {
         if (!window.pinLock || typeof window.pinLock.ensureUnlocked !== 'function') {
           document.body.innerHTML =
-            '<div style="padding:24px;text-align:center;font-family:sans-serif;direction:rtl;">قفل PIN فعال است اما ماژول قفل بارگذاری نشد. صفحه را دوباره باز کنید.</div>';
+            '<div style="padding:24px;text-align:center;font-family:inherit;direction:rtl;">قفل PIN فعال است اما ماژول قفل بارگذاری نشد. صفحه را دوباره باز کنید.</div>';
           return;
         }
         await window.pinLock.ensureUnlocked();
@@ -1446,7 +1446,7 @@ async function bootSpaShell() {
     } catch (pinErr) {
       console.error('pin lock gate failed', pinErr);
       document.body.innerHTML =
-        '<div style="padding:24px;text-align:center;font-family:sans-serif;direction:rtl;">خطا در قفل PIN. صفحه را دوباره باز کنید.</div>';
+        '<div style="padding:24px;text-align:center;font-family:inherit;direction:rtl;">خطا در قفل PIN. صفحه را دوباره باز کنید.</div>';
       return;
     }
 
