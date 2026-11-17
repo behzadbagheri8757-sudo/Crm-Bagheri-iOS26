@@ -5,7 +5,7 @@
   font-weight:100 900;
   font-display:swap;
 }
-:root{--olive-dark:#0070D2;--gold:#FF5C35;--ink:#1F2937;--ink-soft:#667085;--line:rgba(31,41,55,.08);--accent-dark:#D94725;}
+:root{--olive-dark:var(--vg-color-primary);--gold:#FF5C35;--ink:#1F2937;--ink-soft:#667085;--line:rgba(31,41,55,.08);--accent-dark:#D94725;}
 *,
 *::before,
 *::after{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
@@ -204,7 +204,7 @@ details[open]>.customer-behavior-summary::after{transform:rotate(180deg);}
 .inv-header-title{flex:1 1 auto;display:flex;flex-direction:column;align-items:center;min-width:0;}
 .inv-header-title-main{font-size:15px;font-weight:600;color:var(--vg-color-text);}
 .inv-header-title-sub{font-size:11px;color:var(--vg-color-text-muted);}
-button.inv-header-save.btn{flex:0 0 auto;min-height:36px;padding:7px 16px;border-radius:999px;font-size:13px;font-weight:600;background:#0070D2;color:#fff;}
+button.inv-header-save.btn{flex:0 0 auto;min-height:36px;padding:7px 16px;border-radius:999px;font-size:13px;font-weight:600;background:var(--vg-color-primary);color:#fff;}
 .inv-body{flex:1 1 auto;min-height:0;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:calc(72px + env(safe-area-inset-top,0px)) 14px calc(28px + env(safe-area-inset-bottom,0px));max-width:720px;width:100%;margin:0 auto;box-sizing:border-box;}
 .inv-section{margin-bottom:24px;}
 .inv-section-title{font-size:13px;font-weight:600;color:var(--vg-color-text-muted);margin:0 0 10px;}
@@ -238,7 +238,7 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{outline:0
 .inv-items-card-head{padding:0 4px 8px;}
 .inv-items-card-label{font-size:12px;font-weight:600;color:var(--vg-color-text-muted);}
 .inv-line{position:relative;margin:0 !important;padding:0 !important;border:0 !important;border-radius:0 !important;background:transparent !important;box-shadow:none !important;}
-.inv-line+.inv-line::before{content:"";position:absolute;top:0;left:14px;right:14px;height:1px;background:rgba(15,23,42,.06);}
+.inv-line+.inv-line::before{content:"";position:absolute;top:0;left:14px;right:14px;height:.5px;background:var(--vg-color-divider);}
 .inv-line-empty{padding:0 !important;}
 .inv-line-view-active{display:none;}
 .inv-line.is-active .inv-line-view-active{display:block;}
