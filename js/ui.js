@@ -511,7 +511,16 @@ function isSameJalaliMonth(iso, ref){
  * Backward compatible: existing 2-arg callers are unchanged.
  */
 function shamsiDateInputHTML(id, valueISO, opts){
-  const iso = (valueISO && parseISODateParts(valueISO)) ? String(valueISO).slice(0,10) : todayISO();
+  const hasValue = !!(valueISO && parseISODateParts(valueISO));
+  const calendarEmpty = !!(opts && opts.mode === 'calendar' && !hasValue);
+  if (calendarEmpty) {
+    /* Calendar mode, no date yet: nothing is selected, and today is never stored automatically. */
+    return `<div class="shamsi-date" data-shamsi-root="1" data-shamsi-mode="calendar">
+    <input type="hidden" id="${esc(id)}" value="" data-shamsi-hidden="1">
+    <input type="text" class="shamsi-date-field" data-shamsi-field="1" readonly inputmode="none" value="" placeholder="انتخاب تاریخ" aria-label="تاریخ شمسی">
+  </div>`;
+  }
+  const iso = hasValue ? String(valueISO).slice(0,10) : todayISO();
   const j = isoToJalali(iso) || gregorianToJalali(
     new Date().getFullYear(), new Date().getMonth()+1, new Date().getDate()
   );
@@ -951,7 +960,9 @@ let _modalHideTimer = null;
 /* In-app confirmation layer. It sits above an existing sheet when needed, so
    destructive actions can be confirmed without replacing/dismissing an
    in-flight form or changing its state. */
-function appConfirm(message, confirmLabel, cancelLabel){
+function appConfirm(message, confirmLabel, cancelLabel, opts){
+  var _msg = String(message || '');
+  var _danger = (opts && typeof opts.danger === 'boolean') ? opts.danger : /حذف|برگشت|بازیابی|جایگزین|غیرفعال/.test(_msg);
   confirmLabel = confirmLabel || 'تأیید';
   cancelLabel = cancelLabel || 'انصراف';
   return new Promise(function(resolve){
@@ -961,7 +972,7 @@ function appConfirm(message, confirmLabel, cancelLabel){
     layer.className = 'confirm-overlay';
     layer.setAttribute('role','alertdialog');
     layer.setAttribute('aria-modal','true');
-    layer.innerHTML = '<div class="confirm-card"><div class="confirm-message"></div><div class="btn-row"><button type="button" class="btn secondary" data-confirm-cancel></button><button type="button" class="btn danger" data-confirm-ok></button></div></div>';
+    layer.innerHTML = '<div class="confirm-card"><div class="confirm-message"></div><div class="btn-row"><button type="button" class="btn secondary" data-confirm-cancel></button><button type="button" class="btn ' + (_danger ? 'danger' : '') + '" data-confirm-ok></button></div></div>';
     layer.querySelector('.confirm-message').textContent = String(message || 'ادامه می‌دهید؟');
     layer.querySelector('[data-confirm-cancel]').textContent = String(cancelLabel);
     layer.querySelector('[data-confirm-ok]').textContent = String(confirmLabel);
