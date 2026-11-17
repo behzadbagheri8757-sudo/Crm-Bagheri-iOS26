@@ -94,8 +94,8 @@ function invoiceDocHtml(inv, cust, forPrint){
         ${cust&&cust.phone?`<div>تماس: ${esc(cust.phone)}</div>`:''}
         ${cust&&cust.address?`<div>آدرس: ${esc(cust.address)}</div>`:''}
       </div>
-      <table class="inv-table">
-        <thead><tr><th>ردیف</th><th>شرح کالا</th><th>تعداد</th><th>قیمت واحد</th><th>مبلغ</th></tr></thead>
+      <table class="inv-table" aria-label="اقلام فاکتور">
+        <thead><tr><th scope="col">ردیف</th><th scope="col">شرح کالا</th><th scope="col">تعداد</th><th scope="col">قیمت واحد</th><th scope="col">مبلغ</th></tr></thead>
         <tbody>${itemRows}</tbody>
       </table>
       <table class="inv-totals">
@@ -309,8 +309,8 @@ function statementDocHtml(c, forPrint){
         ${c.phone?`<div>تماس: ${esc(c.phone)}</div>`:''}
         ${c.address?`<div>آدرس: ${esc(c.address)}</div>`:''}
       </div>
-      <table class="inv-table">
-        <thead><tr><th>تاریخ</th><th>شرح</th><th>بدهکار</th><th>بستانکار</th><th>مانده</th></tr></thead>
+      <table class="inv-table" aria-label="گردش حساب مشتری">
+        <thead><tr><th scope="col">تاریخ</th><th scope="col">شرح</th><th scope="col">بدهکار</th><th scope="col">بستانکار</th><th scope="col">مانده</th></tr></thead>
         <tbody>${rowsHtml || `<tr><td colspan="5" style="text-align:center;">تراکنشی ثبت نشده</td></tr>`}</tbody>
       </table>
       <table class="inv-totals">

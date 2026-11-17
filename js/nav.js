@@ -96,7 +96,7 @@ function ensureBottomNavDOM(){
     const bar = document.createElement('nav');
     bar.id = 'bottom-nav';
     bar.className = 'bottom-nav';
-    bar.setAttribute('aria-label', 'منوی پایین');
+    bar.setAttribute('aria-label', 'ناوبری اصلی');
     document.body.appendChild(bar);
   }
   if(!document.getElementById('more-sheet-root')){
@@ -104,7 +104,7 @@ function ensureBottomNavDOM(){
     root.id = 'more-sheet-root';
     root.innerHTML = `
       <div class="more-overlay" id="more-overlay" hidden></div>
-      <div class="more-sheet" id="more-sheet" hidden role="dialog" aria-modal="true" aria-label="منوی بیشتر">
+      <div class="more-sheet" id="more-sheet" hidden role="dialog" aria-modal="true" aria-label="منوی بیشتر" tabindex="-1">
         <div class="more-sheet-handle"></div>
         <div class="more-sheet-title">بیشتر</div>
         <div class="more-sheet-list" id="more-sheet-list"></div>
@@ -907,7 +907,7 @@ function renderBottomNav(activeId){
     if (spa && t.spaPath) href = '#' + t.spaPath;
     const ariaCurrent = active ? ' aria-current="page"' : '';
     return `<a class="${cls}" href="${href}" data-spa-path="${t.spaPath || ''}"${ariaCurrent}>
-      <span class="bn-ico">${ico}</span>
+      <span class="bn-ico" aria-hidden="true">${ico}</span>
       <span class="bn-label">${t.label}</span>
     </a>`;
   }).join('');
@@ -963,7 +963,7 @@ function fillMoreSheetList(activeId){
     if (spa && t.spaPath) href = '#' + t.spaPath;
     const ico = navIcon(t.iconKey, isActive);
     return `<a class="more-sheet-item${isActive ? ' active' : ''}" href="${href}" data-spa-path="${t.spaPath || ''}">
-      <span class="more-sheet-item-ico">${ico}</span>
+      <span class="more-sheet-item-ico" aria-hidden="true">${ico}</span>
       <span class="more-sheet-item-label">${t.label}</span>
       <svg class="more-sheet-item-chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
     </a>`;
@@ -989,6 +989,19 @@ function openMoreSheet(activeId){
   const overlay = document.getElementById('more-overlay');
   const sheet = document.getElementById('more-sheet');
   if(!overlay || !sheet) return;
+  if(!sheet.classList.contains('show')) sheet.__returnFocus = document.activeElement;
+  if(sheet.__keyHandler) document.removeEventListener('keydown', sheet.__keyHandler);
+  sheet.__keyHandler = function(e){
+    if(sheet.hidden || !sheet.classList.contains('show')) return;
+    if(e.key === 'Escape'){ e.preventDefault(); closeMoreSheet(); return; }
+    if(e.key !== 'Tab') return;
+    const items = Array.from(sheet.querySelectorAll('a[href],button:not([disabled])')).filter(function(el){ return el.getClientRects().length; });
+    if(!items.length){ e.preventDefault(); sheet.focus(); return; }
+    const first = items[0], last = items[items.length-1];
+    if(e.shiftKey && (document.activeElement === first || !sheet.contains(document.activeElement))){ e.preventDefault(); last.focus(); }
+    else if(!e.shiftKey && (document.activeElement === last || !sheet.contains(document.activeElement))){ e.preventDefault(); first.focus(); }
+  };
+  document.addEventListener('keydown', sheet.__keyHandler);
   overlay.__closeFn = closeMoreSheet;
   // Cancel any pending hide-after-transition timer from a just-closed sheet —
   // otherwise a rapid close→reopen (tap close, immediately tap "بیشتر" again)
@@ -1001,6 +1014,8 @@ function openMoreSheet(activeId){
   requestAnimationFrame(() => {
     overlay.classList.add('show');
     sheet.classList.add('show');
+    const first = sheet.querySelector('.more-sheet-item, .more-sheet-close');
+    if(first) first.focus();
   });
   document.body.classList.add('more-open');
   try{ window.__scrollLock && window.__scrollLock.lock(); }catch(_e){}
@@ -1010,7 +1025,10 @@ function closeMoreSheet(){
   const overlay = document.getElementById('more-overlay');
   const sheet = document.getElementById('more-sheet');
   if(overlay){ overlay.classList.remove('show'); }
-  if(sheet){ sheet.classList.remove('show'); }
+  if(sheet){
+    sheet.classList.remove('show');
+    if(sheet.__keyHandler){ document.removeEventListener('keydown', sheet.__keyHandler); sheet.__keyHandler = null; }
+  }
   document.body.classList.remove('more-open');
   try{ window.__scrollLock && window.__scrollLock.unlock(); }catch(_e){}
   if(_moreSheetHideTimer){ clearTimeout(_moreSheetHideTimer); }
@@ -1018,6 +1036,8 @@ function closeMoreSheet(){
     _moreSheetHideTimer = null;
     if(overlay) overlay.hidden = true;
     if(sheet) sheet.hidden = true;
+    if(sheet && sheet.__returnFocus && sheet.__returnFocus.isConnected){ try{ sheet.__returnFocus.focus({preventScroll:true}); }catch(_e){} }
+    if(sheet) sheet.__returnFocus = null;
   }, 280);
 }
 
@@ -1406,6 +1426,8 @@ function waitForCrmDataLoad() {
         if (retrying) return;
         retrying = true;
         btn.disabled = true;
+        btn.classList.add('is-loading');
+        btn.setAttribute('aria-busy', 'true');
         btn.textContent = 'در حال تلاش…';
         Promise.resolve()
           .then(function () {
