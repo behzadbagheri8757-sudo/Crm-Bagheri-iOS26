@@ -341,9 +341,9 @@
           esc(P ? P.n0(it.rejectedCount) : String(it.rejectedCount)) + ' بار رد شده</span></div>';
     }).join('');
 
-    return '<details class="customer-rejection-details">' +
-      '<summary class="customer-behavior-summary">کالاهای ردشده توسط مشتری (' + esc(P ? P.n0(items.length) : String(items.length)) + ')</summary>' +
-      '<div class="dash-activity customer-rejection-list">' + rows + '</div></details>';
+    return '<div class="customer-rejection-section" data-section="rejections">' +
+      '<h3 class="sub-title">کالاهای ردشده توسط مشتری (' + esc(P ? P.n0(items.length) : String(items.length)) + ')</h3>' +
+      '<div class="dash-activity customer-rejection-list">' + rows + '</div></div>';
   }
 
   /* ============================================================
@@ -697,7 +697,7 @@
         if (ratio >= 1.15) trendText = 'خرید اخیر بیشتر شده';
         else if (ratio <= 0.85) trendText = 'خرید اخیر کمتر شده';
       }
-      return '<div class="customer-trend-card"><div class="customer-trend-head"><div><span class="label">روند خرید</span><span class="customer-trend-period">۸ هفته اخیر</span></div><span class="customer-trend-note">' + esc(trendText) + '</span></div><div class="customer-trend-chart" aria-label="روند خرید بر اساس مبلغ فاکتورها در ۸ هفته اخیر" style="position:relative;"><svg viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="ct-grad" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="100" y2="0"><stop class="ch-a" offset="0"/><stop class="ch-b" offset="1"/></linearGradient><linearGradient id="ct-fade" x1="0" y1="0" x2="0" y2="1"><stop class="ch-fade-top" offset="0"/><stop class="ch-fade-bottom" offset="1"/></linearGradient></defs><path d="' + trendArea + '" fill="url(#ct-fade)"/><path class="ch-line" d="' + trendLine + '" stroke="url(#ct-grad)" vector-effect="non-scaling-stroke"/></svg><i class="customer-trend-dot" style="left:' + parseFloat(lastParts[0]) + '%;top:' + ((parseFloat(lastParts[1]) / 40) * 100) + '%;"></i></div></div>';
+      return '<div class="customer-trend-card"><div class="customer-trend-head"><div><span class="label">روند خرید</span><span class="customer-trend-period">۸ هفته اخیر</span></div><span class="customer-trend-note">' + esc(trendText) + '</span></div><div class="customer-trend-chart" role="img" aria-label="نمودار روند خرید بر اساس مبلغ فاکتورها در ۸ هفته اخیر" style="position:relative;"><svg viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="ct-grad" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="100" y2="0"><stop class="ch-a" offset="0"/><stop class="ch-b" offset="1"/></linearGradient><linearGradient id="ct-fade" x1="0" y1="0" x2="0" y2="1"><stop class="ch-fade-top" offset="0"/><stop class="ch-fade-bottom" offset="1"/></linearGradient></defs><path d="' + trendArea + '" fill="url(#ct-fade)"/><path class="ch-line" d="' + trendLine + '" stroke="url(#ct-grad)" vector-effect="non-scaling-stroke"/></svg><i class="customer-trend-dot" style="left:' + parseFloat(lastParts[0]) + '%;top:' + ((parseFloat(lastParts[1]) / 40) * 100) + '%;"></i></div></div>';
     } catch (e) { return ''; }
   }
 
@@ -1374,13 +1374,16 @@
       return '<button type="button" class="btn ' + (primary ? '' : 'secondary') + '" id="' + btnId + '">' + label + '</button>';
     }
 
-    // Seller decisions live at the bottom, collapsed: reviewing/cancelling is rare, never above the fold.
+    // Seller decisions live on their own push page; the customer overview stays scan-friendly.
     var ackHtmlRaw = (typeof ackListHtml === 'function' ? ackListHtml(c.id) : '');
-    var ackDetailsHtml = ackHtmlRaw
-      ? '<details class="cd-ack-details"><summary class="customer-behavior-summary">تصمیم‌های ثبت‌شده</summary>' + ackHtmlRaw + '</details>'
+    var ackSectionHtml = ackHtmlRaw
+      ? '<div class="cd-ack-section" data-section="decisions"><h3 class="sub-title">تصمیم‌های ثبت‌شده</h3>' + ackHtmlRaw + '</div>'
+      : '';
+    var ackRowHtml = ackHtmlRaw
+      ? '<a class="cd-push-row" href="#/customer?id=' + encodeURIComponent(c.id) + '&section=decisions"><span class="cd-push-label">تصمیم‌های ثبت‌شده</span><svg class="cd-push-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></a>'
       : '';
 
-    // History: collapsed, with the count in the summary.
+    // Transaction histories are opened as dedicated push pages from the overview.
     var invoiceRowHtml = '<a class="cd-push-row" href="#/customer?id=' + encodeURIComponent(c.id) + '&section=invoices">' + '<span class="cd-push-label">فاکتورها</span>' + '<span class="cd-push-meta">' + invs.length + '</span>' + '<svg class="cd-push-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></a>';
     var invoiceSectionHtml = '<details class="cd-history-details" data-section="invoices">' +
       '<summary class="customer-behavior-summary">فاکتورها (' + invs.length + ')</summary>' +
@@ -1400,6 +1403,16 @@
       : ((typeof PromiseUI !== 'undefined') ? PromiseUI.cardHtml(c.id, t.balance) : ''));
     var promiseHistoryHtml = ((typeof PromiseUI !== 'undefined') ? PromiseUI.historyHtml(c.id) : '') +
       ((typeof DeliveryUI !== 'undefined') ? DeliveryUI.historyHtml(c.id) : '');
+    var historySectionHtml = promiseHistoryHtml
+      ? '<div class="cd-promise-history-section" data-section="history">' + promiseHistoryHtml + '</div>'
+      : '';
+    var historyRowHtml = promiseHistoryHtml
+      ? '<a class="cd-push-row" href="#/customer?id=' + encodeURIComponent(c.id) + '&section=history"><span class="cd-push-label">تاریخچهٔ وعده‌ها و قول‌های تحویل</span><svg class="cd-push-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></a>'
+      : '';
+    var rejectionSectionHtml = productRejectionInsightsHtml(c.id, ctx);
+    var rejectionRowHtml = rejectionSectionHtml
+      ? '<a class="cd-push-row" href="#/customer?id=' + encodeURIComponent(c.id) + '&section=rejections"><span class="cd-push-label">کالاهای ردشده توسط مشتری</span><svg class="cd-push-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></a>'
+      : '';
     var visitRowHtml = '<a class="cd-push-row" href="#/customer?id=' + encodeURIComponent(c.id) + '&section=visits">' + '<span class="cd-push-label">ویزیت‌ها و ارزیابی‌ها</span>' + '<span class="cd-push-meta">' + visits.length + '</span>' + '<svg class="cd-push-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></a>';
     var visitSectionHtml = '<details class="cd-history-details" data-section="visits">' +
       '<summary class="customer-behavior-summary">ویزیت‌ها و ارزیابی‌ها (' + visits.length + ')</summary>' +
@@ -1414,6 +1427,9 @@
       : currentSection === 'visits' ? visitSectionHtml
       : currentSection === 'behavior' ? behaviorSectionHtml
       : currentSection === 'watches' ? watchSectionHtml(c.id, ctx, watchData)
+      : currentSection === 'decisions' ? ackSectionHtml
+      : currentSection === 'history' ? historySectionHtml
+      : currentSection === 'rejections' ? rejectionSectionHtml
       : '';
     root.innerHTML =
 
@@ -1455,15 +1471,15 @@
         detailBtn('payment', 'ثبت پرداخت', 'act-pay') +
         detailBtn('visit', 'ثبت ویزیت', 'act-visit') +
       '</div>' +
-      '<details class="bp-customer-secondary-actions"><summary>سایر عملیات</summary>' +
-        '<div class="btn-row cust-actions-secondary" style="margin-bottom:16px;">' +
+      '<div class="bp-customer-secondary-actions"><div class="bp-customer-secondary-title">سایر عملیات</div>' +
+        '<div class="btn-row cust-actions-secondary" style="margin-bottom:0;">' +
           '<button type="button" class="btn small secondary" id="act-check">ثبت چک</button>' +
           '<button type="button" class="btn small secondary" id="act-edit">ویرایش مشتری</button>' +
           '<button type="button" class="btn small secondary" id="act-location">اختصاص موقعیت</button>' +
           '<button type="button" class="btn small secondary" id="act-print-statement">صورت‌حساب</button>' +
           '<button type="button" class="btn small secondary" id="act-toggle-active">' + (c.active === false ? 'فعال‌سازی مشتری' : 'غیرفعال‌سازی مشتری') + '</button>' +
         '</div>' +
-      '</details>' +
+      '</div>' +
 
       '<h3 class="sub-title">خلاصه مالی</h3>' +
       '<div class="cards cust-metrics">' +
@@ -1479,11 +1495,8 @@
       followUpTopHtml +
       behaviorHtml +
       (currentSection ? '' : '<div class="cd-records-nav">' +
-        watchRowHtml + behaviorRowHtml + invoiceRowHtml + paymentRowHtml + checkRowHtml + visitRowHtml +
+        watchRowHtml + behaviorRowHtml + invoiceRowHtml + paymentRowHtml + checkRowHtml + visitRowHtml + ackRowHtml + rejectionRowHtml + historyRowHtml +
         '</div>') +
-      productRejectionInsightsHtml(c.id, ctx) +
-      ackDetailsHtml +
-      promiseHistoryHtml +
       sectionBodyHtml;
 
     if (typeof PromiseUI !== 'undefined') PromiseUI.bind(root, c.id);
@@ -1977,14 +1990,14 @@
   }
 
 
-  /* Push sub-page: /customer?id=…&section=invoices|payments|checks|visits.
+  /* Push sub-page: /customer?id=…&section=invoices|payments|checks|visits|history|decisions|rejections.
      Reuses the already-rendered section list (moved, not re-rendered) so every
      bound handler keeps working. The delegated handlers live on #main, which
      stays the same element. */
-  var PUSH_SECTION_LABELS = { invoices: 'فاکتورها', payments: 'پرداخت‌ها', checks: 'چک‌ها', visits: 'ویزیت‌ها و ارزیابی‌ها', watches: 'هشدارها', behavior: 'تحلیل رفتار خرید' };
+  var PUSH_SECTION_LABELS = { invoices: 'فاکتورها', payments: 'پرداخت‌ها', checks: 'چک‌ها', visits: 'ویزیت‌ها و ارزیابی‌ها', watches: 'هشدارها', behavior: 'تحلیل رفتار خرید', decisions: 'تصمیم‌های ثبت‌شده', history: 'تاریخچهٔ وعده‌ها و قول‌های تحویل', rejections: 'کالاهای ردشده توسط مشتری' };
   function applyPushSection(root) {
     if (!root || !currentSection) return;
-    var det = root.querySelector('details[data-section="' + currentSection + '"]');
+    var det = root.querySelector('[data-section="' + currentSection + '"]');
     if (!det) {
       /* Nothing to show for this section: an empty state, never the whole customer page. */
       var empty = document.createElement('div');

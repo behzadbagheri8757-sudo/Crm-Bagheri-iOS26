@@ -71,8 +71,8 @@
         '<span class="pp-row-main"><strong>' + esc(DP.itemsLabel(p)) + '</strong><small>' + esc(faDate(p.deliveryDate)) + '</small></span>' +
         badgeHtml(p) + '</button>';
     }).join('');
-    return '<details class="cd-history-details"><summary class="customer-behavior-summary">تاریخچهٔ قول‌های تحویل (' +
-      fa(closed.length) + ')</summary><div class="pp-list">' + rows + '</div></details>';
+    return '<section class="cd-history-list"><h3 class="sub-title">تاریخچهٔ قول‌های تحویل (' +
+      fa(closed.length) + ')</h3><div class="pp-list">' + rows + '</div></section>';
   }
 
   function bind(root, cid) {

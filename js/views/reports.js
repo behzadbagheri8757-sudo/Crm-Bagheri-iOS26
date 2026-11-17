@@ -752,12 +752,12 @@
         ? '<span class="rp-legend"><i class="rp-legend-cur"></i>الان<i class="rp-legend-prev"></i>' + trend.prevLabel + '</span>'
         : '') +
       '</div>' +
-      '<div class="rp-readout" id="rp-readout"><span class="rp-readout-title">' +
+      '<div class="rp-readout" id="rp-readout" aria-live="polite" aria-atomic="true"><span class="rp-readout-title">' +
       esc(last.title) +
       '</span><span class="rp-readout-val">' +
       fullToman(last.value) +
       '</span></div>' +
-      '<div class="rp-chart" id="rp-chart">' +
+      '<div class="rp-chart" id="rp-chart" role="group" tabindex="0" aria-label="نمودار تعاملی روند فروش. برای جابه‌جایی بین روزها از کلیدهای جهت‌دار استفاده کنید." aria-controls="rp-readout">' +
       '<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">' +
       '<defs><linearGradient id="rp-fade" x1="0" y1="0" x2="0" y2="1">' +
       '<stop offset="0" class="rp-fade-top"/><stop offset="1" class="rp-fade-bottom"/>' +
@@ -1202,17 +1202,11 @@
   /* ------------------------------------------------------------------ */
   /* Chart interaction (tap / drag to read an exact value)               */
   /* ------------------------------------------------------------------ */
-  function onChartPointer(e) {
-    const wrap = e.target && e.target.closest ? e.target.closest('#rp-chart') : null;
+  function renderChartPoint(wrap, index) {
     if (!wrap || !chartState) return;
-    if (e.pointerType === 'mouse' && e.type === 'pointermove' && e.buttons === 0) return;
-    const rect = wrap.getBoundingClientRect();
-    if (!rect.width) return;
     const cs = chartState;
-    // distance of the pointer from the RIGHT edge, in % of width
-    const fromRight = ((rect.right - e.clientX) / rect.width) * 100;
-    let i = Math.round((fromRight - (100 - cs.X1)) / cs.step);
-    i = Math.max(0, Math.min(cs.n - 1, i));
+    const i = Math.max(0, Math.min(cs.n - 1, index));
+    wrap.dataset.activeIndex = String(i);
     const p = cs.points[i];
     const rightPct = 100 - cs.X1 + i * cs.step;
     const topPct = cs.Y1 - ((p.value || 0) / cs.max) * (cs.Y1 - cs.Y0);
@@ -1224,10 +1218,33 @@
       dot.style.right = rightPct.toFixed(2) + '%';
       dot.style.top = topPct.toFixed(2) + '%';
     }
-    if (ro) {
-      ro.innerHTML =
-        '<span class="rp-readout-title">' + esc(p.title) + '</span><span class="rp-readout-val">' + fullToman(p.value || 0) + '</span>';
-    }
+    if (ro) ro.innerHTML = '<span class="rp-readout-title">' + esc(p.title) + '</span><span class="rp-readout-val">' + fullToman(p.value || 0) + '</span>';
+  }
+
+  function onChartPointer(e) {
+    const wrap = e.target && e.target.closest ? e.target.closest('#rp-chart') : null;
+    if (!wrap || !chartState) return;
+    if (e.pointerType === 'mouse' && e.type === 'pointermove' && e.buttons === 0) return;
+    const rect = wrap.getBoundingClientRect();
+    if (!rect.width) return;
+    const cs = chartState;
+    const fromRight = ((rect.right - e.clientX) / rect.width) * 100;
+    const i = Math.round((fromRight - (100 - cs.X1)) / cs.step);
+    renderChartPoint(wrap, i);
+  }
+
+  function onChartKeydown(e) {
+    const wrap = e.target && e.target.closest ? e.target.closest('#rp-chart') : null;
+    if (!wrap || !chartState) return;
+    const current = Number(wrap.dataset.activeIndex || 0);
+    let next = current;
+    if (e.key === 'ArrowLeft') next = current + 1;
+    else if (e.key === 'ArrowRight') next = current - 1;
+    else if (e.key === 'Home') next = 0;
+    else if (e.key === 'End') next = chartState.n - 1;
+    else return;
+    e.preventDefault();
+    renderChartPoint(wrap, next);
   }
 
   /* ------------------------------------------------------------------ */
@@ -1305,6 +1322,7 @@
     chartPointerHandler = onChartPointer;
     root.addEventListener('pointerdown', chartPointerHandler);
     root.addEventListener('pointermove', chartPointerHandler);
+    root.addEventListener('keydown', onChartKeydown);
 
     renderBody();
   }
@@ -1342,6 +1360,7 @@
           root.removeEventListener('pointerdown', chartPointerHandler);
           root.removeEventListener('pointermove', chartPointerHandler);
         }
+        root.removeEventListener('keydown', onChartKeydown);
       } catch (e) {}
       rootClickHandler = rootToggleHandler = chartPointerHandler = null;
       chartState = null;
