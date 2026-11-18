@@ -79,35 +79,6 @@
   var _idb = null;
   var _watchSyncDepth = 0;
   var _migrating = false;
-  var _ackNotifyPending = false;
-  var ACK_DERIVED_FIELDS = [
-    'ackRiskDelta', 'ackPriorityDelta', 'ackIds', 'ackPriorityById',
-    'ackDecision', 'ackExpiresAt', 'ackScope', 'ackActionEffect',
-    'ackUrgency', 'ackActionText', 'ackActionType', 'ackReviewed'
-  ];
-
-  // ACK changes are a derived-data invalidation boundary, not a data/schema mutation.
-  // Coalesce several ACKs created by one visit into one view refresh.
-  function _notifyAckChange() {
-    if (_ackNotifyPending) return;
-    _ackNotifyPending = true;
-    Promise.resolve().then(function () {
-      _ackNotifyPending = false;
-      try {
-        // The active view owns its refresh callback and creates a fresh computation context.
-        if (global.ViewHost && typeof global.ViewHost.refreshCurrent === 'function') {
-          global.ViewHost.refreshCurrent();
-        }
-      } catch (e) { /* view invalidation is best-effort */ }
-    });
-  }
-
-  function _clearAckAnnotations(signal) {
-    if (!signal) return;
-    for (var i = 0; i < ACK_DERIVED_FIELDS.length; i++) {
-      try { delete signal[ACK_DERIVED_FIELDS[i]]; } catch (e) { signal[ACK_DERIVED_FIELDS[i]] = undefined; }
-    }
-  }
 
   /* ---------- helpers ---------- */
 
@@ -432,7 +403,6 @@
       if (ack.status === 'active') _syncWatchFromAck(ack, params.ctx || null);
       _mem.push(ack);
       _persist(ack);
-      if (ack.status === 'active') _notifyAckChange();
       return ack;
     } catch (e) {
       console.error('createAck failed (fail-open)', e);
@@ -533,32 +503,25 @@
 
   function applyAcksToSignals(signals, acks) {
     if (!signals) return null;
+    if (!acks || !acks.length) return signals;
     try {
       for (var i = 0; i < signals.length; i++) {
         var s = signals[i];
-        if (!s) continue;
-        // Rebuild the ACK layer from the current valid set on every pass. This also
-        // clears stale annotations for empty/null ACK lists, changed scope/family,
-        // expired/reversed ACKs, and immediate financial signals.
-        _clearAckAnnotations(s);
-        var eff = getAckEffectForSignal(s, acks || []);
+        var eff = getAckEffectForSignal(s, acks);
         if (!eff) continue;
-        if (eff.riskDelta !== null) s.ackRiskDelta = eff.riskDelta;
-        s.ackPriorityDelta = eff.priorityDelta;
-        s.ackIds = eff.ackIds.slice();
-        s.ackPriorityById = Object.assign(Object.create(null), eff.priorityById);
+        if (eff.riskDelta !== null) s.ackRiskDelta = (s.ackRiskDelta || 0) + eff.riskDelta;
+        s.ackPriorityDelta = (s.ackPriorityDelta || 0) + eff.priorityDelta;
+        s.ackIds = eff.ackIds;
+        s.ackPriorityById = Object.assign(s.ackPriorityById || {}, eff.priorityById);
         if (eff.decision) {
           s.ackDecision = eff.decision;
           s.ackExpiresAt = eff.expiresAt;
           s.ackScope = eff.scope;
           s.ackActionEffect = eff.actionEffect;
           s.ackUrgency = eff.urgency;
-          if (eff.actionEffect === 'change_to') {
-            if (eff.actionText != null) s.ackActionText = eff.actionText;
-            if (eff.actionType != null) s.ackActionType = eff.actionType;
-          }
+          if (eff.actionEffect === 'change_to') { s.ackActionText = eff.actionText; s.ackActionType = eff.actionType; }
         }
-        if (eff.reviewed) s.ackReviewed = Object.assign({}, eff.reviewed);
+        if (eff.reviewed) s.ackReviewed = eff.reviewed;
       }
     } catch (e) { /* fail-open */ }
     return signals;
@@ -575,7 +538,6 @@
         a.reversedReason = reason || 'seller_reversal';
         _persist(a);
         _releaseWatchFor(a);
-        _notifyAckChange();
         return true;
       }
     } catch (e) { /* fail-open */ }
@@ -598,7 +560,6 @@
         }
       }
     } catch (e) { /* best-effort */ }
-    if (n) _notifyAckChange();
     return n;
   }
 
@@ -617,10 +578,7 @@
           n++;
         }
       }
-      if (n) {
-        console.info('expireAcks: expired', n);
-        _notifyAckChange();
-      }
+      if (n) console.info('expireAcks: expired', n);
     } catch (e) { /* fail-open */ }
     return n;
   }
@@ -650,7 +608,6 @@
         out.superseded.push(a.id);
       }
     } catch (e) { /* fail-open */ }
-    if (out.superseded.length) _notifyAckChange();
     return out;
   }
 
@@ -776,7 +733,6 @@
         _mem.forEach(function (r) { st.put(r); });
       } catch (e) { /* LS mirror authoritative */ }
     }
-    _notifyAckChange();
   }
 
   /* ---------- small UI helper (customer + watch pages) ---------- */
