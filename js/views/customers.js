@@ -31,57 +31,13 @@
      Read-only use of the existing frozen Priority Engine; no new
      scoring, no new thresholds (see spec §9.6 performance rule). */
   let custPriorityMap = null;
-  let custActionMap = null;
   let custCtx = null;
-
-  const CUSTOMER_LIST_SALES_ACTION_CATEGORIES = {
-    PURCHASE_DECLINE_SEVERE: true,
-    BEHIND_PATTERN: true,
-    CONSECUTIVE_NO_ORDER: true,
-    MULTI_SKU_DECLINE: true,
-    COMBINED_SKU_DETERIORATION: true,
-    SKU_DELAY: true
-  };
-
-  function getCustomerListActionBadge(actionState) {
-    if (!actionState || actionState.status !== 'action' || actionState.validated !== true) return null;
-    const action = actionState.action;
-    if (!action || action.actionType === 'no_action') return null;
-    if (action.urgency === 'critical') return { label: 'اقدام فوری', tone: 'danger' };
-    const category = action.primarySignal && action.primarySignal.category;
-    if (category === 'PAYMENT_OVERDUE' || action.actionType === 'payment_followup') {
-      return { label: 'پیگیری مالی', tone: 'warning' };
-    }
-    if (action.urgency === 'high' && CUSTOMER_LIST_SALES_ACTION_CATEGORIES[category]) {
-      return { label: 'ریسک فروش', tone: 'warning' };
-    }
-    return null;
-  }
-
   function buildPriorityLookup() {
     const map = Object.create(null);
     if (typeof calculateAllCustomerPriorities !== 'function') return map;
     let list = [];
     try { list = calculateAllCustomerPriorities(custCtx) || []; } catch (e) { return map; }
     list.forEach(function (p) { if (p && p.customerId) map[p.customerId] = p; });
-    return map;
-  }
-
-  /* Uses the same final decision resolver as the daily suggested-actions queue.
-     The resolver runs before the dashboard's Top 5 slice and owns visit-ACK suppression. */
-  function buildSuggestedActionLookup() {
-    const map = Object.create(null);
-    if (typeof getCustomerSuggestedActionState !== 'function') {
-      (data.customers || []).forEach(function (c) {
-        if (c && c.id) map['customer:' + String(c.id)] = { type: 'customer', customerId: c.id, status: 'error', action: null, error: 'resolver_unavailable' };
-      });
-      return map;
-    }
-    (data.customers || []).forEach(function (c) {
-      if (!c || !c.id || c.active === false || c.oneOff) return;
-      const key = 'customer:' + String(c.id);
-      map[key] = getCustomerSuggestedActionState(c.id, custCtx);
-    });
     return map;
   }
 
@@ -132,9 +88,7 @@
     if (!listEl) return;
 
     if (!custPriorityMap) custPriorityMap = buildPriorityLookup();
-    if (!custActionMap) custActionMap = buildSuggestedActionLookup();
     const priorityMap = custPriorityMap;
-    const actionMap = custActionMap;
     let rows = (data.customers || []).slice();
     const q = (custQuery || '').trim().toLowerCase();
     if (q) {
@@ -230,11 +184,15 @@
 
         let badgeLabel = '';
         let badgeTone = 'neutral';
-        const actionState = actionMap['customer:' + String(c.id)] || null;
-        const actionBadge = getCustomerListActionBadge(actionState);
         if (c.active === false) { badgeLabel = 'غیرفعال شده'; badgeTone = 'muted'; }
         else if (c.oneOff) { badgeLabel = 'یک‌بار‌مصرف'; badgeTone = 'muted'; }
-        else if (actionBadge) { badgeLabel = actionBadge.label; badgeTone = actionBadge.tone; }
+        else if ((riskLevel === 'critical' || riskLevel === 'high') && typeof getRiskBadge === 'function') {
+          // Intentional: the list badges ONLY critical/high (medium/low stay badge-less so the list
+          // stays scannable). Detail and Quick View show the full label via the same getRiskBadge.
+          var _lr = getRiskBadge(riskLevel);
+          badgeLabel = _lr.label;
+          badgeTone = _lr.tone;
+        }
         else if (behavior.behindPattern === true) { badgeLabel = 'عقب‌افتاده'; badgeTone = 'warning'; }
         else if (status === 'lost') { badgeLabel = 'از دست رفته'; badgeTone = 'muted'; }
         else if (status === 'inactive') { badgeLabel = 'سرد شده'; badgeTone = 'muted'; }
@@ -458,7 +416,6 @@
       ? createComputationContext({ data: data })
       : null;
     custPriorityMap = null; // fresh on entering the page
-    custActionMap = null;
     drawCustomersPage(root);
 
     // A real data refresh (invoice/payment/visit recorded elsewhere) can
@@ -469,7 +426,6 @@
         ? createComputationContext({ data: data })
         : null;
       custPriorityMap = null;
-      custActionMap = null;
       renderCustomerListOnly();
     });
 
@@ -478,8 +434,6 @@
       ViewHost.clearRefresh(refreshToken);
       refreshToken = null;
       custCtx = null;
-      custPriorityMap = null;
-      custActionMap = null;
       if (searchHandler) {
         const se = document.getElementById('customer-search');
         if (se) se.removeEventListener('input', searchHandler);
