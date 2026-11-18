@@ -923,8 +923,7 @@
        no new score, threshold or signal. */
     let recommendedAction = null;
     let customerRiskLevel = null;
-    let customerHealthLabel = 'ریسک نامشخص';
-    let actionEvaluationError = false;
+    let customerHealthLabel = 'وضعیت عادی';
     let _storyTextRaw = '';
     if (isOneOffCustomer(c)) {
       // مشتری یک‌بار‌مصرف: امتیاز/ریسک/داستان رفتاری معنا ندارد (چند نفر زیر یک حساب)
@@ -932,24 +931,11 @@
     } else {
       let priority = null, action = null;
       try { if (typeof calculateCustomerPriority === 'function') priority = calculateCustomerPriority(c.id, { ctx: ctx }); } catch (eP) { priority = null; }
-      try {
-        if (typeof calculateCustomerAction === 'function') action = calculateCustomerAction(c.id, priority, { ctx: ctx });
-        else actionEvaluationError = true;
-      } catch (eA) {
-        actionEvaluationError = true;
-        try { console.error('[Action Engine] evaluation failed:', eA && eA.name ? eA.name : 'Error'); } catch (_eLog) {}
-      }
-      var actionValidation = (typeof validateCustomerActionResult === 'function')
-        ? validateCustomerActionResult(action)
-        : { valid: false, reason: 'validator_unavailable' };
-      if (!actionValidation.valid) {
-        actionEvaluationError = true;
-        try { console.error('[Action Engine] invalid evaluation result:', actionValidation.reason); } catch (_eLog2) {}
-      }
-      else recommendedAction = action.actionType !== 'no_action' ? action : null;
+      try { if (typeof calculateCustomerAction === 'function') action = calculateCustomerAction(c.id, priority, { ctx: ctx }); } catch (eA) { action = null; }
+      recommendedAction = action && action.actionType !== 'no_action' ? action : null;
       const riskLevel = priority ? priority.riskLevel : null;
       customerRiskLevel = riskLevel;
-      customerHealthLabel = (typeof getRiskBadge === 'function' ? getRiskBadge(riskLevel).label : 'ریسک نامشخص');
+      customerHealthLabel = (typeof getRiskBadge === 'function' ? getRiskBadge(riskLevel).label : '') || 'وضعیت عادی';
       _storyTextRaw = (priority && priority.customerStory && priority.customerStory.summary) ? priority.customerStory.summary : '';
     }
 
@@ -988,7 +974,7 @@
       topAlertHtml = '<div class="cd-top-alert cd-top-alert-danger" role="alert">' +
         '<span class="cd-top-alert-title">چک برگشتی فعال</span>' +
         '<span class="cd-top-alert-desc">' +
-          'پیگیری فوری چک برگشتی' +
+          esc(typeof getRiskBadge === 'function' ? getRiskBadge('critical').label : 'اقدام فوری') +
         '</span></div>';
     } else if (attRow && attRow.balance > 0) {
       topAlertHtml = '<div class="cd-top-alert cd-top-alert-warning">' +
@@ -1375,10 +1361,9 @@
     var recMatchesPaymentDetail = !!(recommendedAction && recommendedAction.actionType === 'payment_followup');
     // The recommendation is a one-line hint above the buttons (never a separate box); when it IS one of the
     // three fixed actions that button is the single primary one, otherwise «ثبت فاکتور» stays primary.
-    var detailUrgency = typeof getActionUrgencyBadge === 'function' ? getActionUrgencyBadge(recommendedAction) : null;
     var detailHintHtml = recommendedAction
-      ? '<div class="bp-qv-action-hint cd-action-hint"><span class="bp-qv-action-hint-label">پیشنهاد</span> ' + esc(recommendedAction.action) + (detailUrgency ? ' <span class="bp-qv-action-urgency">' + esc(detailUrgency.label) + '</span>' : '') + '</div>'
-      : (actionEvaluationError ? '<div class="bp-qv-action-hint cd-action-hint">ارزیابی اقدام ناموفق بود؛ نتیجه در دسترس نیست.</div>' : '');
+      ? '<div class="bp-qv-action-hint cd-action-hint"><span class="bp-qv-action-hint-label">پیشنهاد</span> ' + esc(recommendedAction.action) + '</div>'
+      : '';
 
     // Primary action follows the recommendation (visit / payment); otherwise the usual «invoice».
     function detailBtn(action, label, btnId) {
@@ -1879,39 +1864,25 @@
     var totals = customerTotals(cid, ctx) || { balance: 0 };
     var story = priority && priority.customerStory && priority.customerStory.summary ? priority.customerStory.summary : '';
     var riskLevel = priority ? priority.riskLevel : null;
-    var health = (typeof getRiskBadge === 'function' ? getRiskBadge(riskLevel).label : 'ریسک نامشخص');
+    var health = (typeof getRiskBadge === 'function' ? getRiskBadge(riskLevel).label : '') || 'وضعیت عادی';
 
     // Recommended action (same calculateCustomerAction the Detail page and Dashboard queue use).
     // Signature: calculateCustomerAction(cid, precomputedPriority, { ctx }).
     var recommendedAction = null;
-    var actionEvaluationError = false;
     try {
       if (typeof calculateCustomerAction === 'function') {
         var qa = calculateCustomerAction(cid, priority, { ctx: ctx });
-        var quickActionValidation = (typeof validateCustomerActionResult === 'function')
-          ? validateCustomerActionResult(qa)
-          : { valid: false, reason: 'validator_unavailable' };
-        if (!quickActionValidation.valid) {
-          actionEvaluationError = true;
-          try { console.error('[Action Engine] invalid evaluation result:', quickActionValidation.reason); } catch (_eLog2) {}
-        }
-        else recommendedAction = qa.actionType !== 'no_action' ? qa : null;
-      } else actionEvaluationError = true;
-    } catch (eAct) {
-      actionEvaluationError = true;
-      try { console.error('[Action Engine] evaluation failed:', eAct && eAct.name ? eAct.name : 'Error'); } catch (_eLog) {}
-    }
+        recommendedAction = (qa && qa.actionType !== 'no_action' && qa.action) ? qa : null;
+      }
+    } catch (eAct) { recommendedAction = null; }
 
     // When the recommendation IS "register a visit" / "register a payment", the matching fixed button
     // becomes the primary one (no duplicate button, no hint). Only other actions get a one-line hint.
     var recMatchesVisit = !!(recommendedAction && (recommendedAction.actionType === 'visit' || recommendedAction.actionType === 'follow_up'));
     var recMatchesPayment = !!(recommendedAction && recommendedAction.actionType === 'payment_followup');
-    var qvUrgency = typeof getActionUrgencyBadge === 'function' ? getActionUrgencyBadge(recommendedAction) : null;
-    var recommendedHintHtml = recommendedAction
-      ? (QV_HINT_HIDDEN_ACTION_TYPES.indexOf(recommendedAction.actionType) < 0
-          ? '<div class="bp-qv-action-hint"><span class="bp-qv-action-hint-label">پیشنهاد</span> ' + esc(recommendedAction.action) + (qvUrgency ? ' <span class="bp-qv-action-urgency">' + esc(qvUrgency.label) + '</span>' : '') + '</div>'
-          : (qvUrgency ? '<div class="bp-qv-action-hint"><span class="bp-qv-action-urgency">' + esc(qvUrgency.label) + '</span></div>' : ''))
-      : (actionEvaluationError ? '<div class="bp-qv-action-hint">ارزیابی اقدام ناموفق بود؛ نتیجه در دسترس نیست.</div>' : '');
+    var recommendedHintHtml = (recommendedAction && QV_HINT_HIDDEN_ACTION_TYPES.indexOf(recommendedAction.actionType) < 0)
+      ? '<div class="bp-qv-action-hint"><span class="bp-qv-action-hint-label">پیشنهاد</span> ' + esc(recommendedAction.action) + '</div>'
+      : '';
 
     var showStory = !!story;   // shown whenever it exists; CSS clamps it to 2 lines
 
