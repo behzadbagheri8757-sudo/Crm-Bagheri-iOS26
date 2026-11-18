@@ -373,23 +373,16 @@ function balanceStatusText(balance, amountText){
 }
 /**
  * Single source of the customer risk wording (Customer Detail, Quick View, Customers list).
- * Pure: no data access. Unknown / missing level stays explicitly unknown; never implies low risk.
+ * Pure: no data access. Unknown / missing level => empty label (caller supplies its own fallback).
  * @param {string} level 'critical' | 'high' | 'medium' | 'low'
  * @returns {{label:string, tone:string}}
  */
 function getRiskBadge(level){
-  if(level==='critical') return { label:'ریسک بحرانی', tone:'danger' };
-  if(level==='high')     return { label:'ریسک بالا', tone:'warning' };
-  if(level==='medium')   return { label:'ریسک متوسط', tone:'warning' };
-  if(level==='low')      return { label:'ریسک پایین', tone:'neutral' };
-  return { label:'ریسک نامشخص', tone:'neutral' };
-}
-function getActionUrgencyBadge(action){
-  if(!action || typeof action.actionType!=='string' || action.actionType==='no_action') return null;
-  // The Action Engine owns the allow-list and full output contract.
-  if(typeof window==='undefined' || typeof window.validateCustomerActionResult!=='function' || !window.validateCustomerActionResult(action).valid) return null;
-  if(action.urgency==='high' || action.urgency==='critical') return { label:'اقدام فوری', tone:action.urgency==='critical'?'danger':'warning' };
-  return null;
+  if(level==='critical') return { label:'اقدام فوری', tone:'danger' };
+  if(level==='high')     return { label:'ریسک فروش', tone:'warning' };
+  if(level==='medium')   return { label:'نیاز به بررسی', tone:'warning' };
+  if(level==='low')      return { label:'وضعیت عادی', tone:'neutral' };
+  return { label:'', tone:'' };
 }
 /**
  * Single source of the «نیازمند پیگیری» description used by Dashboard, Customer Detail and Quick View.
