@@ -1047,3 +1047,108 @@ a.cd-tl-item:active{opacity:.65;}
 .cd-tl-amount{flex:none;font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;padding-top:18px;}
 #main.customer-detail-view .cd-push-page .cd-tl-list{margin-top:4px;}
 @media (prefers-reduced-motion: no-preference){.cpick-row,.cd-call-btn,.cd-tl-item{transition:background-color .12s ease,opacity .12s ease;}}
+
+/* ── Stage 4: invoice creation UX refinement (presentation-only) ────────────
+   Keeps invoice state, calculations, persistence and interaction handlers intact.
+   Uses the shared visual tokens so the same layout works in light and dark mode. */
+.inv-sheet-v2 .inv-body{
+  padding-inline:clamp(14px,4vw,20px);
+  scroll-padding-block:calc(88px + env(safe-area-inset-top,0px)) calc(28px + env(safe-area-inset-bottom,0px));
+}
+.inv-sheet-v2 .inv-body::before{height:calc(76px + env(safe-area-inset-top,0px));}
+.inv-sheet-v2 .inv-header{
+  min-height:58px;
+  border-bottom:1px solid var(--vg-color-divider);
+  box-shadow:0 5px 18px rgba(15,23,42,.055);
+}
+.inv-sheet-v2 .inv-header-save.btn{min-width:72px;box-shadow:none;}
+.inv-sheet-v2 .inv-header-save.btn:active{transform:scale(.97);}
+.inv-sheet-v2 .inv-total-chip{
+  min-height:48px;
+  padding:9px 16px;
+  border:1px solid var(--vg-color-divider);
+  border-radius:16px;
+  box-shadow:0 5px 16px rgba(15,23,42,.07);
+  background:var(--vg-color-surface);
+}
+.inv-sheet-v2 .inv-total-chip-value{font-size:18px;letter-spacing:-.02em;}
+.inv-sheet-v2 .inv-customer-context{
+  min-height:66px;
+  padding:13px 16px;
+  border:1px solid var(--vg-color-divider);
+  border-radius:16px;
+  box-shadow:var(--vg-shadow-group);
+}
+.inv-sheet-v2 .inv-customer-name{font-size:15px;line-height:1.5;}
+.inv-sheet-v2 .inv-items-card{
+  overflow:hidden;
+  border:1px solid var(--vg-color-divider);
+  border-radius:16px;
+  box-shadow:var(--vg-shadow-group);
+}
+.inv-sheet-v2 .inv-line-view-active{border-inline-start:3px solid var(--vg-color-primary);}
+.inv-sheet-v2 .inv-line.is-active:not(.inv-line-empty) .inv-line-view-active{background:var(--vg-color-surface-soft);}
+.inv-sheet-v2 .inv-mini-input{
+  min-height:46px;
+  border:1px solid var(--vg-color-divider);
+  background:var(--vg-color-bg);
+  font-variant-numeric:tabular-nums;
+}
+.inv-sheet-v2 .inv-mini-input:focus{outline:none;border-color:var(--vg-color-primary);box-shadow:0 0 0 3px var(--vg-color-primary-soft);}
+.inv-sheet-v2 .inv-add-line{min-height:54px;}
+.inv-sheet-v2 .inv-details-section .inv-rows,
+.inv-sheet-v2 .inv-payment-actions,
+.inv-sheet-v2 .inv-summary-section,
+.inv-sheet-v2 .inv-profit-summary{
+  border:1px solid var(--vg-color-divider);
+  border-radius:16px;
+  box-shadow:var(--vg-shadow-group);
+}
+.inv-sheet-v2 .inv-payment-actions{grid-template-columns:repeat(4,minmax(0,1fr));}
+.inv-sheet-v2 .inv-payment-action{min-height:68px;gap:5px;-webkit-tap-highlight-color:transparent;}
+.inv-sheet-v2 .inv-payment-action.is-active{box-shadow:inset 0 0 0 1.5px var(--vg-color-primary);}
+.inv-sheet-v2 .inv-discount-block{
+  border:1px solid var(--vg-color-divider);
+  border-radius:14px;
+  background:var(--vg-color-surface);
+}
+.inv-sheet-v2 .inv-discount-type{background:var(--vg-color-surface-soft);}
+.inv-sheet-v2 .inv-discount-block input{background:var(--vg-color-bg);border-color:var(--vg-color-divider);color:var(--vg-color-text);}
+.inv-sheet-v2 .inv-summary-section{margin-top:12px;padding:16px;}
+.inv-sheet-v2 .inv-summary-section #calc-summary .inv-total-row{
+  margin:7px -4px 0;
+  padding:13px 4px 11px;
+  border-top:1px solid var(--vg-color-divider);
+  border-bottom:1px solid var(--vg-color-divider);
+}
+.inv-sheet-v2 .inv-summary-section #calc-summary .inv-total-row .name{font-size:14px;font-weight:600;color:var(--vg-color-text);}
+.inv-sheet-v2 .inv-summary-section #calc-summary .inv-total-row .amount{font-size:20px;font-weight:700;color:var(--vg-color-primary);letter-spacing:-.02em;}
+.inv-sheet-v2 .inv-summary-section #calc-summary .inv-remain-row{margin-top:8px;padding:10px 0 2px;}
+.inv-sheet-v2 .inv-profit-summary{margin-top:10px;}
+.inv-sheet-v2 .inv-payment-panel{border-color:var(--vg-color-divider);}
+.inv-sheet-v2 input,
+.inv-sheet-v2 button{scroll-margin-block:100px;}
+@media (max-width:380px){
+  .inv-sheet-v2 .inv-body{padding-inline:12px;}
+  .inv-sheet-v2 .inv-payment-action{font-size:11px;min-height:64px;padding-inline:3px;}
+  .inv-sheet-v2 .inv-payment-action-icon{width:20px;height:20px;}
+  .inv-sheet-v2 .inv-mini-input{min-height:44px;}
+}
+@media (prefers-reduced-motion:no-preference){
+  .inv-sheet-v2 .inv-header-save.btn,
+  .inv-sheet-v2 .inv-payment-action,
+  .inv-sheet-v2 .inv-add-line{transition:transform .12s ease,background-color .12s ease,box-shadow .12s ease;}
+}
+@media (prefers-reduced-motion:reduce){
+  .inv-sheet-v2 .inv-header-save.btn,
+  .inv-sheet-v2 .inv-payment-action,
+  .inv-sheet-v2 .inv-add-line{transition:none;}
+}
+
+/* Stage 5 — searchable product selection in the visit flow (presentation only). */
+.visit-card .vp-add-search-wrap{display:flex;align-items:center;gap:10px;min-height:48px;margin:0 0 12px;padding:0 13px;background:var(--vg-color-surface-soft);border:1px solid var(--vg-color-border);border-radius:var(--vg-radius-soft);color:var(--vg-color-text-muted);}
+.visit-card .vp-add-search-wrap:focus-within{border-color:var(--vg-color-primary);box-shadow:0 0 0 3px var(--vg-color-primary-soft);}
+.visit-card .vp-add-search-wrap>span{font-size:22px;line-height:1;flex:none;}
+.visit-card .vp-add-search-wrap input{width:100%;min-width:0;min-height:46px;padding:0;border:0;outline:0;background:transparent;color:var(--vg-color-text);font:inherit;font-size:14px;}
+.visit-card .vp-add-search-wrap input::placeholder{color:var(--vg-color-text-muted);}
+.visit-card .vp-add-count{margin:0 2px 8px;color:var(--vg-color-text-muted);font-size:11px;font-variant-numeric:tabular-nums;}
