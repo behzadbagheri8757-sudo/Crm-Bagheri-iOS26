@@ -67,7 +67,7 @@ a.ledger-row:not(.action-row)::after{content:'';flex:none;width:8px;height:8px;m
 #main .dashboard-shell section.dash-commitments .dashboard-block-head,
 #main section.dash-commitments .dashboard-block-head{margin:0;padding:12px 16px 8px;}
 #main .dash-push .dashboard-block{margin:0 0 16px;}
-section.dash-commitments{box-shadow:none;}
+section.dash-commitments{box-shadow:0 0 0 .5px var(--disc-sep), 0 1px 3px rgba(0,0,0,.04);}
 html[data-theme="dark"] section.dash-commitments{box-shadow:none;}
 section.dash-commitments .pp-dash-group{border-top:.5px solid var(--disc-sep);border-bottom:.5px solid var(--disc-sep);}
 #main .dashboard-shell .dash-act,
