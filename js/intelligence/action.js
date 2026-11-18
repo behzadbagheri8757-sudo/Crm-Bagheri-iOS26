@@ -1294,6 +1294,30 @@
     return actions;
   }
 
+  // Shared output contract for Customer Detail, Quick View and other customer-action consumers.
+  // Keep this allow-list aligned with the concrete action types emitted by this engine.
+  const CUSTOMER_ACTION_TYPES = Object.create(null);
+  Object.keys(ACTION_RULES).forEach(function (category) { CUSTOMER_ACTION_TYPES[ACTION_RULES[category].actionType] = true; });
+  CUSTOMER_ACTION_TYPES.no_action = true;
+  // Emitted by the prospect branch of this same Action Engine.
+  CUSTOMER_ACTION_TYPES.prospect_followup = true;
+
+  function validateCustomerActionResult(result) {
+    if (!result || typeof result !== 'object') return { valid: false, reason: 'missing_result' };
+    if (typeof result.actionType !== 'string' || !CUSTOMER_ACTION_TYPES[result.actionType]) {
+      return { valid: false, reason: 'invalid_action_type' };
+    }
+    if (['low', 'medium', 'high', 'critical'].indexOf(result.urgency) < 0) {
+      return { valid: false, reason: 'invalid_urgency' };
+    }
+    if (result.actionType !== 'no_action' &&
+        (typeof result.action !== 'string' || !result.action.trim())) {
+      return { valid: false, reason: 'missing_action_text' };
+    }
+    return { valid: true, reason: null };
+  }
+
+  global.validateCustomerActionResult = validateCustomerActionResult;
   global.calculateCustomerAction = calculateCustomerAction;
   global.calculateAllCustomerActions = calculateAllCustomerActions;
   global.calculateAllActions = calculateAllActions;
