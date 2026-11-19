@@ -1903,7 +1903,6 @@ function openAddVisit(cid){
     note: '',
     userChangedResult: false,
     pendingFrom: 'list',
-    addProductQuery: '',
     step: 'kind'
   };
   const nextActionEl = document.getElementById('f-next-action');
@@ -2098,46 +2097,6 @@ function openAddVisit(cid){
     return shown;
   }
 
-  // Search is presentation-only: normalize Persian/Arabic characters and digits,
-  // without changing product IDs, catalog records, or visit persistence.
-  function normalizeVisitProductSearch(value){
-    return String(value || '').trim().toLowerCase()
-      .replace(/ي/g, 'ی').replace(/ك/g, 'ک')
-      .replace(/[۰-۹]/g, function (d) { return String(d.charCodeAt(0) - 1776); })
-      .replace(/[٠-٩]/g, function (d) { return String(d.charCodeAt(0) - 1632); });
-  }
-
-  function renderAddProductResults(){
-    const results = stage && stage.querySelector('#vp-add-results');
-    if (!results) return;
-    const shown = shownProductIds();
-    const query = normalizeVisitProductSearch(state.addProductQuery);
-    const avail = activeProducts.filter(function (p) {
-      if (shown[p.id]) return false;
-      if (!query) return true;
-      return normalizeVisitProductSearch(p.name || '').includes(query);
-    });
-    const total = activeProducts.filter(function (p) { return !shown[p.id]; }).length;
-    results.innerHTML = avail.length
-      ? '<div class="vp-add-count">' + enToFaDigits(String(avail.length)) + ' از ' + enToFaDigits(String(total)) + ' محصول</div>' +
-        '<div class="vp-rows">' + avail.map(function (p) {
-          return '<div class="vp-row"><button type="button" class="vp-row-main" data-vp-pick="' + esc(p.id) + '">' +
-            '<span class="vp-row-name">' + esc(p.name || '—') + '</span></button></div>';
-        }).join('') + '</div>'
-      : '<div class="vp-empty">' + (total ? 'محصولی با این نام پیدا نشد.' : 'محصول دیگری برای افزودن نیست.') + '</div>';
-    results.querySelectorAll('[data-vp-pick]').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        markDirty(btn);
-        state.pendingProductId = btn.getAttribute('data-vp-pick');
-        state.pendingReaction = null;
-        state.pendingRejectionReason = null;
-        state.pendingFrom = 'add';
-        state.step = 'reaction';
-        renderStage();
-      });
-    });
-  }
-
   function renderStage(){
     if (!stage) return;
     let html = '';
@@ -2178,14 +2137,20 @@ function openAddVisit(cid){
           footerBack('kind') +
         '</div>';
     } else if (step === 'add') {
+      const shown = shownProductIds();
+      const avail = activeProducts.filter(function (p) { return !shown[p.id]; });
       html =
         '<div class="visit-card visit-card-enter" data-visit-step="add">' +
           '<div class="vp-head">' +
             '<div class="q-title">افزودن محصول</div>' +
-            '<div class="vp-sub">نام محصول را جستجو کن یا از فهرست انتخاب کن</div>' +
+            '<div class="vp-sub">سایر محصولات فعال کاتالوگ</div>' +
           '</div>' +
-          '<label class="vp-add-search-wrap" for="vp-add-search"><span aria-hidden="true">⌕</span><input id="vp-add-search" type="search" inputmode="search" autocomplete="off" placeholder="جستجوی محصول…" value="' + esc(state.addProductQuery) + '" aria-label="جستجوی محصول"></label>' +
-          '<div id="vp-add-results" aria-live="polite"></div>' +
+          (avail.length
+            ? '<div class="vp-rows">' + avail.map(function (p) {
+                return '<div class="vp-row"><button type="button" class="vp-row-main" data-vp-pick="' + esc(p.id) + '">' +
+                  '<span class="vp-row-name">' + esc(p.name || '—') + '</span></button></div>';
+              }).join('') + '</div>'
+            : '<div class="vp-empty">محصول دیگری برای افزودن نیست.</div>') +
           footerBack('list') +
         '</div>';
     } else if (step === 'reaction') {
@@ -2250,6 +2215,17 @@ function openAddVisit(cid){
         renderStage();
       });
     });
+    stage.querySelectorAll('[data-vp-pick]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        markDirty(btn);
+        state.pendingProductId = btn.getAttribute('data-vp-pick');
+        state.pendingReaction = null;
+        state.pendingRejectionReason = null;
+        state.pendingFrom = 'add';
+        state.step = 'reaction';
+        renderStage();
+      });
+    });
     stage.querySelectorAll('[data-vp-del]').forEach(function (btn) {
       btn.addEventListener('click', function () {
         markDirty(btn);
@@ -2273,14 +2249,6 @@ function openAddVisit(cid){
         state.step = 'add';
         renderStage();
       });
-    }
-    const addSearch = stage.querySelector('#vp-add-search');
-    if (addSearch) {
-      addSearch.addEventListener('input', function () {
-        state.addProductQuery = addSearch.value;
-        renderAddProductResults();
-      });
-      renderAddProductResults();
     }
     stage.querySelectorAll('.chip-opt').forEach(function (btn) {
       btn.addEventListener('click', function () {
