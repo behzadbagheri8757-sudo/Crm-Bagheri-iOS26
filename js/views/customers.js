@@ -83,54 +83,12 @@
     } catch (e) { return ''; }
   }
 
-  /* Pure: customers that have a valid critical action in the shared queue. Prospect items
-     (prospectId set) and items without a customerId are ignored; no_action and missing or
-     non-string actionType never qualify. */
-  /* actionType values the action engine emits (action.js ACTION_RULES + overrides). Keep in sync. */
-  var ENGINE_ACTION_TYPES = ['check_followup', 'payment_followup', 'visit', 'manager_review', 'investigate', 'call', 'follow_up', 'prospect_followup', 'no_action'];
-  function buildUrgentActionIds(actions) {
-    const ids = new Map();
-    (Array.isArray(actions) ? actions : []).forEach(function (a) {
-      if (!a || a.prospectId || !a.customerId) return;
-      if (typeof a.actionType !== 'string' || ENGINE_ACTION_TYPES.indexOf(a.actionType) < 0) return;
-      if (a.actionType === 'no_action') return;
-      if (a.urgency !== 'critical') return;
-      ids.set(a.customerId, true);
-    });
-    return ids;
-  }
-
-  /* Pure: list badge decision. Urgent comes only from the action queue; risk labels describe
-     risk (critical → «ریسک بالا», high → «ریسک فروش») and never reuse the action wording. */
-  function customerListBadge(inp) {
-    if (inp.active === false) return { label: 'غیرفعال شده', tone: 'muted' };
-    if (inp.oneOff) return { label: 'یک‌بار‌مصرف', tone: 'muted' };
-    if (inp.urgent) return { label: 'اقدام فوری', tone: 'danger' };
-    if (inp.riskLevel === 'critical') return { label: 'ریسک بالا', tone: 'danger' };
-    if (inp.riskLevel === 'high') return { label: 'ریسک فروش', tone: 'warning' };
-    if (inp.behindPattern) return { label: 'عقب‌افتاده', tone: 'warning' };
-    if (inp.status === 'lost') return { label: 'از دست رفته', tone: 'muted' };
-    if (inp.status === 'inactive') return { label: 'سرد شده', tone: 'muted' };
-    if (inp.status === 'new') return { label: 'جدید', tone: 'neutral' };
-    return { label: '', tone: 'neutral' };
-  }
-
   function renderCustomerListOnly() {
     const listEl = document.getElementById('customer-list');
     if (!listEl) return;
 
     if (!custPriorityMap) custPriorityMap = buildPriorityLookup();
     const priorityMap = custPriorityMap;
-    // «اقدام فوری» comes from the action engine only (same queue as the dashboard), never from riskLevel.
-    let urgentActionIds = new Map();
-    try {
-      if (custCtx && typeof calculateAllActions === 'function') {
-        urgentActionIds = buildUrgentActionIds(calculateAllActions(custCtx));
-      }
-    } catch (e) {
-      urgentActionIds = new Map(); // calculation error: no urgent badge (never a false urgent)
-      if (typeof console !== 'undefined' && console.warn) console.warn('customer list: action queue unavailable', e);
-    }
     let rows = (data.customers || []).slice();
     const q = (custQuery || '').trim().toLowerCase();
     if (q) {
@@ -224,15 +182,21 @@
           : 0;
         const status = (typeof customerStatus === 'function') ? customerStatus(c.id, custCtx) : null;
 
-        const badge = customerListBadge({
-          active: c.active, oneOff: c.oneOff,
-          urgent: urgentActionIds.has(c.id),
-          riskLevel: riskLevel,
-          behindPattern: behavior.behindPattern === true,
-          status: status
-        });
-        const badgeLabel = badge.label;
-        const badgeTone = badge.tone;
+        let badgeLabel = '';
+        let badgeTone = 'neutral';
+        if (c.active === false) { badgeLabel = 'غیرفعال شده'; badgeTone = 'muted'; }
+        else if (c.oneOff) { badgeLabel = 'یک‌بار‌مصرف'; badgeTone = 'muted'; }
+        else if ((riskLevel === 'critical' || riskLevel === 'high') && typeof getRiskBadge === 'function') {
+          // Intentional: the list badges ONLY critical/high (medium/low stay badge-less so the list
+          // stays scannable). Detail and Quick View show the full label via the same getRiskBadge.
+          var _lr = getRiskBadge(riskLevel);
+          badgeLabel = _lr.label;
+          badgeTone = _lr.tone;
+        }
+        else if (behavior.behindPattern === true) { badgeLabel = 'عقب‌افتاده'; badgeTone = 'warning'; }
+        else if (status === 'lost') { badgeLabel = 'از دست رفته'; badgeTone = 'muted'; }
+        else if (status === 'inactive') { badgeLabel = 'سرد شده'; badgeTone = 'muted'; }
+        else if (status === 'new') { badgeLabel = 'جدید'; badgeTone = 'neutral'; }
 
         const days = (typeof customerStats === 'function')
         ? (function(){ try { return customerStats(c.id, custCtx).daysSinceLast; } catch(e){ return Infinity; } })()
