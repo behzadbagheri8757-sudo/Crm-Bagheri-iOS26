@@ -52,6 +52,8 @@
   // in-memory list of feedback records
   var _mem = [];
   var _idb = null;
+  var _replaceEpoch = 0;
+  var _restoreSnapshotPending = false;
 
   function _nowISO() {
     return new Date().toISOString();
@@ -123,12 +125,42 @@
     } catch (e) { /* ignore */ }
   }
 
-  function _idbHydrate(cb) {
-    if (!_idb) { if (cb) cb(); return; }
+  function _writeRestoreSnapshot(cb) {
+    var epochAtWrite = _replaceEpoch;
+    if (!_idb) { if (cb) cb(new Error('Feedback restore database unavailable')); return; }
+    var tx;
+    var settled = false;
+    function finish(err) { if (settled) return; settled = true; if (cb) cb(err || null); }
     try {
+      tx = _idb.transaction(FEEDBACK_PARAMS.idbStore, 'readwrite');
+      tx.oncomplete = function () {
+        if (epochAtWrite === _replaceEpoch) {
+          _restoreSnapshotPending = false;
+          finish(null);
+        } else {
+          finish(new Error('Feedback restore superseded by a newer snapshot'));
+        }
+      };
+      tx.onerror = function (event) { finish((event && event.target && event.target.error) || tx.error || new Error('Feedback restore transaction failed')); };
+      tx.onabort = function () { finish(tx.error || new Error('Feedback restore transaction aborted')); };
+      var store = tx.objectStore(FEEDBACK_PARAMS.idbStore);
+      store.clear();
+      _mem.forEach(function (row) { store.put(row); });
+    } catch (err) { try { if (tx && tx.abort) tx.abort(); } catch (_) {} finish(err); }
+  }
+
+  function _idbHydrate(cb) {
+    if (!_idb) { if (cb) cb(_restoreSnapshotPending ? new Error('Feedback restore is pending; IndexedDB is unavailable') : null); return; }
+    try {
+      if (_restoreSnapshotPending) {
+        _writeRestoreSnapshot(function (err) { if (cb) cb(err || null); });
+        return;
+      }
       var tx = _idb.transaction(FEEDBACK_PARAMS.idbStore, 'readonly');
+      var epochAtRead = _replaceEpoch;
       var req = tx.objectStore(FEEDBACK_PARAMS.idbStore).getAll();
       req.onsuccess = function () {
+        if (epochAtRead !== _replaceEpoch) { if (cb) cb(); return; }
         var rows = req.result || [];
         // merge by id
         var byId = Object.create(null);
@@ -364,6 +396,17 @@
     return out;
   }
 
+  // Restore the module-private memory after the backup transaction has replaced IDB.
+  function replaceIntelligenceFeedback(rows, cb) {
+    _replaceEpoch++;
+    _restoreSnapshotPending = true;
+    _mem = Array.isArray(rows) ? rows.slice() : [];
+    _saveLS();
+    if (_idb) _writeRestoreSnapshot(cb);
+    else if (cb) cb(new Error('Feedback restore is pending until IndexedDB is available'));
+    return true;
+  }
+
   function clearIntelligenceFeedback() {
     _mem = [];
     try {
@@ -385,7 +428,10 @@
   global.applyFeedbackToSignals = applyFeedbackToSignals;
   global.requestFeedbackForCustomer = requestFeedbackForCustomer;
   global.clearIntelligenceFeedback = clearIntelligenceFeedback;
+  global.replaceIntelligenceFeedback = replaceIntelligenceFeedback;
   global.FEEDBACK_PARAMS = FEEDBACK_PARAMS;
   global.REASON_MODIFIERS = REASON_MODIFIERS;
+  global._intelligenceFeedbackMem = function(){ return _mem; };
+  global._testFeedbackHydrateWithDb = function(db, cb){ _idb=db; _idbHydrate(cb || function(){}); } ;
 
 })(typeof window !== 'undefined' ? window : this);

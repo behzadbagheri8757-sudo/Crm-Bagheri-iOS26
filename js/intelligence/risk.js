@@ -119,21 +119,23 @@
     });
 
     // P-01: account-level risk dominates; SKU-level only when no account risk.
-    var hasAccountRisk = false;
-    for (var i = 0; i < riskSignals.length; i++) {
-      if (riskSignals[i].sourceLevel === 'account') {
-        hasAccountRisk = true;
-        break;
-      }
-    }
-
+    // Preserve the original account-presence fact for the existing growth cap;
+    // use effective points only to decide whether account risk masks SKU risk.
+    var hasAccountRisk = riskSignals.some(function (s) { return s.sourceLevel === 'account'; });
+    // Account risk dominates SKU risk only when its effective contribution is
+    // positive. A fully offset account signal (e.g. severity 20 + ACK -30)
+    // must not erase independent SKU risk evidence.
+    var hasEffectiveAccountRisk = riskSignals.some(function (s) {
+      return s.sourceLevel === 'account' && _signalPoints(s) > 0;
+    });
     var scoringPool = riskSignals;
-    if (hasAccountRisk) {
+    if (hasEffectiveAccountRisk) {
       scoringPool = riskSignals.filter(function (s) {
         return s.sourceLevel === 'account';
       });
     }
-    // else: no account risk → all remaining risk signals (SKU-level) score
+    // Otherwise account and SKU signals both contribute; zero-point account
+    // signals naturally add nothing.
 
     let score = 0;
     scoringPool.forEach(function (s) {
