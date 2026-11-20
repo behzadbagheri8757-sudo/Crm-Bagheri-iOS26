@@ -910,49 +910,6 @@ function _raisinPilafPackages(it){
   return Math.round(((it.qty||0) / pw) * 100) / 100;
 }
 
-/** Strict Gregorian YYYY-MM-DD validation; avoids Date.parse rollover on impossible days. */
-function isValidISOCalendarDate(value){
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value||''));
-  if(!m) return false;
-  const y=Number(m[1]), mo=Number(m[2]), d=Number(m[3]);
-  const check=new Date(Date.UTC(y,mo-1,d));
-  return check.getUTCFullYear()===y && check.getUTCMonth()===mo-1 && check.getUTCDate()===d;
-}
-/** Analytical purchase contract. Financial calculations retain their original invoice sets. */
-function isValidPurchaseInvoice(inv){
-  if(!inv || !(Number(inv.total) > 0) || !Array.isArray(inv.items)) return false;
-  const d = String(inv.date || '');
-  if(!isValidISOCalendarDate(d)) return false;
-  return inv.items.some(it => it && Number(it.qty) > 0);
-}
-function groupPurchaseOccasions(invoices){
-  const valid = (Array.isArray(invoices) ? invoices : []).filter(isValidPurchaseInvoice).slice().sort((a,b)=>(String(a.date||'').slice(0,10).localeCompare(String(b.date||'').slice(0,10)) || String(a.number||'').localeCompare(String(b.number||''))));
-  const groups = [];
-  valid.forEach(inv => {
-    const day = String(inv.date).slice(0,10);
-    let g = groups[groups.length-1];
-    if(!g || g.date !== day){ g = {date:day, invoices:[], invoiceIds:[], items:[]}; groups.push(g); }
-    g.invoices.push(inv); if(inv.id) g.invoiceIds.push(inv.id);
-    (inv.items||[]).forEach(it=>g.items.push({item:it, invoice:inv}));
-  });
-  return groups;
-}
-// Return form quantities use the selected source invoice row's unit: package count
-// for new rows, kg for legacy rows. Mixed-unit duplicate lines are intentionally unresolved.
-function _raisinPilafReturnPackages(ri, payment, sourceInvoice){
-  if(!ri || !_isRaisinPilafItem(ri, _raisinPilafProductIds())) return ri ? (ri.qty||0) : 0;
-  const sources = sourceInvoice ? (sourceInvoice.items||[]).filter(it=>it && it.productId===ri.productId) : [];
-  if(!sources.length) return null; // unlinked or source row not found
-  const newUnit = sources.some(it=>Number(it.weight)>0);
-  const oldUnit = sources.some(it=>!(Number(it.weight)>0));
-  if(newUnit && oldUnit) return null; // mixed-unit duplicate lines cannot be resolved from aggregate return qty
-  if(newUnit) return Number(ri.qty)||0; // qty = package count
-  const prod = (data.products||[]).find(p=>p.id===ri.productId);
-  const pw = prod && Number(prod.packageWeight);
-  if(pw > 0) return Math.round(((Number(ri.qty)||0)/pw)*100)/100; // legacy qty = kg
-  return null; // unknown legacy package weight: do not invent a conversion
-}
-
 function topProducts(limit){
   const map = {};
   const raisinIds = _raisinPilafProductIds();
@@ -1038,28 +995,13 @@ function _behaviorReturnsInRange(returns, startISO, endISO, invs){
   }, 0);
 }
 
-function _behaviorISODaysAgo(n, asOfDate){
-  const iso = String(asOfDate || ((typeof todayISO === 'function') ? todayISO() : new Date().toISOString().slice(0,10))).slice(0,10);
-  const parts = iso.split('-').map(Number);
-  const ref = new Date(parts[0], parts[1]-1, parts[2]);
+function _behaviorISODaysAgo(n){
+  const ref = new Date();
   const d = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate() - n);
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return y + '-' + m + '-' + day;
-}
-
-/** Shared analytical date arithmetic. Financial ledgers do not use this helper. */
-function analysisDaysAgo(isoDate, ctx){
-  const asOf = String((ctx && ctx.asOfDate) || ((typeof todayISO === 'function') ? todayISO() : new Date().toISOString().slice(0,10))).slice(0,10);
-  const target = String(isoDate || '').slice(0,10);
-  if(typeof isValidISOCalendarDate === 'function' && (!isValidISOCalendarDate(asOf) || !isValidISOCalendarDate(target))) return null;
-  const a = /^(\d{4})-(\d{2})-(\d{2})$/.exec(asOf);
-  const b = /^(\d{4})-(\d{2})-(\d{2})$/.exec(target);
-  if(!a || !b) return null;
-  const at = Date.UTC(Number(a[1]),Number(a[2])-1,Number(a[3]));
-  const bt = Date.UTC(Number(b[1]),Number(b[2])-1,Number(b[3]));
-  return Math.floor((at-bt)/86400000);
 }
 
 /**
@@ -1133,7 +1075,7 @@ function visitOverdueDays(cid, ctx, skipMemo){
   });
   const lastDate = sorted[0] && sorted[0].date;
   if(!lastDate) return 0;
-  const daysSince = analysisDaysAgo(lastDate, ctx);
+  const daysSince = (typeof daysAgo === 'function') ? daysAgo(lastDate) : null;
   if(daysSince == null || !isFinite(daysSince)) return 0;
   return Math.max(0, daysSince - cadence);
 }
@@ -1267,11 +1209,10 @@ function _behaviorVisitInvoiceStats(invs, visits){
  */
 function customerBehavior(cid, ctx, skipMemo){
   if(ctx && typeof ctx.memo === 'function' && !skipMemo){
-    return ctx.memo('customerBehavior', String(cid) + '|' + String(ctx.asOfDate || ''), function(){ return customerBehavior(cid, ctx, true); });
+    return ctx.memo('customerBehavior', cid, function(){ return customerBehavior(cid, ctx, true); });
   }
-  const invs = customerInvoices(cid, ctx).filter(isValidPurchaseInvoice).slice().sort((a,b)=>
+  const invs = customerInvoices(cid, ctx).slice().sort((a,b)=>
     (a.date||'').localeCompare(b.date||'') || String(a.number||'').localeCompare(String(b.number||'')));
-  const purchaseOccasions = groupPurchaseOccasions(invs);
   const returns = _behaviorReturnPayments(cid, ctx);
   const cust = ctx && typeof ctx.customerById === 'function'
     ? ctx.customerById(cid)
@@ -1287,16 +1228,29 @@ function customerBehavior(cid, ctx, skipMemo){
   const invTotal = invTotalGross - returnTotal;
   const avgInvoice = count ? invTotal / count : null;
 
-  const purchaseDayDates = purchaseOccasions.map(g=>g.date);
-  const purchaseDayIntervals = [];
-  for(let i=1;i<purchaseDayDates.length;i++){
-    const gap = _behaviorDaysDiff(purchaseDayDates[i-1], purchaseDayDates[i]);
-    if(gap != null && gap > 0) purchaseDayIntervals.push(gap);
+  let avgIntervalDays = null;
+  if(count >= 2){
+    const intervals = [];
+    for(let i = 1; i < count; i++){
+      const p0 = (typeof parseISODateParts === 'function') ? parseISODateParts(invs[i-1].date) : null;
+      const p1 = (typeof parseISODateParts === 'function') ? parseISODateParts(invs[i].date) : null;
+      if(p0 && p1){
+        const t0 = new Date(p0.y, p0.m - 1, p0.d).getTime();
+        const t1 = new Date(p1.y, p1.m - 1, p1.d).getTime();
+        if(!isNaN(t0) && !isNaN(t1)) intervals.push(Math.round((t1 - t0) / 86400000));
+      } else {
+        const t0 = new Date(invs[i-1].date).getTime();
+        const t1 = new Date(invs[i].date).getTime();
+        if(!isNaN(t0) && !isNaN(t1)) intervals.push(Math.round((t1 - t0) / 86400000));
+      }
+    }
+    if(intervals.length){
+      avgIntervalDays = intervals.reduce((a,b)=>a+b, 0) / intervals.length;
+    }
   }
-  const avgIntervalDays = purchaseDayIntervals.length
-    ? purchaseDayIntervals.reduce((a,b)=>a+b,0)/purchaseDayIntervals.length : null;
-  const daysSinceLastRaw = lastInvoiceDate ? analysisDaysAgo(lastInvoiceDate, ctx) : null;
-  const daysSinceLast = (daysSinceLastRaw != null && isFinite(daysSinceLastRaw)) ? Math.max(0, daysSinceLastRaw) : null;
+
+  const daysSinceLastRaw = lastInvoiceDate ? daysAgo(lastInvoiceDate) : null;
+  const daysSinceLast = (daysSinceLastRaw != null && isFinite(daysSinceLastRaw)) ? daysSinceLastRaw : null;
   const behindPattern = (avgIntervalDays != null && daysSinceLast != null)
     ? (daysSinceLast > avgIntervalDays + 0.5)
     : null;
@@ -1305,11 +1259,27 @@ function customerBehavior(cid, ctx, skipMemo){
      keep their legacy meaning for the UI and the Watch layer).
      Based on DISTINCT purchase days: several invoices on one day are ONE purchase
      occasion, so they neither count as extra purchase days nor create 0-day gaps.
-     A day counts only when at least one valid positive-total invoice has a positive-quantity line.
+     A day counts only if at least one invoice that day has total > 0.
      These are minimum-caution inputs, not a scientific sufficiency measure. */
-  const _purchaseDays = purchaseDayDates.slice();
+  const _purchaseDays = [];
+  {
+    const _seenDays = Object.create(null);
+    invs.forEach(function(inv){
+      if(!inv || !(inv.total > 0)) return;
+      const d = inv.date ? String(inv.date).slice(0, 10) : '';
+      if(!d || _seenDays[d]) return;
+      if(typeof parseISODateParts === 'function' && !parseISODateParts(d)) return;
+      _seenDays[d] = true;
+      _purchaseDays.push(d);
+    });
+    _purchaseDays.sort();
+  }
   const purchaseDayCount = _purchaseDays.length;
-  const _distinctIntervals = purchaseDayIntervals.slice();
+  const _distinctIntervals = [];
+  for(let i = 1; i < _purchaseDays.length; i++){
+    const gap = _behaviorDaysDiff(_purchaseDays[i-1], _purchaseDays[i]);
+    if(gap != null && gap > 0) _distinctIntervals.push(gap);
+  }
   const distinctIntervalCount = _distinctIntervals.length;
   const avgDistinctIntervalDays = distinctIntervalCount
     ? _distinctIntervals.reduce((a,b)=>a+b, 0) / distinctIntervalCount
@@ -1318,18 +1288,17 @@ function customerBehavior(cid, ctx, skipMemo){
     ? (daysSinceLast > avgDistinctIntervalDays + 0.5)
     : null;
 
-  const today = (ctx && ctx.asOfDate) || ((typeof todayISO === 'function') ? todayISO() : new Date().toISOString().slice(0,10));
-  const d29 = _behaviorISODaysAgo(29, today);
-  const d59 = _behaviorISODaysAgo(59, today);
-  const d89 = _behaviorISODaysAgo(89, today);
-  const d30 = _behaviorISODaysAgo(30, today);
-  const sales30 = _behaviorSalesInRange(invs, d29, today) - _behaviorReturnsInRange(returns, d29, today, invs);
-  const sales90 = _behaviorSalesInRange(invs, d89, today) - _behaviorReturnsInRange(returns, d89, today, invs);
-  const salesPrev30 = _behaviorSalesInRange(invs, d59, d30) - _behaviorReturnsInRange(returns, d59, d30, invs);
-
+  const today = (typeof todayISO === 'function') ? todayISO() : new Date().toISOString().slice(0,10);
+  const d30 = _behaviorISODaysAgo(30);
+  const d60 = _behaviorISODaysAgo(60);
+  const d90 = _behaviorISODaysAgo(90);
+  const d31 = _behaviorISODaysAgo(31);
+  const sales30 = _behaviorSalesInRange(invs, d30, today) - _behaviorReturnsInRange(returns, d30, today, invs);
+  const sales90 = _behaviorSalesInRange(invs, d90, today) - _behaviorReturnsInRange(returns, d90, today, invs);
+  const salesPrev30 = _behaviorSalesInRange(invs, d60, d31) - _behaviorReturnsInRange(returns, d60, d31, invs);
 
   let amountTrend = null;
-  if(purchaseDayCount >= 2){
+  if(count >= 2){
     const a = sales30, b = salesPrev30;
     if(b === 0 && a === 0) amountTrend = 'flat';
     else if(b === 0 && a > 0) amountTrend = 'up';
@@ -1356,17 +1325,12 @@ function customerBehavior(cid, ctx, skipMemo){
       prodMap[key].revenue += (it.qty || 0) * (it.price || 0) - (it.discount || 0);
     });
   });
-  const invoiceByIdForReturns = Object.create(null);
-  invs.forEach(inv=>{if(inv && inv.id) invoiceByIdForReturns[inv.id]=inv;});
   returns.forEach(p => {
-    const sourceInvoice = p && p.invoiceId ? invoiceByIdForReturns[p.invoiceId] : null;
     (p.returnItems || []).forEach(ri => {
       if(!ri.productId && !ri.name) return;
       const key = ri.productId || ('n:' + (ri.name || ''));
       if(!prodMap[key]) prodMap[key] = { productId: ri.productId || null, name: ri.name || '—', qty: 0, revenue: 0 };
-      const retQty = _isRaisinPilafItem(ri, _raisinIdsForBehavior)
-        ? _raisinPilafReturnPackages(ri, p, sourceInvoice) : (ri.qty || 0);
-      if(retQty != null) prodMap[key].qty -= retQty;
+      prodMap[key].qty -= (ri.qty || 0);
       prodMap[key].revenue -= (ri.qty || 0) * (ri.price || 0);
     });
   });
@@ -1384,49 +1348,47 @@ function customerBehavior(cid, ctx, skipMemo){
     .slice(0, 5);
 
   let decliningProducts = [];
-  if(purchaseOccasions.length >= 4){
-    const mid = Math.floor(purchaseOccasions.length / 2);
-    const early = purchaseOccasions.slice(0, mid).flatMap(g=>g.invoices);
-    const late = purchaseOccasions.slice(mid).flatMap(g=>g.invoices);
+  if(count >= 4){
+    const mid = Math.floor(count / 2);
+    const early = invs.slice(0, mid);
+    const late = invs.slice(mid);
     const earlyMap = {}, lateMap = {};
     function accSold(list, map){
       list.forEach(inv => (inv.items||[]).forEach(it=>{
         const key = it.productId || ('n:' + (it.name||''));
-        if(!map[key]) map[key] = { productId: it.productId||null, name: it.name||'—', qty: 0, grossQty: 0, returnQty: 0 };
+        if(!map[key]) map[key] = { productId: it.productId||null, name: it.name||'—', qty: 0 };
         /* کشمش پلویی: نرمال‌سازی به تعداد بسته/کارتن تا رکوردهای قدیمی (qty=کیلوگرم)
            و جدید (qty=تعداد بسته) قابل مقایسه باشند — رجوع کن به _raisinPilafPackages بالای فایل. */
-        const soldQty = _isRaisinPilafItem(it, _raisinIdsForBehavior) ? _raisinPilafPackages(it) : (it.qty||0);
-        map[key].qty += soldQty;
-        map[key].grossQty += soldQty;
+        map[key].qty += _isRaisinPilafItem(it, _raisinIdsForBehavior) ? _raisinPilafPackages(it) : (it.qty||0);
       }));
     }
     accSold(early, earlyMap);
     accSold(late, lateMap);
-    /* Only returns linked to a resolvable source invoice are allocated to a
-       purchase half. Unlinked/unresolvable returns remain explicit uncertainty;
-       return date is not a safe substitute for source-invoice date. */
-    const invoiceIndexById = Object.create(null);
-    invs.forEach((inv, idx)=>{ if(inv && inv.id) invoiceIndexById[inv.id]=idx; });
-    const splitInvoiceIndex = purchaseOccasions[mid] && purchaseOccasions[mid].invoices.length
-      ? invs.indexOf(purchaseOccasions[mid].invoices[0]) : Math.floor(count/2);
-    const uncertainReturnByProduct = Object.create(null);
-    returns.forEach(p => {
-      const linkedIndex = p && p.invoiceId ? invoiceIndexById[p.invoiceId] : null;
-      (p.returnItems || []).forEach(ri => {
-        const key = ri.productId || ('n:' + (ri.name||''));
-        const sourceInvoice = linkedIndex != null ? invs[linkedIndex] : null;
-        const retQty = _isRaisinPilafItem(ri, _raisinIdsForBehavior)
-          ? _raisinPilafReturnPackages(ri, p, sourceInvoice) : (sourceInvoice ? (ri.qty||0) : null);
-        if(linkedIndex == null || retQty == null){
-          if(!uncertainReturnByProduct[key]) uncertainReturnByProduct[key] = [];
-          uncertainReturnByProduct[key].push({paymentId:p.id||null,invoiceId:p.invoiceId||null,reason:linkedIndex==null?'unlinked_or_missing_source_invoice':'ambiguous_unit_conversion'});
-          return;
-        }
-        const target = linkedIndex < splitInvoiceIndex ? earlyMap : lateMap;
-        if(!target[key]) target[key] = { productId: ri.productId||null, name: ri.name||'—', qty: 0, grossQty: 0, returnQty: 0 };
-        target[key].qty -= retQty; target[key].returnQty += retQty;
+    /* Return allocation follows the same rule as _behaviorReturnsInRange:
+       linked returns use the original invoice date; account-only or
+       unresolvable returns fall back to the return's own date. */
+    const midDate = invs[mid] && invs[mid].date ? invs[mid].date : null;
+    let returnInvById = null;
+    if(Array.isArray(invs)){
+      returnInvById = {};
+      invs.forEach(inv => {
+        if(inv && inv.id) returnInvById[inv.id] = inv;
       });
-    });
+    }
+    if(midDate){
+      returns.forEach(p => {
+        let refDate = p.date || '';
+        if(returnInvById && p.invoiceId && returnInvById[p.invoiceId] && returnInvById[p.invoiceId].date){
+          refDate = returnInvById[p.invoiceId].date;
+        }
+        const target = refDate < midDate ? earlyMap : lateMap;
+        (p.returnItems || []).forEach(ri => {
+          const key = ri.productId || ('n:' + (ri.name||''));
+          if(!target[key]) target[key] = { productId: ri.productId||null, name: ri.name||'—', qty: 0 };
+          target[key].qty -= (ri.qty||0);
+        });
+      });
+    }
     Object.keys(earlyMap).forEach(key => {
       const e = earlyMap[key].qty;
       const l = (lateMap[key] && lateMap[key].qty) || 0;
@@ -1442,24 +1404,13 @@ function customerBehavior(cid, ctx, skipMemo){
           name: earlyMap[key].name,
           productId: earlyMap[key].productId,
           earlyQty: Math.max(0, Math.round(e * 100) / 100),
-          lateQty: Math.max(0, Math.round(l * 100) / 100),
-          earlyGrossQty: Math.max(0, Math.round((earlyMap[key].grossQty||0) * 100) / 100),
-          lateGrossQty: Math.max(0, Math.round(((lateMap[key] && lateMap[key].grossQty)||0) * 100) / 100),
-          earlyReturnQty: Math.max(0, Math.round((earlyMap[key].returnQty||0) * 100) / 100),
-          lateReturnQty: Math.max(0, Math.round(((lateMap[key] && lateMap[key].returnQty)||0) * 100) / 100),
-          lateNetQty: Math.round(l * 100) / 100,
-          latePurchaseState: (uncertainReturnByProduct[key] && uncertainReturnByProduct[key].length) ? 'uncertain' : (((lateMap[key] && lateMap[key].grossQty) || 0) > 0 || ((lateMap[key] && lateMap[key].returnQty) || 0) > 0)
-            ? (l <= 0 ? 'net_nonpositive' : 'net_positive') : 'no_purchase',
-          quantityQuality: uncertainReturnByProduct[key] && uncertainReturnByProduct[key].length
-            ? { status: 'uncertain', reasons: uncertainReturnByProduct[key] }
-            : { status: 'complete', reasons: [] }
+          lateQty: Math.max(0, Math.round(l * 100) / 100)
         });
       }
     });
     decliningProducts.sort((a,b)=> (b.earlyQty - b.lateQty) - (a.earlyQty - a.lateQty));
+    decliningProducts = decliningProducts.slice(0, 5);
   }
-  const decliningProductsAll = decliningProducts;
-  const decliningProductsDisplay = decliningProductsAll.slice(0, 5);
 
   const visitCount = visits.length;
   let orderedCount = 0;
@@ -1500,8 +1451,7 @@ function customerBehavior(cid, ctx, skipMemo){
     salesPrev30,
     amountTrend,
     topProducts: topProductsList,
-    decliningProducts: decliningProductsDisplay,
-    decliningProductsAll,
+    decliningProducts,
     visitCount,
     orderedCount,
     conversionRate,
@@ -1711,6 +1661,3 @@ async function hydrateMonthlySalesTarget(){
   _monthlySalesTargetCache = 0;
   return 0;
 }
-
-// Shared analytical purchase contract for Intelligence modules.
-if (typeof window !== 'undefined') { window.isValidISOCalendarDate = isValidISOCalendarDate; window.isValidPurchaseInvoice = isValidPurchaseInvoice; window.groupPurchaseOccasions = groupPurchaseOccasions; window._raisinPilafReturnPackages = _raisinPilafReturnPackages; }
