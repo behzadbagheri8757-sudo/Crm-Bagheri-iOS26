@@ -329,6 +329,9 @@ async function restoreIntelligenceBundle(bundle){
         localStorage.setItem(INTELLIGENCE_LS_KEYS.seller_acks, JSON.stringify(Array.isArray(bundle.seller_acks) ? bundle.seller_acks : []));
         if(typeof replaceAllAcks==='function') replaceAllAcks(Array.isArray(bundle.seller_acks) ? bundle.seller_acks : []);
       }
+      if(typeof replaceIntelligencePersistence==='function') replaceIntelligencePersistence(bundle.occurrences||[]);
+      if(typeof replaceIntelligenceFeedback==='function') replaceIntelligenceFeedback(bundle.seller_feedback||[]);
+      if(typeof replaceBaselineCache==='function') replaceBaselineCache(bundle.baseline_cache||[]);
     }catch(lsErr){
       console.warn('intelligence localStorage mirror refresh failed', lsErr);
     }
@@ -925,6 +928,9 @@ async function restoreIntelligenceBundleStrict(bundle){
   localStorage.setItem(INTELLIGENCE_LS_KEYS.baseline_cache,JSON.stringify(baseMap));
   localStorage.setItem(INTELLIGENCE_LS_KEYS.seller_acks,JSON.stringify(bundle.seller_acks||[]));
   if(typeof replaceAllAcks==='function') replaceAllAcks(bundle.seller_acks||[]);
+  if(typeof replaceIntelligencePersistence==='function') replaceIntelligencePersistence(bundle.occurrences||[]);
+  if(typeof replaceIntelligenceFeedback==='function') replaceIntelligenceFeedback(bundle.seller_feedback||[]);
+  if(typeof replaceBaselineCache==='function') replaceBaselineCache(bundle.baseline_cache||[]);
   return true;
 }
 

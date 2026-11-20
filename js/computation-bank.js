@@ -16,20 +16,24 @@ var RECEIVABLE_ATTENTION_DEFAULTS = {
   function createComputationContext(options) {
     options = options || {};
     var source = options.data || global.data || {};
+    var asOfDate = options.asOfDate || options.referenceDate || (typeof global.todayISO === 'function' ? global.todayISO() : new Date().toISOString().slice(0, 10));
     var values = Object.create(null);
+    var ctx;
 
     function memo(bucket, key, producer) {
       var group = values[bucket];
       if (!group) group = values[bucket] = Object.create(null);
-      var normalized = String(key == null ? '__default__' : key);
+      // Read the mutable context date at call time so A -> B -> A is correct.
+      var normalized = String(key == null ? '__default__' : key) + '|ref:' + String(ctx ? ctx.asOfDate : asOfDate);
       if (Object.prototype.hasOwnProperty.call(group, normalized)) return group[normalized];
       var value = producer();
       group[normalized] = value;
       return value;
     }
 
-    var ctx = {
+    ctx = {
       data: source,
+      asOfDate: asOfDate,
       values: values,
       memo: memo,
       aggregatePairMapCache: Object.create(null),
