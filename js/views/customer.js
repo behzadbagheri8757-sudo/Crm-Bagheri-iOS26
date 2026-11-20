@@ -71,13 +71,13 @@
      محاسبه یا تغییر نمی‌دهد. صرفاً نتایج موجود را برای تصمیم سریع کنار هم می‌گذارد. */
   function customerBehaviorSummary(bb) {
     if (!bb) return null;
-    if (bb.invoiceCount < 2) {
+    if ((bb.purchaseDayCount || 0) < 2) {
       return {
         level: 'insufficient',
         lines: [
-          bb.invoiceCount === 0
-            ? 'هنوز فاکتوری برای این مشتری ثبت نشده است.'
-            : 'فقط یک فاکتور ثبت شده — برای تشخیص الگوی خرید حداقل ۲ فاکتور لازم است.'
+          (bb.purchaseDayCount || 0) === 0
+            ? 'هنوز خرید معتبری برای این مشتری ثبت نشده است.'
+            : 'خریدها فقط در یک روز ثبت شده‌اند — برای تشخیص الگو حداقل ۲ نوبت خرید در روزهای جدا لازم است.'
         ]
       };
     }
@@ -1160,71 +1160,6 @@
           .join('')
       : '<div class="empty" style="padding:12px 0;">ویزیتی ثبت نشده</div>';
 
-    /* Customer 360 timeline — one chronological feed merged from the four
-       existing per-customer lists (invoices, payments, checks, visits).
-       Read-only presentation: no new data, score or calculation. */
-    var tlItems = [];
-    invs.forEach(function (inv) {
-      var st = invoicePayStatus(inv);
-      tlItems.push({ kind: 'invoice', label: 'فاکتور', date: inv.date || '', key: inv.date || '',
-        title: '#' + String(inv.number || ''), sub: st.label, subCls: st.cls, amount: inv.total,
-        href: '#/invoice?id=' + encodeURIComponent(inv.id) + '&fromCustomer=' + encodeURIComponent(c.id) + '&fromSection=timeline' });
-    });
-    pays.forEach(function (p) {
-      tlItems.push({ kind: 'payment', label: 'پرداخت', date: p.date || '', key: p.date || '',
-        title: paymentMethodLabel(p.method), sub: p.note || '', subCls: '', amount: p.amount,
-        href: p.invoiceId ? '#/invoice?id=' + encodeURIComponent(p.invoiceId) + '&fromCustomer=' + encodeURIComponent(c.id) + '&fromSection=timeline' : '' });
-    });
-    chks.forEach(function (ch) {
-      var d = ch.issueDate || ch.dueDate || '';
-      var cleared = ch.status === 'cleared', bounced = ch.status === 'bounced';
-      tlItems.push({ kind: 'check', label: 'چک', date: d, key: d,
-        title: ch.checkNumber ? 'چک ' + ch.checkNumber : 'چک',
-        sub: (bounced ? 'برگشتی' : cleared ? 'پاس‌شده' : 'در جریان') + (ch.dueDate ? ' · سررسید ' + faDate(ch.dueDate) : ''),
-        subCls: bounced ? 'accent-rust' : cleared ? 'accent-olive' : 'accent-amber', amount: ch.amount,
-        href: ch.invoiceId ? '#/invoice?id=' + encodeURIComponent(ch.invoiceId) + '&fromCustomer=' + encodeURIComponent(c.id) + '&fromSection=timeline' : '' });
-    });
-    visits.forEach(function (v) {
-      var ord = v.ordered || v.result === (typeof VISIT_RESULTS !== 'undefined' && VISIT_RESULTS[0]);
-      tlItems.push({ kind: 'visit', label: 'ویزیت', date: v.date || '', key: (v.date || '') + ' ' + (v.time || ''),
-        title: v.result || 'ویزیت', sub: [v.nextAction, v.reason, v.note].filter(Boolean)[0] || '',
-        subCls: '', amount: null, time: v.time || '', tone: ord ? 'accent-olive' : '', href: '' });
-    });
-    tlItems.sort(function (a, b) { return String(b.key).localeCompare(String(a.key)); });
-    function tlRowHtml(it) {
-      var inner =
-        '<span class="cd-tl-dot cd-tl-' + it.kind + '" aria-hidden="true"></span>' +
-        '<span class="cd-tl-body">' +
-          '<span class="cd-tl-head"><span class="cd-tl-kind">' + esc(it.label) + '</span>' +
-          '<span class="cd-tl-date">' + faDate(it.date) + (it.time ? ' ' + esc(it.time) : '') + '</span></span>' +
-          '<span class="cd-tl-title ' + (it.tone || '') + '">' + esc(it.title) + '</span>' +
-          (it.sub ? '<span class="cd-tl-sub ' + (it.subCls || '') + '">' + esc(it.sub) + '</span>' : '') +
-        '</span>' +
-        (it.amount != null ? '<span class="cd-tl-amount">' + toman(it.amount) + ' ت</span>' : '');
-      return it.href
-        ? '<a class="cd-tl-item" href="' + it.href + '">' + inner + '</a>'
-        : '<div class="cd-tl-item">' + inner + '</div>';
-    }
-    var timelineListHtml = tlItems.length
-      ? '<div class="cd-tl-list">' + tlItems.slice(0, 150).map(tlRowHtml).join('') + '</div>' +
-        (tlItems.length > 150 ? '<div class="sub" style="padding:8px 4px;">۱۵۰ رویداد اخیر نمایش داده شده؛ بقیه در بخش‌های فاکتور، پرداخت، چک و ویزیت است.</div>' : '')
-      : '<div class="empty" style="padding:12px 0;">هنوز فعالیتی برای این مشتری ثبت نشده</div>';
-    var timelineSectionHtml = '<details class="cd-history-details" data-section="timeline">' +
-      '<summary class="customer-behavior-summary">خط زمان فعالیت (' + tlItems.length + ')</summary>' + timelineListHtml + '</details>';
-    var timelineRowHtml = '<a class="cd-push-row" href="#/customer?id=' + encodeURIComponent(c.id) + '&section=timeline"><span class="cd-push-label">خط زمان فعالیت</span><span class="cd-push-meta">' + tlItems.length + '</span><svg class="cd-push-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></a>';
-    var timelinePreviewHtml = tlItems.length
-      ? '<div class="cd-tl-preview"><div class="cd-tl-preview-head"><h3 class="sub-title customer-detail-helper-title">آخرین فعالیت‌ها</h3>' +
-        '<a class="section-action" href="#/customer?id=' + encodeURIComponent(c.id) + '&section=timeline">همه ←</a></div>' +
-        '<div class="cd-tl-list">' + tlItems.slice(0, 4).map(tlRowHtml).join('') + '</div></div>'
-      : '';
-    var callHtml = '';
-    if (c.phone) {
-      var telDigits = String(c.phone).replace(/[۰-۹]/g, function (d) { return String(d.charCodeAt(0) - 1776); })
-        .replace(/[٠-٩]/g, function (d) { return String(d.charCodeAt(0) - 1632); }).replace(/[^\d+]/g, '');
-      if (telDigits) callHtml = '<a class="cd-call-btn" href="tel:' + esc(telDigits) + '" aria-label="تماس با ' + esc(c.name) + '">' +
-        '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg><span>تماس</span></a>';
-    }
-
     let behaviorHtml = '';
     let behaviorSectionHtml = '';
     let behaviorRowHtml = '';
@@ -1486,8 +1421,7 @@
         '<a class="btn small secondary" href="#/visits">همه ویزیت‌ها</a>' +
       '</div><div class="customer-tx-list customer-visit-list">' + visitRows + '</div></details>';
 
-    var sectionBodyHtml = currentSection === 'timeline' ? timelineSectionHtml
-      : currentSection === 'invoices' ? invoiceSectionHtml
+    var sectionBodyHtml = currentSection === 'invoices' ? invoiceSectionHtml
       : currentSection === 'payments' ? paymentSectionHtml
       : currentSection === 'checks' ? checkSectionHtml
       : currentSection === 'visits' ? visitSectionHtml
@@ -1525,7 +1459,6 @@
           (c.address ? cdMeta('آدرس', c.address) : '') +
           (c.note ? cdMeta('یادداشت', c.note) : '') +
         '</div>' +
-        callHtml +
       '</div>' +
 
       topAlertHtml +
@@ -1558,13 +1491,11 @@
         '<div class="cd-metric-cell"><div class="label">سود مشتری</div><div class="value">' + toman(profit) + ' ت</div></div>' +
       '</div>' +
 
-      timelinePreviewHtml +
-
       focus.html +
       followUpTopHtml +
       behaviorHtml +
       (currentSection ? '' : '<div class="cd-records-nav">' +
-        timelineRowHtml + watchRowHtml + behaviorRowHtml + invoiceRowHtml + paymentRowHtml + checkRowHtml + visitRowHtml + ackRowHtml + rejectionRowHtml + historyRowHtml +
+        watchRowHtml + behaviorRowHtml + invoiceRowHtml + paymentRowHtml + checkRowHtml + visitRowHtml + ackRowHtml + rejectionRowHtml + historyRowHtml +
         '</div>') +
       sectionBodyHtml;
 
@@ -2063,7 +1994,7 @@
      Reuses the already-rendered section list (moved, not re-rendered) so every
      bound handler keeps working. The delegated handlers live on #main, which
      stays the same element. */
-  var PUSH_SECTION_LABELS = { timeline: 'خط زمان فعالیت', invoices: 'فاکتورها', payments: 'پرداخت‌ها', checks: 'چک‌ها', visits: 'ویزیت‌ها و ارزیابی‌ها', watches: 'هشدارها', behavior: 'تحلیل رفتار خرید', decisions: 'تصمیم‌های ثبت‌شده', history: 'تاریخچهٔ وعده‌ها و قول‌های تحویل', rejections: 'کالاهای ردشده توسط مشتری' };
+  var PUSH_SECTION_LABELS = { invoices: 'فاکتورها', payments: 'پرداخت‌ها', checks: 'چک‌ها', visits: 'ویزیت‌ها و ارزیابی‌ها', watches: 'هشدارها', behavior: 'تحلیل رفتار خرید', decisions: 'تصمیم‌های ثبت‌شده', history: 'تاریخچهٔ وعده‌ها و قول‌های تحویل', rejections: 'کالاهای ردشده توسط مشتری' };
   function applyPushSection(root) {
     if (!root || !currentSection) return;
     var det = root.querySelector('[data-section="' + currentSection + '"]');
