@@ -41,9 +41,6 @@
   // that newer write in both memory and localStorage. _dirty tracks keys
   // written via _store() since load so hydrate never clobbers them.
   var _dirty = Object.create(null);
-  var _replaceEpoch = 0;
-  var _restoreSnapshotPending = false;
-  var BASELINE_ALGORITHM_VERSION = 'sku-baseline-v2';
 
   // Baseline identity is Family-level: customerId|familyId, where
   //   familyId = product.analysisGroupId || product.id   (runtime only).
@@ -66,7 +63,7 @@
   }
 
   function _key(customerId, productId) {
-    return BASELINE_ALGORITHM_VERSION + '|' + String(customerId) + '|' + String(_identity(productId) || '');
+    return String(customerId) + '|' + String(_identity(productId) || '');
   }
 
   function _dateDiffDays(laterIso, earlierIso) {
@@ -175,42 +172,12 @@
     } catch (e) { /* ignore */ }
   }
 
-  function _writeRestoreSnapshot(cb) {
-    var epochAtWrite = _replaceEpoch;
-    if (!_idb) { if (cb) cb(new Error('Baseline restore database unavailable')); return; }
-    var tx;
-    var settled = false;
-    function finish(err) { if (settled) return; settled = true; if (cb) cb(err || null); }
-    try {
-      tx = _idb.transaction(BASELINE_PARAMS.idbStore, 'readwrite');
-      tx.oncomplete = function () {
-        if (epochAtWrite === _replaceEpoch) {
-          _restoreSnapshotPending = false;
-          finish(null);
-        } else {
-          finish(new Error('Baseline restore superseded by a newer snapshot'));
-        }
-      };
-      tx.onerror = function (event) { finish((event && event.target && event.target.error) || tx.error || new Error('Baseline restore transaction failed')); };
-      tx.onabort = function () { finish(tx.error || new Error('Baseline restore transaction aborted')); };
-      var store = tx.objectStore(BASELINE_PARAMS.idbStore);
-      store.clear();
-      Object.keys(_mem).forEach(function (key) { store.put(_mem[key]); });
-    } catch (err) { try { if (tx && tx.abort) tx.abort(); } catch (_) {} finish(err); }
-  }
-
   function _idbHydrate(cb) {
-    if (!_idb) { if (cb) cb(_restoreSnapshotPending ? new Error('Baseline restore is pending; IndexedDB is unavailable') : null); return; }
+    if (!_idb) { if (cb) cb(); return; }
     try {
-      if (_restoreSnapshotPending) {
-        _writeRestoreSnapshot(function (err) { if (cb) cb(err || null); });
-        return;
-      }
       var tx = _idb.transaction(BASELINE_PARAMS.idbStore, 'readonly');
-      var epochAtRead = _replaceEpoch;
       var req = tx.objectStore(BASELINE_PARAMS.idbStore).getAll();
       req.onsuccess = function () {
-        if (epochAtRead !== _replaceEpoch) { if (cb) cb(); return; }
         var rows = req.result || [];
         for (var i = 0; i < rows.length; i++) {
           var row = rows[i];
@@ -234,8 +201,6 @@
     var k = _key(customerId, productId);
     var rec = {
       key: k,
-      algorithmVersion: BASELINE_ALGORITHM_VERSION,
-      referenceDate: (stats && stats.referenceDate) || null,
       customerId: customerId,
       // productId kept for audit/display (last representative SKU when the
       // caller supplies one); familyId is intentionally NOT stored.
@@ -260,10 +225,7 @@
   function getBaseline(customerId, productId) {
     if (!customerId || productId == null || productId === '') return null;
     var rec = _mem[_key(customerId, productId)];
-    if (!rec || rec.algorithmVersion !== BASELINE_ALGORITHM_VERSION) return null;
-    if (typeof isValidISOCalendarDate === 'function' && !isValidISOCalendarDate(rec.referenceDate)) return null;
-    if (!rec.referenceDate) return null;
-    return rec;
+    return rec || null;
   }
 
   /**
@@ -286,10 +248,6 @@
     if (!purchases.length) return getBaseline(customerId, productId);
 
     var allStats = _computeStats(purchases);
-    allStats.referenceDate = purchases.reduce(function (latest, row) {
-      var d = row && row.date ? String(row.date).slice(0, 10) : '';
-      return d && (!latest || d > latest) ? d : latest;
-    }, null);
     var existing = getBaseline(customerId, productId);
     var minP = BASELINE_PARAMS.minPurchases;
     var thresh = BASELINE_PARAMS.deviationThreshold;
@@ -310,7 +268,6 @@
     });
     var recentSlice = sorted.slice(Math.max(0, sorted.length - minP));
     var recentStats = _computeStats(recentSlice);
-    recentStats.referenceDate = allStats.referenceDate;
 
     // Need enough recent purchases and at least one interval
     if (recentStats.purchaseCount < minP || recentStats.intervalCount < 1) {
@@ -343,26 +300,9 @@
     // Persistent shift confirmed → update stored baseline to recent pattern
     return _store(customerId, auditPid, {
       purchaseCount: allStats.purchaseCount,
-      referenceDate: allStats.referenceDate,
       typicalCycle: recentStats.typicalCycle != null ? recentStats.typicalCycle : existing.typicalCycle,
       typicalQuantity: recentStats.typicalQuantity != null ? recentStats.typicalQuantity : existing.typicalQuantity
     }, 'shift');
-  }
-
-  // Backup restore has replaced IDB already. Align private memory and LS mirror
-  // without deleting old cache rows; legacy keys remain inert under v2 identity.
-  function replaceBaselineCache(rows, cb) {
-    _replaceEpoch++;
-    _restoreSnapshotPending = true;
-    _mem = Object.create(null);
-    _dirty = Object.create(null);
-    (Array.isArray(rows) ? rows : []).forEach(function (r) {
-      if (r && r.key) _mem[r.key] = r;
-    });
-    _saveLS();
-    if (_idb) _writeRestoreSnapshot(cb);
-    else if (cb) cb(new Error('Baseline restore is pending until IndexedDB is available'));
-    return true;
   }
 
   function clearBaselineCache() {
@@ -389,10 +329,7 @@
   global.getBaseline = getBaseline;
   global.updateBaselineIfShifted = updateBaselineIfShifted;
   global.clearBaselineCache = clearBaselineCache;
-  global.replaceBaselineCache = replaceBaselineCache;
-  global.BASELINE_ALGORITHM_VERSION = BASELINE_ALGORITHM_VERSION;
   global.BASELINE_PARAMS = BASELINE_PARAMS;
   global._baselineCacheSize = _baselineCacheSize;
-  global._testBaselineHydrateWithDb = function(db, cb){ _idb=db; _idbHydrate(cb || function(){}); } ;
 
 })(typeof window !== 'undefined' ? window : this);

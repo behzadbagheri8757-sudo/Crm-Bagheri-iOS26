@@ -209,7 +209,7 @@
       try {
         var b = customerBehavior(cid, ctx);
         if (b && b.lastVisit && b.lastVisit.date && typeof daysAgo === 'function') {
-          var d = (typeof analysisDaysAgo === 'function') ? analysisDaysAgo(b.lastVisit.date, ctx) : daysAgo(b.lastVisit.date);
+          var d = daysAgo(b.lastVisit.date);
           if (d != null && isFinite(d) && d !== Infinity) overdue = d;
         }
       } catch (e2) { /* ignore */ }

@@ -38,9 +38,6 @@
   // key -> array of ISO date strings (YYYY-MM-DD), newest not required sorted
   var _mem = Object.create(null);
   var _hydrated = false;
-  var _replaceEpoch = 0;
-  var _restoreSnapshotPending = false;
-  var _restoreHydrated = false;
   var _idb = null;
 
   function _today() {
@@ -172,48 +169,16 @@
     } catch (e) { /* ignore */ }
   }
 
-  function _writeRestoreSnapshot(cb) {
-    var epochAtWrite = _replaceEpoch;
-    if (!_idb) { if (cb) cb(new Error('Persistence restore database unavailable')); return; }
-    var tx;
-    var settled = false;
-    function finish(err) { if (settled) return; settled = true; if (cb) cb(err || null); }
-    try {
-      tx = _idb.transaction(PERSISTENCE_PARAMS.idbStore, 'readwrite');
-      tx.oncomplete = function () {
-        if (epochAtWrite === _replaceEpoch) {
-          _restoreSnapshotPending = false;
-          _restoreHydrated = true;
-          _hydrated = true;
-          finish(null);
-        } else {
-          finish(new Error('Persistence restore superseded by a newer snapshot'));
-        }
-      };
-      tx.onerror = function (event) { finish((event && event.target && event.target.error) || tx.error || new Error('Persistence restore transaction failed')); };
-      tx.onabort = function () { finish(tx.error || new Error('Persistence restore transaction aborted')); };
-      var store = tx.objectStore(PERSISTENCE_PARAMS.idbStore);
-      store.clear();
-      Object.keys(_mem).forEach(function (key) { store.put({key:key, dates:_mem[key].slice()}); });
-    } catch (err) { try { if (tx && tx.abort) tx.abort(); } catch (_) {} finish(err); }
-  }
-
   function _idbHydrate(cb) {
     if (!_idb) {
-      if (cb) cb(_restoreSnapshotPending ? new Error('Persistence restore is pending; IndexedDB is unavailable') : null);
+      if (cb) cb();
       return;
     }
     try {
-      if (_restoreSnapshotPending) {
-        _writeRestoreSnapshot(function (err) { if (cb) cb(err || null); });
-        return;
-      }
       var tx = _idb.transaction(PERSISTENCE_PARAMS.idbStore, 'readonly');
       var store = tx.objectStore(PERSISTENCE_PARAMS.idbStore);
-      var epochAtRead = _replaceEpoch;
       var req = store.getAll();
       req.onsuccess = function () {
-        if (epochAtRead !== _replaceEpoch) { if (cb) cb(); return; }
         var rows = req.result || [];
         for (var i = 0; i < rows.length; i++) {
           var row = rows[i];
@@ -227,11 +192,9 @@
         _hydrated = true;
         if (cb) cb();
       };
-      req.onerror = function (event) {
-        if (cb) cb((event && event.target && event.target.error) || req.error || new Error('Persistence hydration request failed'));
-      };
+      req.onerror = function () { if (cb) cb(); };
     } catch (e) {
-      if (cb) cb(e);
+      if (cb) cb();
     }
   }
 
@@ -278,21 +241,8 @@
   // recordOccurrence, or getOccurrenceCount — bootstrap-only, once per load.
   _loadLocalStorage();
   _openIdb(function (db) {
-    if (db) {
-      _idbHydrate(function (err) {
-        if (err || _restoreSnapshotPending) return;
-
-        _saveLocalStorage();
-
-        if (!_restoreHydrated) {
-          _sweepColdKeys();
-        }
-
-        _restoreHydrated = false;
-      });
-    } else if (!_restoreSnapshotPending) {
-      _sweepColdKeys();
-    }
+    if (db) _idbHydrate(function () { _saveLocalStorage(); _sweepColdKeys(); });
+    else _sweepColdKeys();
   });
 
   function recordOccurrence(customerId, category, productId, timestamp) {
@@ -382,21 +332,6 @@
     return signals;
   }
 
-  // Backup restore has already replaced IndexedDB transactionally; replace the
-  // module's private memory/LS mirror too, without clearing or sweeping caches.
-  function replaceIntelligencePersistence(rows, cb) {
-    _replaceEpoch++;
-    _restoreSnapshotPending = true;
-    _mem = Object.create(null);
-    (Array.isArray(rows) ? rows : []).forEach(function (r) {
-      if (r && r.key && Array.isArray(r.dates)) _mem[r.key] = r.dates.slice();
-    });
-    _saveLocalStorage();
-    if (_idb) _writeRestoreSnapshot(cb);
-    else if (cb) cb(new Error('Persistence restore is pending until IndexedDB is available'));
-    return true;
-  }
-
   function clearIntelligencePersistence() {
     _mem = Object.create(null);
     try {
@@ -423,12 +358,10 @@
   global.applyPersistence = applyPersistence;
   global.getOccurrenceCount = getOccurrenceCount;
   global.clearIntelligencePersistence = clearIntelligencePersistence;
-  global.replaceIntelligencePersistence = replaceIntelligencePersistence;
   global.PERSISTENCE_PARAMS = PERSISTENCE_PARAMS;
   // internal test seam
   global._intelligencePersistenceSeed = _seedOccurrences;
   global._intelligencePersistenceMem = function () { return _mem; };
-  global._testPersistenceHydrateWithDb = function(db, cb){ _idb=db; _idbHydrate(cb || function(){}); } ;
   global._intelligenceColdKeySweep = _sweepColdKeys;
 
 })(typeof window !== 'undefined' ? window : this);

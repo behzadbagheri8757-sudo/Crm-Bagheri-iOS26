@@ -73,13 +73,7 @@
     return new Date().toISOString().slice(0, 10);
   }
 
-  function _daysAgo(iso, referenceDate) {
-    if (referenceDate) {
-      var a = new Date(String(referenceDate).slice(0,10) + 'T00:00:00').getTime();
-      var b = new Date(String(iso).slice(0,10) + 'T00:00:00').getTime();
-      if (!isFinite(a) || !isFinite(b)) return null;
-      return Math.floor((a-b)/86400000);
-    }
+  function _daysAgo(iso) {
     if (typeof daysAgo === 'function') {
       var d = daysAgo(iso);
       return (d != null && isFinite(d)) ? d : null;
@@ -272,8 +266,7 @@
           memberProductIds: [],
           memberSet: Object.create(null),
           purchases: [],
-          returns: [],
-          uncertainReturns: []
+          returns: []
         };
       }
       var pr = map[key];
@@ -285,10 +278,9 @@
     }
 
     var invoices = Array.isArray(data.invoices) ? data.invoices : [];
-    invoices = invoices.filter(function(inv){ return inv && inv.customerId === customerId &&
-      (typeof isValidPurchaseInvoice !== 'function' || isValidPurchaseInvoice(inv)); });
     for (var i = 0; i < invoices.length; i++) {
       var inv = invoices[i];
+      if (!inv || inv.customerId !== customerId) continue;
       var items = inv.items || [];
       // Merge duplicate lines within the same invoice at FAMILY level:
       // one purchase event per invoice per Family (no frequency inflation).
@@ -301,12 +293,9 @@
         if (!byFam[fidI]) {
           byFam[fidI] = { qty: 0, revenue: 0, members: Object.create(null) };
         }
-        var analysisQty = (typeof _raisinPilafPackages === 'function' &&
-          (String(it.name||'').trim() === 'کشمش پلویی' || (data.products||[]).some(function(p){return p.id===it.productId && String(p.name||'').trim()==='کشمش پلویی';})))
-          ? _raisinPilafPackages(it) : it.qty;
-        byFam[fidI].qty += analysisQty;
+        byFam[fidI].qty += it.qty;
         byFam[fidI].revenue += (it.qty * (it.price || 0)) - (it.discount || 0);
-        byFam[fidI].members[it.productId] = (byFam[fidI].members[it.productId] || 0) + analysisQty;
+        byFam[fidI].members[it.productId] = (byFam[fidI].members[it.productId] || 0) + it.qty;
       }
       var fids = Object.keys(byFam);
       for (var k = 0; k < fids.length; k++) {
@@ -330,7 +319,6 @@
           revenue: m.revenue,
           unitPrice: m.qty > 0 ? (m.revenue / m.qty) : null,
           invoiceId: inv.id,
-          invoiceIds: [inv.id],
           productId: domPid,
           members: m.members
         });
@@ -348,43 +336,15 @@
         if (!ret || !ret.productId) continue;
         if (!(ret.qty > 0)) continue;
         var pairR = ensure(ret.productId);
-        var sourceInvoice = pay.invoiceId ? invoices.find(function(x){ return x.id === pay.invoiceId; }) : null;
-        var isRaisinReturn = String(ret.name||'').trim() === 'کشمش پلویی' || (data.products||[]).some(function(p){return p.id===ret.productId && String(p.name||'').trim()==='کشمش پلویی';});
-        var returnQty = ret.qty;
-        if (isRaisinReturn && typeof _raisinPilafReturnPackages === 'function') {
-          returnQty = _raisinPilafReturnPackages(ret, pay, sourceInvoice);
-        }
-        if (!sourceInvoice || returnQty == null) {
-          pairR.uncertainReturns.push({
-            date: pay.date || null, invoiceId: pay.invoiceId || null, productId: ret.productId,
-            rawQty: ret.qty, reason: !sourceInvoice ? 'unlinked_or_missing_source_invoice' : 'ambiguous_unit_conversion'
-          });
-          continue;
-        }
         pairR.returns.push({
-          date: sourceInvoice.date,
+          date: pay.date,
           productId: ret.productId,
-          qty: returnQty,
+          qty: ret.qty,
           price: ret.price || 0,
-          invoiceId: sourceInvoice.id
+          invoiceId: pay.invoiceId || null
         });
       }
     }
-
-    // A purchase occasion is one customer × family × calendar day, not one invoice.
-    Object.keys(map).forEach(function(k){
-      var pr = map[k], byDay = Object.create(null);
-      (pr.purchases||[]).forEach(function(ev){
-        var day = String(ev.date||'').slice(0,10);
-        if(!byDay[day]) byDay[day] = Object.assign({}, ev, {qty:0, revenue:0, members:Object.create(null), invoiceIds:[]});
-        var g = byDay[day]; g.qty += ev.qty||0; g.revenue += ev.revenue||0;
-        (ev.invoiceIds||[ev.invoiceId]).forEach(function(id){if(id && g.invoiceIds.indexOf(id)<0)g.invoiceIds.push(id);});
-        Object.keys(ev.members||{}).forEach(function(pid){g.members[pid]=(g.members[pid]||0)+ev.members[pid];});
-      });
-      pr.purchases = Object.keys(byDay).sort().map(function(day){
-        var g=byDay[day]; g.unitPrice=g.qty>0?g.revenue/g.qty:null; return g;
-      });
-    });
 
     // Sort purchases by date ascending
     var keys = Object.keys(map);
@@ -455,10 +415,10 @@
   /* ---------------------------------------------------------
      Stage 3 — Current state (F3 event-based recent window)
      --------------------------------------------------------- */
-  function _computeCurrent(pair, historical, recent, customerInvoicesList, ctx) {
+  function _computeCurrent(pair, historical, recent, customerInvoicesList) {
     var purchases = pair.purchases;
     var last = purchases.length ? purchases[purchases.length - 1] : null;
-    var daysSinceLast = last ? _daysAgo(last.date, ctx && ctx.asOfDate) : null;
+    var daysSinceLast = last ? _daysAgo(last.date) : null;
     var currentGap = null;
     if (historical.typicalCycle != null && historical.typicalCycle > 0 && daysSinceLast != null) {
       currentGap = daysSinceLast - historical.typicalCycle;
@@ -477,24 +437,24 @@
     var recentFrequency = 0;
     if (freqWindowDays != null) {
       for (var i = 0; i < purchases.length; i++) {
-        var d = _daysAgo(purchases[i].date, ctx && ctx.asOfDate);
+        var d = _daysAgo(purchases[i].date);
         if (d != null && d <= freqWindowDays) recentFrequency++;
       }
     }
 
-    var rawInvs = customerInvoicesList || [];
-    var invs = typeof groupPurchaseOccasions === 'function'
-      ? groupPurchaseOccasions(rawInvs)
-      : rawInvs.map(function(inv){return {date:inv.date,invoices:[inv]};});
+    var invs = customerInvoicesList || [];
 
-    // One basket observation per distinct calendar purchase day.
+    // Compute historicalPresenceRate first (needed below to size the
+    // basket window adaptively).
     var histPresenceCount = 0;
     for (var h = 0; h < invs.length; h++) {
-      var foundHistorical = false;
-      (invs[h].invoices||[]).forEach(function(inv){
-        (inv.items||[]).forEach(function(it){if(it && _pairHasProduct(pair,it.productId) && it.qty>0) foundHistorical=true;});
-      });
-      if(foundHistorical) histPresenceCount++;
+      var its = invs[h].items || [];
+      for (var jj = 0; jj < its.length; jj++) {
+        if (its[jj] && _pairHasProduct(pair, its[jj].productId) && its[jj].qty > 0) {
+          histPresenceCount++;
+          break;
+        }
+      }
     }
     var historicalPresenceRate = invs.length ? (histPresenceCount / invs.length) : null;
 
@@ -520,11 +480,13 @@
     var windowInvs = sortedInvs.slice(0, basketWindow);
     var presenceCount = 0;
     for (var w = 0; w < windowInvs.length; w++) {
-      var foundCurrent = false;
-      (windowInvs[w].invoices||[]).forEach(function(inv){
-        (inv.items||[]).forEach(function(it){if(it && _pairHasProduct(pair,it.productId) && it.qty>0) foundCurrent=true;});
-      });
-      if(foundCurrent) presenceCount++;
+      var items = windowInvs[w].items || [];
+      for (var ii = 0; ii < items.length; ii++) {
+        if (items[ii] && _pairHasProduct(pair, items[ii].productId) && items[ii].qty > 0) {
+          presenceCount++;
+          break;
+        }
+      }
     }
     var currentBasketPresence = windowInvs.length ? (presenceCount / windowInvs.length) : 0;
 
@@ -552,14 +514,15 @@
     var basketShare = 0;
     if (totalInvoices > 0) {
       var present = 0;
-      var rawInvoices = (typeof customerInvoices === 'function') ? customerInvoices(customerId, ctx) : [];
-      var occasions = typeof groupPurchaseOccasions === 'function' ? groupPurchaseOccasions(rawInvoices) : rawInvoices.map(function(inv){return {invoices:[inv]};});
-      for (var j = 0; j < occasions.length; j++) {
-        var found = false;
-        (occasions[j].invoices||[]).forEach(function(inv){
-          (inv.items||[]).forEach(function(it){if(it && _pairHasProduct(pair,it.productId) && it.qty>0) found=true;});
-        });
-        if(found) present++;
+       var invs = (typeof customerInvoices === 'function') ? customerInvoices(customerId, ctx) : [];
+      for (var j = 0; j < invs.length; j++) {
+        var items = invs[j].items || [];
+        for (var k = 0; k < items.length; k++) {
+          if (items[k] && _pairHasProduct(pair, items[k].productId) && items[k].qty > 0) {
+            present++;
+            break;
+          }
+        }
       }
       basketShare = _clamp01(present / totalInvoices);
     }
@@ -695,48 +658,61 @@
   /* ---------------------------------------------------------
      Stage 7 — Context
      --------------------------------------------------------- */
-  function _recentWindowInvoiceIds(pair, recentWindowSize) {
-    var purchases = pair.purchases || [];
-    var startIdx = Math.max(0, purchases.length - recentWindowSize);
-    var ids = Object.create(null);
-    purchases.slice(startIdx).forEach(function(ev){
-      (ev.invoiceIds || (ev.invoiceId ? [ev.invoiceId] : [])).forEach(function(id){ if(id) ids[id] = true; });
-    });
-    return ids;
-  }
-
   function _netRecentQty(pair, recentWindowSize) {
-    var purchases = pair.purchases || [];
+    var purchases = pair.purchases;
     var startIdx = Math.max(0, purchases.length - recentWindowSize);
     var windowPurchases = purchases.slice(startIdx);
     var gross = 0;
-    for (var i = 0; i < windowPurchases.length; i++) gross += windowPurchases[i].qty || 0;
-    var invoiceIds = _recentWindowInvoiceIds(pair, recentWindowSize);
+    var earliest = null;
+    for (var i = 0; i < windowPurchases.length; i++) {
+      gross += windowPurchases[i].qty || 0;
+      if (!earliest || String(windowPurchases[i].date) < String(earliest)) {
+        earliest = windowPurchases[i].date;
+      }
+    }
     var returned = 0;
-    (pair.returns || []).forEach(function(ret){ if (ret.invoiceId && invoiceIds[ret.invoiceId]) returned += ret.qty || 0; });
-    pair.recentReturnQuality = (pair.uncertainReturns && pair.uncertainReturns.length)
-      ? { status: 'uncertain', reasons: pair.uncertainReturns.map(function(r){return r.reason;}), count: pair.uncertainReturns.length }
-      : { status: 'complete', reasons: [], count: 0 };
-    return gross - returned;
+    if (earliest) {
+      for (var r = 0; r < pair.returns.length; r++) {
+        var ret = pair.returns[r];
+        if (String(ret.date || '') >= String(earliest)) returned += ret.qty || 0;
+      }
+    }
+    return Math.max(0, gross - returned);
   }
 
+  // BUGFIX (Audit #12): mirrors _netRecentQty's own recent-window/earliest
+  // computation, but exposes whether any return actually falls inside that
+  // window. Kept separate from _netRecentQty (rather than changing its
+  // return shape) so its one existing call site is untouched.
   function _hasReturnsInWindow(pair, recentWindowSize) {
-    var invoiceIds = _recentWindowInvoiceIds(pair, recentWindowSize);
-    if ((pair.returns || []).some(function(ret){ return !!(ret.invoiceId && invoiceIds[ret.invoiceId]); })) return true;
-    // Unknown source linkage is surfaced as uncertainty, not treated as a known
-    // in-window return and not silently discarded from the analytical quality.
+    var purchases = pair.purchases;
+    var startIdx = Math.max(0, purchases.length - recentWindowSize);
+    var windowPurchases = purchases.slice(startIdx);
+    var earliest = null;
+    for (var i = 0; i < windowPurchases.length; i++) {
+      if (!earliest || String(windowPurchases[i].date) < String(earliest)) {
+        earliest = windowPurchases[i].date;
+      }
+    }
+    if (!earliest || !pair.returns) return false;
+    for (var r = 0; r < pair.returns.length; r++) {
+      var ret = pair.returns[r];
+      if (String(ret.date || '') >= String(earliest)) return true;
+    }
     return false;
   }
 
   // familyId -> { productId: true } for products bought (qty>0) in the late
   // half of the customer's invoice history. Same split calc.js uses for
-  // purchase occasions (distinct valid calendar days; all same-day invoices stay together).
+  // decliningProducts (date, then invoice number; mid = floor(count/2)).
   function _lateFamilyMembers(customerId, ctx, famOf) {
     var out = Object.create(null);
     if (typeof customerInvoices !== 'function') return out;
-    var raw = customerInvoices(customerId, ctx).filter(function(inv){return typeof isValidPurchaseInvoice !== 'function' || isValidPurchaseInvoice(inv);});
-    var occasions = typeof groupPurchaseOccasions === 'function' ? groupPurchaseOccasions(raw) : raw.map(function(inv){return {invoices:[inv]};});
-    var late = occasions.slice(Math.floor(occasions.length / 2)).reduce(function(a,g){return a.concat(g.invoices||[]);}, []);
+    var invs = customerInvoices(customerId, ctx).slice().sort(function (a, b) {
+      return String(a.date || '').localeCompare(String(b.date || ''))
+        || String(a.number || '').localeCompare(String(b.number || ''));
+    });
+    var late = invs.slice(Math.floor(invs.length / 2));
     for (var i = 0; i < late.length; i++) {
       var items = late[i].items || [];
       for (var j = 0; j < items.length; j++) {
@@ -756,7 +732,7 @@
       var b = customerBehavior(customerId, ctx);
       if (!b) return false;
       if (b.amountTrend === 'down') return true;
-      var declining = Array.isArray(b.decliningProductsAll) ? b.decliningProductsAll : (Array.isArray(b.decliningProducts) ? b.decliningProducts : []);
+      var declining = Array.isArray(b.decliningProducts) ? b.decliningProducts : [];
       // calc.js decliningProducts is SKU-level (untouched). Normalize to
       // Family-level here, in the Intelligence layer only: (a) a declining
       // SKU whose Family is retained by another member bought in the late
@@ -866,16 +842,9 @@
     }
 
     var recent = _computeBaseline(pair.purchases, SKU_PARAMS.recentWindowSize);
-    var current = _computeCurrent(pair, historical, recent, custInvs, ctx);
-    current.netRecentQty = _netRecentQty(pair, SKU_PARAMS.recentWindowSize);
-    current.netPurchaseState = (pair.recentReturnQuality && pair.recentReturnQuality.status === 'uncertain') ? 'uncertain'
-      : (current.recentFrequency === 0 ? 'no_purchase'
-        : (current.netRecentQty <= 0 ? 'net_nonpositive' : 'net_positive'));
-    current.quantityQuality = pair.recentReturnQuality || { status: 'complete', reasons: [], count: 0 };
-    var purchaseOccasionCount = typeof groupPurchaseOccasions === 'function' ? groupPurchaseOccasions(custInvs).length : custInvs.length;
-    var importance = _computeImportance(pair, historical, customerId, totalRev, totalProfit, purchaseOccasionCount, ctx);
+    var current = _computeCurrent(pair, historical, recent, custInvs);
+    var importance = _computeImportance(pair, historical, customerId, totalRev, totalProfit, custInvs.length, ctx);
     var confidence = _computeConfidence(historical, recent, pair);
-    if (pair.recentReturnQuality && pair.recentReturnQuality.status === 'uncertain') confidence = Math.min(confidence, SKU_PARAMS.lowHistoryConfidenceFactor);
     var trend = _trendClass(historical, recent);
     var stockOut = _familyStockOut(pair.familyId, pair.memberProductIds, pair.productId, ctx);
     var productName = _productName(pair.productId, ctx);
@@ -971,9 +940,7 @@
           evidence: {
             typicalQuantity: historical.typicalQuantity,
             recentQuantity: recent.typicalQuantity,
-            netRecentQty: netQty,
-            netPurchaseState: current.netPurchaseState,
-            recentPurchaseEventCount: current.recentFrequency
+            netRecentQty: netQty
           }
         });
       }
@@ -1124,13 +1091,10 @@
         contextFlags: {
           stock: stockOut,
           accountDecline: !!accountDecline,
-          returns: pair.returns.length > 0 || (pair.uncertainReturns && pair.uncertainReturns.length > 0),
-          netPurchaseState: current.netPurchaseState,
-          quantityQuality: current.quantityQuality
+          returns: pair.returns.length > 0
         },
         evidence: (function () {
           evidence.memberProductIds = pair.memberProductIds ? pair.memberProductIds.slice() : [pair.productId];
-          evidence.quantityQuality = current.quantityQuality;
           return evidence;
         })()
       }),
@@ -1146,7 +1110,7 @@
      --------------------------------------------------------- */
   function extractSkuSignals(customerId, ctx, skipMemo) {
     if (ctx && typeof ctx.memo === 'function' && !skipMemo) {
-      return ctx.memo('skuSignals', String(customerId) + '|' + String(ctx.asOfDate || ''), function () {
+      return ctx.memo('skuSignals', customerId, function () {
         return extractSkuSignals(customerId, ctx, true);
       });
     }
@@ -1160,7 +1124,7 @@
     var keys = Object.keys(map);
     if (!keys.length) return out;
 
-    var custInvs = (typeof customerInvoices === 'function') ? customerInvoices(customerId, ctx).filter(function(inv){return typeof isValidPurchaseInvoice !== 'function' || isValidPurchaseInvoice(inv);}) : [];
+    var custInvs = (typeof customerInvoices === 'function') ? customerInvoices(customerId, ctx) : [];
     var totalRev = 0;
     try {
       if (typeof customerTotals === 'function') {
@@ -1261,10 +1225,6 @@
   }
 
   global.extractSkuSignals = extractSkuSignals;
-  // Internal deterministic test seam for purchase-event aggregation.
-  global._aggregatePairMapForTests = _aggregatePairMap;
-  global._netRecentQtyForTests = _netRecentQty;
-  global._hasReturnsInWindowForTests = _hasReturnsInWindow;
   global.SKU_PARAMS = SKU_PARAMS;
   // Runtime Family identity helpers (shared by all Intelligence modules;
   // resolved at call time, so script load order does not matter).
@@ -1306,7 +1266,7 @@
     var map = _aggregatePairMap(customerId, ctx);
     var keys = Object.keys(map);
     if (!keys.length) return out;
-    var custInvs = (typeof customerInvoices === 'function') ? customerInvoices(customerId, ctx).filter(function(inv){return typeof isValidPurchaseInvoice !== 'function' || isValidPurchaseInvoice(inv);}) : [];
+    var custInvs = (typeof customerInvoices === 'function') ? customerInvoices(customerId, ctx) : [];
 
     for (var i = 0; i < keys.length; i++) {
       var pair = map[keys[i]];
@@ -1321,7 +1281,7 @@
       var historical = _computeBaseline(pair.purchases, null);
       if (historical.purchaseCount < 1) continue;
       var recent = _computeBaseline(pair.purchases, SKU_PARAMS.recentWindowSize);
-      var current = _computeCurrent(pair, historical, recent, custInvs, ctx);
+      var current = _computeCurrent(pair, historical, recent, custInvs);
       // Same stock-context semantics as Confirmed: only used to suppress
       // timing/quantity-style dims below, never a full exclusion (unlike
       // the active gate above).

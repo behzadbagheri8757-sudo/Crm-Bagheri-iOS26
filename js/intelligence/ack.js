@@ -77,8 +77,6 @@
 
   var _mem = [];
   var _idb = null;
-  var _replaceEpoch = 0;
-  var _restoreSnapshotPending = false;
   var _watchSyncDepth = 0;
   var _migrating = false;
 
@@ -93,15 +91,6 @@
   function _parseISO(s) {
     if (!s) return null;
     var str = String(s);
-    // Date.parse normalizes impossible calendar dates (e.g. Feb 31) on some
-    // engines. Validate the ISO calendar day before accepting the timestamp.
-    var day = /^(\d{4})-(\d{2})-(\d{2})(?:$|T)/.exec(str);
-    if (!day) return null;
-    if (day) {
-      var y = Number(day[1]), m = Number(day[2]), d0 = Number(day[3]);
-      var check = new Date(Date.UTC(y, m - 1, d0));
-      if (check.getUTCFullYear() !== y || check.getUTCMonth() !== m - 1 || check.getUTCDate() !== d0) return null;
-    }
     var d = /^\d{4}-\d{2}-\d{2}$/.test(str) ? new Date(str + 'T23:59:59') : new Date(str);
     return isNaN(d.getTime()) ? null : d;
   }
@@ -202,54 +191,11 @@
     } catch (e) { /* ignore: LS mirror still holds it */ }
   }
 
-  function _writeRestoreSnapshot(cb) {
-    var epochAtWrite = _replaceEpoch;
-    if (!_idb || !_idb.objectStoreNames.contains(ACK_PARAMS.idbStore)) {
-      if (cb) cb(new Error('ACK restore store unavailable'));
-      return;
-    }
-    var tx;
-    var settled = false;
-    function finish(err) {
-      if (settled) return;
-      settled = true;
-      if (cb) cb(err || null);
-    }
-    try {
-      tx = _idb.transaction(ACK_PARAMS.idbStore, 'readwrite');
-      tx.oncomplete = function () {
-        if (epochAtWrite === _replaceEpoch) {
-          _restoreSnapshotPending = false;
-          finish(null);
-        } else {
-          finish(new Error('ACK restore superseded by a newer snapshot'));
-        }
-      };
-      tx.onerror = function (event) { finish((event && event.target && event.target.error) || tx.error || new Error('ACK restore transaction failed')); };
-      tx.onabort = function () { finish(tx.error || new Error('ACK restore transaction aborted')); };
-      var store = tx.objectStore(ACK_PARAMS.idbStore);
-      store.clear();
-      _mem.forEach(function (row) { store.put(row); });
-    } catch (err) {
-      try { if (tx && tx.abort) tx.abort(); } catch (_) {}
-      finish(err);
-    }
-  }
-
   function _idbHydrate(cb) {
-    if (!_idb || !_idb.objectStoreNames.contains(ACK_PARAMS.idbStore)) {
-      if (cb) cb(_restoreSnapshotPending ? new Error('ACK restore is pending; IndexedDB store is unavailable') : null);
-      return;
-    }
+    if (!_idb || !_idb.objectStoreNames.contains(ACK_PARAMS.idbStore)) { if (cb) cb(); return; }
     try {
-      if (_restoreSnapshotPending) {
-        _writeRestoreSnapshot(function (err) { if (cb) cb(err || null); });
-        return;
-      }
-      var epochAtRead = _replaceEpoch;
       var req = _idb.transaction(ACK_PARAMS.idbStore, 'readonly').objectStore(ACK_PARAMS.idbStore).getAll();
       req.onsuccess = function () {
-        if (epochAtRead !== _replaceEpoch) { if (cb) cb(); return; }
         var rows = req.result || [];
         var byId = Object.create(null);
         for (var i = 0; i < _mem.length; i++) byId[_mem[i].id] = _mem[i];     // LS mirror is fresher
@@ -335,10 +281,8 @@
 
   function _isLive(a, nowMs) {
     if (!a || a.status !== 'active') return false;
-    if (a.expiresAt == null || a.expiresAt === '') return true; // legacy ACK without expiry
     var exp = _parseISO(a.expiresAt);
-    if (!exp || !isFinite(exp.getTime())) return false;
-    return exp.getTime() > nowMs;
+    return !exp || exp.getTime() > nowMs;
   }
 
   /* ---------- Watch mirror (tombstone stays the Watch cache) ---------- */
@@ -559,25 +503,16 @@
 
   function applyAcksToSignals(signals, acks) {
     if (!signals) return null;
-    var derivedFields = [
-      'ackRiskDelta', 'ackPriorityDelta', 'ackIds', 'ackPriorityById',
-      'ackDecision', 'ackExpiresAt', 'ackScope', 'ackActionEffect',
-      'ackUrgency', 'ackActionText', 'ackActionType', 'ackReviewed'
-    ];
+    if (!acks || !acks.length) return signals;
     try {
       for (var i = 0; i < signals.length; i++) {
         var s = signals[i];
-        if (!s) continue;
-        // Clear every prior derived ACK annotation before recomputing from the
-        // current live ACK set. Repeated calls and cancellation are idempotent.
-        for (var f = 0; f < derivedFields.length; f++) delete s[derivedFields[f]];
-        if (!acks || !acks.length) continue;
         var eff = getAckEffectForSignal(s, acks);
         if (!eff) continue;
-        if (eff.riskDelta !== null) s.ackRiskDelta = eff.riskDelta;
-        s.ackPriorityDelta = eff.priorityDelta;
-        s.ackIds = eff.ackIds.slice();
-        s.ackPriorityById = Object.assign({}, eff.priorityById);
+        if (eff.riskDelta !== null) s.ackRiskDelta = (s.ackRiskDelta || 0) + eff.riskDelta;
+        s.ackPriorityDelta = (s.ackPriorityDelta || 0) + eff.priorityDelta;
+        s.ackIds = eff.ackIds;
+        s.ackPriorityById = Object.assign(s.ackPriorityById || {}, eff.priorityById);
         if (eff.decision) {
           s.ackDecision = eff.decision;
           s.ackExpiresAt = eff.expiresAt;
@@ -787,13 +722,17 @@
 
   function exportAcks() { return _mem.slice(); }
 
-  function replaceAllAcks(rows, cb) {
-    _replaceEpoch++;
-    _restoreSnapshotPending = true;
+  function replaceAllAcks(rows) {
     _mem = Array.isArray(rows) ? rows.filter(function (r) { return r && r.id; }) : [];
     _saveLS();
-    if (_idb && _idb.objectStoreNames.contains(ACK_PARAMS.idbStore)) _writeRestoreSnapshot(cb);
-    else if (cb) cb(new Error('ACK restore is pending until IndexedDB is available'));
+    if (_idb && _idb.objectStoreNames.contains(ACK_PARAMS.idbStore)) {
+      try {
+        var tx = _idb.transaction(ACK_PARAMS.idbStore, 'readwrite');
+        var st = tx.objectStore(ACK_PARAMS.idbStore);
+        st.clear();
+        _mem.forEach(function (r) { st.put(r); });
+      } catch (e) { /* LS mirror authoritative */ }
+    }
   }
 
   /* ---------- small UI helper (customer + watch pages) ---------- */
@@ -869,8 +808,6 @@
   global.ackWatchSyncActive = ackWatchSyncActive;
   global.exportAcks = exportAcks;
   global.replaceAllAcks = replaceAllAcks;
-  global._sellerAckMemoryForTests = function(){ return _mem; };
-  global._testAckHydrateWithDb = function(db, cb){ _idb=db; _idbHydrate(cb || function(){}); } ;
   global.ackListHtml = ackListHtml;
   global.bindAckReverse = bindAckReverse;
   global.ensureAckStores = _ensureStores;

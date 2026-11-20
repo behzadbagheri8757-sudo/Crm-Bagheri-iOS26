@@ -139,10 +139,13 @@
   function _getConfirmedLateProductIds(cid, ctx) {
     var ids = Object.create(null);
     if (typeof customerInvoices !== 'function') return ids;
-    var raw = customerInvoices(cid, ctx).filter(function(inv){return typeof isValidPurchaseInvoice !== 'function' || isValidPurchaseInvoice(inv);});
-    var occasions = typeof groupPurchaseOccasions === 'function' ? groupPurchaseOccasions(raw) : raw.map(function(inv){return {date:inv.date,invoices:[inv]};});
-    var mid = Math.floor(occasions.length / 2);
-    var late = occasions.slice(mid).reduce(function(a,g){return a.concat(g.invoices||[]);}, []);
+    var invs = customerInvoices(cid, ctx).slice().sort(function (a, b) {
+      return String(a.date || '').localeCompare(String(b.date || ''))
+        || String(a.number || '').localeCompare(String(b.number || ''));
+    });
+    var count = invs.length;
+    var mid = Math.floor(count / 2);
+    var late = invs.slice(mid);
     for (var i = 0; i < late.length; i++) {
       var items = late[i].items || [];
       for (var j = 0; j < items.length; j++) {
@@ -280,8 +283,8 @@
      6: BASKET_SHRINK
      --------------------------------------------------------- */
   function _basketShrinkSignal(cid, b, out, productsById, lateProductIds) {
-    if (!((b.purchaseDayCount || 0) >= 4)) return;
-    const declining = Array.isArray(b.decliningProductsAll) ? b.decliningProductsAll : (Array.isArray(b.decliningProducts) ? b.decliningProducts : []);
+    if (!(b.invoiceCount >= 4)) return;
+    const declining = Array.isArray(b.decliningProducts) ? b.decliningProducts : [];
     if (!(declining.length >= 1)) return;
     // Product Analysis Group: a decline that's actually a same-group SKU
     // switch isn't a meaningful basket shrink — filter it out before counting.
@@ -296,7 +299,6 @@
       unit: 'count',
       reason: 'تعدادی از کالاهای سبد خرید کاهش یافته‌اند',
       confidence: 0.75,
-      evidence: { decliningProductIds: meaningful.map(function (p) { return p && p.productId; }).filter(Boolean), decliningProducts: meaningful.map(function(p){ return {productId:p.productId, earlyQty:p.earlyQty, lateGrossQty:p.lateGrossQty, lateReturnQty:p.lateReturnQty, lateNetQty:p.lateNetQty, latePurchaseState:p.latePurchaseState, quantityQuality:p.quantityQuality || {status:'complete',reasons:[]} }; }) },
     }));
   }
 
@@ -309,13 +311,9 @@
      purchased in the earlier half of the customer's history).
      --------------------------------------------------------- */
   function _keyProductLostSignal(cid, b, out, productsById, lateProductIds) {
-    const declining = Array.isArray(b.decliningProductsAll) ? b.decliningProductsAll : (Array.isArray(b.decliningProducts) ? b.decliningProducts : []);
+    const declining = Array.isArray(b.decliningProducts) ? b.decliningProducts : [];
     const lost = declining.filter(function (p) {
-      // A net-zero purchase after a recorded return is not 'no purchase'.
-      // Keep the decline/return evidence in customerBehavior, but do not label it lost.
-      var state = p && p.latePurchaseState;
-      if (!state && p) state = (Number(p.lateGrossQty) > 0 || Number(p.lateReturnQty) > 0) ? 'net_nonpositive' : 'no_purchase';
-      return p && p.earlyQty >= 5 && p.lateQty === 0 && state === 'no_purchase';
+      return p && p.earlyQty >= 5 && p.lateQty === 0;
     });
     if (!lost.length) return;
 
@@ -381,11 +379,11 @@
     // Fallback only when visit cadence is unavailable.
     if (typeof visitCadence === 'function' && visitCadence(cid, ctx)) return;
     if (!b.lastVisit) return;
-    if ((b.purchaseDayCount || 0) < 2) return;
+    if (b.invoiceCount < 2) return;
 
     const lastVisitDate = b.lastVisit.date;
     if (!lastVisitDate) return;
-    const days = (typeof analysisDaysAgo === 'function') ? analysisDaysAgo(lastVisitDate, ctx) : ((typeof daysAgo === 'function') ? daysAgo(lastVisitDate) : null);
+    const days = (typeof daysAgo === 'function') ? daysAgo(lastVisitDate) : null;
     if (days == null || !isFinite(days)) return;
     if (days < 45) return;
 
@@ -413,7 +411,7 @@
 
     let daysSince = null;
     if (b && b.lastVisit && b.lastVisit.date) {
-      daysSince = (typeof analysisDaysAgo === 'function') ? analysisDaysAgo(b.lastVisit.date, ctx) : ((typeof daysAgo === 'function') ? daysAgo(b.lastVisit.date) : null);
+      daysSince = (typeof daysAgo === 'function') ? daysAgo(b.lastVisit.date) : null;
     }
     if (daysSince == null || !isFinite(daysSince)) {
       const cust = (ctx && typeof ctx.customerById === 'function')
@@ -428,7 +426,7 @@
             return String(b2.date || '').localeCompare(String(a.date || ''));
           });
           if (visits[0] && visits[0].date) {
-            daysSince = (typeof analysisDaysAgo === 'function') ? analysisDaysAgo(visits[0].date, ctx) : ((typeof daysAgo === 'function') ? daysAgo(visits[0].date) : null);
+            daysSince = (typeof daysAgo === 'function') ? daysAgo(visits[0].date) : null;
           }
         }
       }
@@ -482,7 +480,7 @@
     if (typeof data === 'undefined' || !Array.isArray(data.checks) || data.checks.length === 0) {
       return;
     }
-    const today = (ctx && ctx.asOfDate) || ((typeof todayISO === 'function') ? todayISO() : new Date().toISOString().slice(0, 10));
+    const today = (typeof todayISO === 'function') ? todayISO() : new Date().toISOString().slice(0, 10);
     const custChecks = (typeof customerChecks === 'function')
       ? customerChecks(cid, ctx)
       : data.checks.filter(function (c) { return c && c.customerId === cid; });
@@ -526,7 +524,7 @@
      --------------------------------------------------------- */
   function extractCustomerSignals(cid, ctx, skipMemo) {
     if (ctx && typeof ctx.memo === 'function' && !skipMemo) {
-      return ctx.memo('customerSignals', String(cid) + '|' + String(ctx.asOfDate || ''), function () {
+      return ctx.memo('customerSignals', cid, function () {
         return extractCustomerSignals(cid, ctx, true);
       });
     }
@@ -606,6 +604,7 @@
       }
     }
     if (skuSignals.length) {
+        _dedupeSkuAgainstAccountSignals(out, skuSignals, ctx);
       for (var si = 0; si < skuSignals.length; si++) {
         if (skuSignals[si]) {
           // P-01: guarantee sourceLevel on SKU-origin signals (sku_intelligence
@@ -645,12 +644,6 @@
       }
     }
 
-    // F4 deduplication runs only after persistence has assigned pending/active.
-    // Pending SKU evidence must never suppress an account-level signal.
-    if (skuSignals.length) {
-      try { _dedupeSkuAgainstAccountSignals(out, skuSignals, ctx); } catch (eDedup) { /* fail-open */ }
-    }
-
     // ------------------------------------------------------------------
     // P-03 Seller Feedback: attach evidence + riskModifier when present.
     // Does not change status (P-02) or sourceLevel (P-01). No removals.
@@ -687,48 +680,123 @@
      leaving suppressed account signals removed from accountSignals. */
   function _dedupeSkuAgainstAccountSignals(accountSignals, skuSignals, ctx) {
     if (!accountSignals || !skuSignals || !skuSignals.length) return;
-    // Only active, semantically equivalent SKU evidence may cover an account issue.
-    // SKU_DELAY is timing-only and never proves basket shrink or product loss.
-    var lineDropByProduct = Object.create(null);
+
+    var skuProductIds = Object.create(null);
+    var famOfD = (typeof makeFamilyResolver === 'function')
+      ? makeFamilyResolver(ctx)
+      : function (pid) { return pid; };
+    var skuFamilyIds = Object.create(null);
+    var hasLineDropSku = false;
     for (var i = 0; i < skuSignals.length; i++) {
       var ss = skuSignals[i];
-      if (!ss || ss.status !== 'active') continue;
-      if (ss.category !== 'LINE_DROP' || !ss.productId || ss.productId === 'multi') continue;
-      var ev = ss.evidence || {};
-      if (ev.currentBasketPresence !== 0) continue;
-      lineDropByProduct[ss.productId] = true;
-    }
-    for (var j = accountSignals.length - 1; j >= 0; j--) {
-      var sig = accountSignals[j];
-      if (!sig || sig.status !== 'active') continue;
-      if (sig.category === 'BASKET_SHRINK') {
-        var topics = sig.evidence && Array.isArray(sig.evidence.decliningProductIds)
-          ? sig.evidence.decliningProductIds.filter(Boolean) : [];
-        // Basket shrink may be deduplicated only when every affected product is
-        // independently confirmed absent by an active LINE_DROP for that exact SKU.
-        if (topics.length && topics.every(function(pid){ return lineDropByProduct[pid] === true; })) {
-          accountSignals.splice(j, 1);
+      if (!ss) continue;
+      if (ss.productId && ss.productId !== 'multi') skuProductIds[ss.productId] = true;
+      if (ss.familyId != null && ss.familyId !== '') skuFamilyIds[ss.familyId] = true;
+      // Family-level SKU signals cover EVERY member SKU of the Family.
+      if (ss.evidence && Array.isArray(ss.evidence.memberProductIds)) {
+        for (var mm = 0; mm < ss.evidence.memberProductIds.length; mm++) {
+          skuProductIds[ss.evidence.memberProductIds[mm]] = true;
         }
-      } else if (sig.category === 'KEY_PRODUCT_LOST') {
-        var hardLost = sig.evidence && Array.isArray(sig.evidence.hardLost) ? sig.evidence.hardLost : [];
-        var remaining = hardLost.filter(function(p){ return !p || !lineDropByProduct[p.productId]; });
-        if (hardLost.length && remaining.length === 0) {
+      }
+      if (ss.evidence && Array.isArray(ss.evidence.affectedFamilyIds)) {
+        for (var af = 0; af < ss.evidence.affectedFamilyIds.length; af++) {
+          skuFamilyIds[ss.evidence.affectedFamilyIds[af]] = true;
+        }
+      }
+      if (ss.evidence && Array.isArray(ss.evidence.affectedProductIds)) {
+        for (var a = 0; a < ss.evidence.affectedProductIds.length; a++) {
+          skuProductIds[ss.evidence.affectedProductIds[a]] = true;
+        }
+      }
+      var cat = ss.category;
+      if (cat === 'LINE_DROP' || cat === 'SKU_CHURN' || cat === 'SKU_QUANTITY_DROP' ||
+          cat === 'COMBINED_SKU_DETERIORATION' || cat === 'MULTI_SKU_DECLINE' ||
+          cat === 'SKU_FREQUENCY_DROP') {
+        hasLineDropSku = true;
+      }
+    }
+
+    for (var j = accountSignals.length - 1; j >= 0; j--) {
+      var s = accountSignals[j];
+      if (!s) continue;
+
+      if (s.category === 'BASKET_SHRINK' && hasLineDropSku) {
+        accountSignals.splice(j, 1);
+        continue;
+      }
+
+      if (s.category === 'KEY_PRODUCT_LOST') {
+        // Rebuild reason from remaining SKUs if we can parse product names;
+        // KEY_PRODUCT_LOST does not store productId list on the signal, only
+        // a Persian reason string built from decliningProducts at generation
+        // time. Re-derive from customerBehavior so F4 can remove matched SKUs.
+        var remainingNames = [];
+        var remainingCount = 0;
+        var retainedRemaining = [];
+        if (s.evidence && Array.isArray(s.evidence.retainedLost)) {
+          retainedRemaining = s.evidence.retainedLost.slice();
+        }
+        if (s.evidence && Array.isArray(s.evidence.hardLost)) {
+          var hardLost = s.evidence.hardLost;
+          for (var hli = 0; hli < hardLost.length; hli++) {
+            var hardPid = hardLost[hli] && hardLost[hli].productId;
+            if (hardPid && (skuProductIds[hardPid] || skuFamilyIds[famOfD(hardPid)])) continue; // removed by SKU-level signal
+            remainingNames.push((hardLost[hli] && hardLost[hli].name) || hardPid || '');
+            remainingCount++;
+          }
+        } else if (typeof customerBehavior === 'function') {
+          try {
+            var b = customerBehavior(s.customerId, ctx);
+            var declining = (b && Array.isArray(b.decliningProducts)) ? b.decliningProducts : [];
+            var retainedIds = Object.create(null);
+            for(var rli=0; rli<retainedRemaining.length; rli++){
+              var retainedPid = retainedRemaining[rli] && retainedRemaining[rli].productId;
+              if(retainedPid) retainedIds[retainedPid] = true;
+            }
+            var lost = declining.filter(function (p) {
+              return p && p.earlyQty >= 5 && p.lateQty === 0 && !retainedIds[p.productId];
+            });
+            for (var k = 0; k < lost.length; k++) {
+              var pid = lost[k].productId;
+              if (pid && (skuProductIds[pid] || skuFamilyIds[famOfD(pid)])) continue; // removed by SKU-level signal
+              remainingNames.push(lost[k].name || pid || '');
+              remainingCount++;
+            }
+          } catch (e) {
+            remainingCount = s.value || 0;
+            remainingNames = [];
+          }
+        } else {
+          remainingCount = s.value || 0;
+        }
+
+        if (remainingCount > 0) {
+          s.value = remainingCount;
+          s.severity = 'high';
+          if (remainingNames.length) {
+            s.reason = remainingNames.length === 1
+              ? 'محصول کلیدی «' + remainingNames[0] + '» دیگر خریداری نمی‌شود'
+              : 'محصولات کلیدی (' + remainingNames.join('، ') + ') دیگر خریداری نمی‌شوند';
+          }
+        } else if (retainedRemaining.length > 0) {
+          var retainedNames = retainedRemaining.map(function (p) {
+            var prod = (typeof data !== 'undefined' && Array.isArray(data.products))
+              ? data.products.find(function(x){ return x && x.id === p.productId; }) : null;
+            var groupName = _analysisGroupNameById(prod ? prod.analysisGroupId : null);
+            return 'محصول «' + ((p && p.name) || '') + '» دیگر خریداری نمی‌شود، اما گروه تحلیلی «'
+              + (groupName || '') + '» با محصول جایگزین حفظ شده است';
+          }).filter(Boolean);
+          s.value = retainedRemaining.length;
+          s.severity = 'low';
+          s.reason = retainedNames.join(' — ');
+        } else {
           accountSignals.splice(j, 1);
-        } else if (hardLost.length && remaining.length !== hardLost.length) {
-          sig.evidence.hardLost = remaining;
-          sig.value = remaining.length;
-          var names = remaining.map(function(p){return p && p.name;}).filter(Boolean);
-          if (names.length) sig.reason = names.length === 1
-            ? 'محصول کلیدی «' + names[0] + '» دیگر خریداری نمی‌شود'
-            : 'محصولات کلیدی (' + names.join('، ') + ') دیگر خریداری نمی‌شوند';
         }
       }
     }
   }
 
   global.extractCustomerSignals = extractCustomerSignals;
-  // Internal deterministic test seam for post-persistence overlap handling.
-  global._dedupeSkuAgainstAccountSignals = _dedupeSkuAgainstAccountSignals;
 
   /* ============================================================
      WATCH / EARLY WARNING LAYER (frozen spec — implementation only)
@@ -773,13 +841,14 @@
 
   function _watchRawInvoiceSplit(cid, ctx) {
     if (typeof customerInvoices !== 'function') return null;
-    var raw = customerInvoices(cid, ctx).filter(function(inv){return typeof isValidPurchaseInvoice !== 'function' || isValidPurchaseInvoice(inv);});
-    var occasions = typeof groupPurchaseOccasions === 'function' ? groupPurchaseOccasions(raw) : raw.map(function(inv){return {date:inv.date,invoices:[inv]};});
-    var count = occasions.length;
-    if (count < 2) return null;
+    var invs = customerInvoices(cid, ctx).slice().sort(function (a, b) {
+      return String(a.date || '').localeCompare(String(b.date || ''));
+    });
+    var count = invs.length;
+    if (count < 2) return null; // minimum invoiceCount = 2 (spec 6C)
     var mid = Math.floor(count / 2);
-    var early = occasions.slice(0,mid).reduce(function(a,g){return a.concat(g.invoices||[]);}, []);
-    var late = occasions.slice(mid).reduce(function(a,g){return a.concat(g.invoices||[]);}, []);
+    var early = invs.slice(0, mid);
+    var late = invs.slice(mid);
     function qtyMap(list) {
       var map = Object.create(null);
       for (var i = 0; i < list.length; i++) {
@@ -787,43 +856,15 @@
         for (var j = 0; j < items.length; j++) {
           var it = items[j];
           if (!it || !it.productId || !(it.qty > 0)) continue;
-          if (!map[it.productId]) map[it.productId] = { productId: it.productId, name: it.name || _watchProductName(it.productId), qty: 0, grossQty: 0, returnQty: 0 };
-          var ip = (data.products||[]).find(function(p){return p && p.id===it.productId;});
-          var isRaisin = String(it.name||'').trim()==='کشمش پلویی' || !!(ip && String(ip.name||'').trim()==='کشمش پلویی');
-          var q = isRaisin && typeof _raisinPilafPackages === 'function' ? _raisinPilafPackages(it) : it.qty;
-          map[it.productId].qty += q;
-          map[it.productId].grossQty += q;
+          if (!map[it.productId]) {
+            map[it.productId] = { productId: it.productId, name: it.name || _watchProductName(it.productId), qty: 0 };
+          }
+          map[it.productId].qty += it.qty;
         }
       }
       return map;
     }
-    var earlyMap = qtyMap(early), lateMap = qtyMap(late);
-    var uncertainByProduct = Object.create(null);
-    var sideByInvoice = Object.create(null), invoiceById = Object.create(null);
-    early.forEach(function(inv){if(inv.id){sideByInvoice[inv.id]=earlyMap;invoiceById[inv.id]=inv;}});
-    late.forEach(function(inv){if(inv.id){sideByInvoice[inv.id]=lateMap;invoiceById[inv.id]=inv;}});
-    var pays = typeof customerPayments === 'function' ? customerPayments(cid, ctx) : [];
-    pays.forEach(function(pay){
-      if(!pay || pay.method!=='return') return;
-      var sourceInvoice = pay.invoiceId ? invoiceById[pay.invoiceId] : null;
-      var target = pay.invoiceId ? sideByInvoice[pay.invoiceId] : null;
-      (pay.returnItems||[]).forEach(function(ri){
-        if(!ri || !ri.productId) return;
-        var rp = (data.products||[]).find(function(p){return p && p.id===ri.productId;});
-        var isRaisin = String(ri.name||'').trim()==='کشمش پلویی' || !!(rp && String(rp.name||'').trim()==='کشمش پلویی');
-        var q = isRaisin && typeof _raisinPilafReturnPackages === 'function'
-          ? _raisinPilafReturnPackages(ri, pay, sourceInvoice) : (sourceInvoice ? (ri.qty||0) : null);
-        if(!target || q == null) {
-          if(!uncertainByProduct[ri.productId]) uncertainByProduct[ri.productId] = [];
-          uncertainByProduct[ri.productId].push({paymentId:pay.id||null,invoiceId:pay.invoiceId||null,reason:!target?'unlinked_or_missing_source_invoice':'ambiguous_unit_conversion'});
-          return;
-        }
-        if(!target[ri.productId]) target[ri.productId] = {productId:ri.productId,name:ri.name||_watchProductName(ri.productId),qty:0,grossQty:0,returnQty:0};
-        target[ri.productId].qty -= q;
-        target[ri.productId].returnQty += q;
-      });
-    });
-    return { purchaseDayCount: count, early: earlyMap, late: lateMap, uncertainByProduct: uncertainByProduct };
+    return { invoiceCount: count, early: qtyMap(early), late: qtyMap(late) };
   }
 
   function _mkWatch(cid, category, opts) {
@@ -872,14 +913,14 @@
     }));
   }
 
-  /* C) BASKET_SHRINK_WATCH — raw purchase-day split, independent of
+  /* C) BASKET_SHRINK_WATCH — raw invoice split, independent of
      customerBehavior().decliningProducts (spec 6C).
      ASSUMPTION (spec gives no level bands for this rule — reported in
      the implementation report, not guessed silently): level is 'medium'
      when >=2 products show a meaningful decline, otherwise 'low'.
      "Meaningful decline" per product: earlyQty >= 2 and lateQty <= earlyQty*0.5
      — chosen independently of calc.js's decliningProducts thresholds
-     (which require four purchase days, earlyQty>=2, lateQty<earlyQty*0.6). */
+     (which require invoiceCount>=4, earlyQty>=2, lateQty<earlyQty*0.6). */
   function _basketShrinkWatch(cid, out, ctx, productsById, lateProductIds) {
     var split = _watchRawInvoiceSplit(cid, ctx);
     if (!split) return;
@@ -907,24 +948,24 @@
       var aq = al ? al.qty : 0;
       if (!(ae.qty >= 2 && aq <= ae.qty * 0.5)) continue;
       if (_isGroupRetained(apid, productsById, lateProductIds)) continue;
-      affected.push({ productId: apid, productName: ae.name || _watchProductName(apid), earlyQty: ae.qty, lateQty: aq, earlyGrossQty: ae.grossQty||0, lateGrossQty: (al && al.grossQty)||0, lateReturnQty: (al && al.returnQty)||0, lateNetQty: aq, latePurchaseState: (split.uncertainByProduct && split.uncertainByProduct[apid]) ? 'uncertain' : ((al && ((al.grossQty||0)>0 || (al.returnQty||0)>0)) ? (aq<=0?'net_nonpositive':'net_positive') : 'no_purchase'), quantityQuality: (split.uncertainByProduct && split.uncertainByProduct[apid]) ? 'uncertain' : 'known', quantityQualityReasons: (split.uncertainByProduct && split.uncertainByProduct[apid]) || [] });
+      affected.push({ productId: apid, productName: ae.name || _watchProductName(apid), earlyQty: ae.qty, lateQty: aq });
     }
     out.push(_mkWatch(cid, 'BASKET_SHRINK_WATCH', {
       level: level,
-      reason: 'افت مقدار کالاهای مشخص بین نیمه اول و نیمه دوم روزهای خرید مشاهده می‌شود',
+      reason: 'افت مقدار کالاهای مشخص بین نیمه اول و نیمه دوم فاکتورها مشاهده می‌شود',
       deviationStrength: Math.min(1, decliningCount / 2),
       source: 'account',
       evidence: {
-        comparison: 'نیمه اول روزهای خرید در برابر نیمه دوم روزهای خرید',
-        purchaseDayCount: split.purchaseDayCount,
-        earlyPurchaseDayCount: Math.floor(split.purchaseDayCount / 2),
-        latePurchaseDayCount: split.purchaseDayCount - Math.floor(split.purchaseDayCount / 2),
+        comparison: 'نیمه اول فاکتورها در برابر نیمه دوم فاکتورها',
+        invoiceCount: split.invoiceCount,
+        earlyInvoiceCount: Math.floor(split.invoiceCount / 2),
+        lateInvoiceCount: split.invoiceCount - Math.floor(split.invoiceCount / 2),
         affectedProducts: affected
       }
     }));
   }
 
-  /* D) KEY_PRODUCT_LOST_WATCH — raw purchase-day split-history, independent of
+  /* D) KEY_PRODUCT_LOST_WATCH — raw split-history, independent of
      customerBehavior().decliningProducts (spec 6D). Exact thresholds
      given by spec: earlyQty >= 3, lateQty === 0.
      ASSUMPTION (spec gives no level bands for this rule — reported,
@@ -939,7 +980,7 @@
       var e = split.early[pid];
       var l = split.late[pid];
       var lateQty = l ? l.qty : 0;
-      if (e.qty >= 3 && lateQty === 0 && !((l && (l.grossQty > 0 || l.returnQty > 0))) && !(split.uncertainByProduct && split.uncertainByProduct[pid])) {
+      if (e.qty >= 3 && lateQty === 0) {
         // Product Analysis Group: retained-by-group SKU never becomes a
         // hard-lost Watch item (spec §4.6). Watch lifecycle untouched otherwise.
         if (_isGroupRetained(pid, productsById, lateProductIds)) continue;
@@ -954,9 +995,9 @@
       var le = split.early[lpid];
       var ll = split.late[lpid];
       var lq = ll ? ll.qty : 0;
-      if (!(le.qty >= 3 && lq === 0 && !((ll && (ll.grossQty > 0 || ll.returnQty > 0))) && !(split.uncertainByProduct && split.uncertainByProduct[lpid]))) continue;
+      if (!(le.qty >= 3 && lq === 0)) continue;
       if (_isGroupRetained(lpid, productsById, lateProductIds)) continue;
-      lostProducts.push({ productId: lpid, productName: le.name || _watchProductName(lpid), earlyQty: le.qty, lateQty: lq, earlyGrossQty: le.grossQty||0, lateGrossQty: (ll && ll.grossQty)||0, lateReturnQty: (ll && ll.returnQty)||0, lateNetQty: lq, latePurchaseState: ((ll && ((ll.grossQty||0)>0 || (ll.returnQty||0)>0)) ? (lq<=0?'net_nonpositive':'net_positive') : 'no_purchase'), quantityQuality: 'known' });
+      lostProducts.push({ productId: lpid, productName: le.name || _watchProductName(lpid), earlyQty: le.qty, lateQty: lq });
     }
     out.push(_mkWatch(cid, 'KEY_PRODUCT_LOST_WATCH', {
       level: level,
@@ -964,10 +1005,10 @@
       deviationStrength: Math.min(1, lostCount / 2),
       source: 'account',
       evidence: {
-        comparison: 'نیمه اول روزهای خرید در برابر نیمه دوم روزهای خرید',
-        purchaseDayCount: split.purchaseDayCount,
-        earlyPurchaseDayCount: Math.floor(split.purchaseDayCount / 2),
-        latePurchaseDayCount: split.purchaseDayCount - Math.floor(split.purchaseDayCount / 2),
+        comparison: 'نیمه اول فاکتورها در برابر نیمه دوم فاکتورها',
+        invoiceCount: split.invoiceCount,
+        earlyInvoiceCount: Math.floor(split.invoiceCount / 2),
+        lateInvoiceCount: split.invoiceCount - Math.floor(split.invoiceCount / 2),
         lostProducts: lostProducts
       }
     }));
