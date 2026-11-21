@@ -260,6 +260,13 @@ html[data-theme="dark"] .watch-detail-reason .watch-detail-value{color:var(--vg-
 .bp-qv-health.radar-risk-critical{color:var(--vg-color-danger);}
 .bp-qv-health.radar-risk-high,
 .bp-qv-health.radar-risk-medium{color:var(--vg-color-warning);}
+/* v117: relationship status colours (reuse the existing palette; no layout change) */
+.bp-customer-health-value.radar-rel-red{color:var(--vg-color-danger,#D52B36);}
+.bp-customer-health-value.radar-rel-yellow{color:var(--vg-color-warning,#C47B00);}
+.bp-customer-health-value.radar-rel-green{color:var(--vg-color-success,#2E7D32);}
+.bp-qv-health.radar-rel-red{color:var(--vg-color-danger,#D52B36);}
+.bp-qv-health.radar-rel-yellow{color:var(--vg-color-warning,#C47B00);}
+.bp-qv-health.radar-rel-green{color:var(--vg-color-success,#2E7D32);}
 .bp-qv-section-label{margin-bottom:5px;font-size:11px;font-weight:600;color:var(--vg-color-text-muted);}
 .bp-qv-alert{margin-top:var(--vg-space-related);padding:9px 11px;border-radius:var(--qv-box-radius);border-inline-start:3px solid currentColor;font-size:12px;font-weight:var(--vg-weight-value);line-height:1.7;}
 .bp-qv-alert.is-danger{background:var(--vg-color-danger-soft);color:var(--vg-color-danger);}
