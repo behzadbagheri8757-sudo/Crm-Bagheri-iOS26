@@ -1319,6 +1319,181 @@ function _behaviorProductSplit(invs, returns, mid, ctxArg){
  * Purchase truth = invoices minus sales-returns (payments method==='return').
  * Visits = observation only. Returns null when data is insufficient. Never mutates data.
  */
+/* ============================================================
+   v117 — وضعیت رابطه تجاری مشتری (سلامت رابطه)  [مستقل از Risk / Priority / Action / SKU / مالی]
+
+   فقط داده خرید معتبر کل حساب مشتری را می‌بیند؛ هیچ سیگنال، امتیاز، هشدار مالی یا Action وارد نمی‌شود.
+   مشتق‌شده است و هیچ‌چیزی ذخیره یا مهاجرت نمی‌شود. کش فقط داخل ctx.memo و با کلید تاریخ مرجع است.
+
+   خرید معتبر: فاکتور مشتری با تاریخ معتبر (نه آینده نسبت به ctx.asOfDate)، حداقل یک قلم با qty>0 و total>0.
+   فاکتور در داده‌های این پروژه حذف فیزیکی می‌شود و ویرایش آن با تاریخ نهایی ثبت می‌شود؛ سند مرجوعی
+   در داده، payment با method='return' است و خرید حساب نمی‌شود. روز خرید = تاریخ تقویمی؛ چند فاکتور هم‌روز یک روز است.
+
+   پارامترها (تأییدشده، بدون گرد کردن):
+     حداقل سابقه: ۴ روز خرید متمایز؛ چرخه از حداکثر ۷ روز اخیر و میانهٔ فاصله‌ها (حداکثر ۶ فاصله)
+     قرمز: فاصله از آخرین خرید ≥ ۴×چرخه و ≥ ۳۰ روز   (قرمز بر زرد اولویت دارد)
+     زرد: فاصله ≥ ۲×چرخه
+     سبز: در غیر این صورت
+   ============================================================ */
+const RELATIONSHIP_PARAMS = Object.freeze({
+  minPurchaseDays: 4,
+  cycleWindowDays: 7,
+  redCycleMultiple: 4,
+  redMinGapDays: 30,
+  yellowCycleMultiple: 2
+});
+
+/* Product returns (payment.method==='return' with returnItems) are linked to their SOURCE invoice by invoiceId and
+   use the same quantity unit as the invoice rows (the app validates requested <= invoiced per product).
+   - A product return without invoiceId cannot be attributed to a purchase: it is counted and reported, never guessed.
+   - An invoice whose every product is returned in full (returned >= invoiced) is NOT a valid purchase any more.
+   - A partial return leaves the remaining part a real purchase on its own date (the date is not moved).
+   - Ambiguous units (legacy kg rows mixed with weighted raisin-pilaf rows, same product, same invoice) that are
+     touched by a return => the invoice is not decided as fully returned; reported as uncertain. */
+function _relationshipReturnIndex(cid, invIds, ctx){
+  const byInv = Object.create(null);
+  let unlinked = 0;
+  ((ctx.customerPayments(cid) || [])).forEach(function(p){
+    if(!p || p.method !== 'return' || !Array.isArray(p.returnItems)) return;
+    if(!p.invoiceId){
+      if(p.returnItems.some(function(r){ return r && Number(r.qty) > 0; })) unlinked++;
+      return;
+    }
+    if(!invIds[p.invoiceId]) return;                      // source belongs to another customer / unknown
+    const m = byInv[p.invoiceId] || (byInv[p.invoiceId] = Object.create(null));
+    p.returnItems.forEach(function(r){
+      if(!r || Number(r.qty) <= 0) return;
+      const k = String(r.productId);
+      m[k] = (m[k] || 0) + Number(r.qty);
+    });
+  });
+  return { byInv: byInv, unlinked: unlinked };
+}
+
+function _relationshipInvoiceReturnState(inv, retMap){
+  const need = Object.create(null);
+  (inv.items || []).forEach(function(it){
+    if(!it || !(Number(it.qty) > 0)) return;
+    const k = String(it.productId);
+    need[k] = (need[k] || 0) + Number(it.qty);
+  });
+  const keys = Object.keys(need);
+  if(!keys.length || !retMap) return 'none';
+  const touched = keys.filter(function(k){ return (retMap[k] || 0) > 0; });
+  if(!touched.length) return 'none';
+  // ambiguous unit: a touched product that has mixed weighted / legacy raisin rows on this invoice
+  if(typeof _isRaisinPilafItem === 'function' && typeof _raisinPilafProductIds === 'function'){
+    const rIds = _raisinPilafProductIds();
+    const ambiguous = touched.some(function(k){
+      const rows = (inv.items || []).filter(function(it){ return it && String(it.productId) === k; });
+      if(!rows.length || !_isRaisinPilafItem(rows[0], rIds)) return false;
+      const w = rows.some(function(x){ return x.weight && x.weight > 0; });
+      const l = rows.some(function(x){ return !(x.weight && x.weight > 0); });
+      return w && l;
+    });
+    if(ambiguous) return 'uncertain';
+  }
+  const full = keys.every(function(k){ return (retMap[k] || 0) >= need[k] - 1e-9; });
+  return full ? 'full' : 'partial';
+}
+
+function _relationshipPurchaseDays(invs, ctx, cid){
+  const invIds = Object.create(null);
+  (invs || []).forEach(function(inv){ if(inv && inv.id) invIds[inv.id] = true; });
+  const ret = _relationshipReturnIndex(cid, invIds, ctx);
+  const set = Object.create(null);
+  const counts = { fullyReturnedInvoices: 0, partiallyReturnedInvoices: 0, uncertainReturnInvoices: 0, unlinkedProductReturns: ret.unlinked };
+  (invs || []).forEach(function(inv){
+    if(!inv || typeof inv.date !== 'string') return;
+    const day = _analysisNormalizeDay(inv.date);
+    if(!day) return;
+    const gap = analysisDaysAgo(day, ctx);
+    if(gap == null || gap < 0) return;                       // invalid or after the reference day
+    const hasQty = Array.isArray(inv.items) && inv.items.some(function(it){ return it && Number(it.qty) > 0; });
+    if(!hasQty || !(Number(inv.total) > 0)) return;          // not a real purchase
+    const state = _relationshipInvoiceReturnState(inv, ret.byInv[inv.id]);
+    if(state === 'full'){ counts.fullyReturnedInvoices++; return; }   // fully returned: not a valid purchase
+    if(state === 'partial') counts.partiallyReturnedInvoices++;
+    if(state === 'uncertain') counts.uncertainReturnInvoices++;
+    set[day] = true;                                          // none / partial / uncertain (kept, reported)
+  });
+  return { days: Object.keys(set).sort(), counts: counts };   // ascending ISO days
+}
+
+function _relationshipMedian(values){
+  const a = values.slice().sort(function(x, y){ return x - y; });
+  const n = a.length;
+  return n % 2 ? a[(n - 1) / 2] : (a[n / 2 - 1] + a[n / 2]) / 2;
+}
+
+function _relationshipCompute(cid, ctx){
+  const P = RELATIONSHIP_PARAMS;
+  const asOf = analysisToday(ctx);
+  const cust = ((ctx && ctx.data && ctx.data.customers) || []).find(function(x){ return x && x.id === cid; });
+  const base = { customerId: cid, asOfDate: asOf, purchaseDays: 0, cycleDays: null, gapDays: null, lastPurchaseDate: null };
+
+  if(cust && cust.oneOff){
+    return Object.assign(base, { status: 'not_applicable', color: null, label: 'مشتری یک‌بار‌مصرف', reason: 'ارزیابی رابطه برای مشتری یک‌بار‌مصرف معنا ندارد' });
+  }
+
+  const pd = _relationshipPurchaseDays((ctx.customerInvoices(cid) || []), ctx, cid);
+  const days = pd.days;
+  Object.assign(base, pd.counts);
+  base.purchaseDays = days.length;
+  base.lastPurchaseDate = days.length ? days[days.length - 1] : null;
+
+  if(days.length < P.minPurchaseDays){
+    return Object.assign(base, { status: 'insufficient', color: null, label: 'سابقه ناکافی', reason: 'سابقه کافی برای ارزیابی وجود ندارد' });
+  }
+
+  const recent = days.slice(-P.cycleWindowDays);
+  const intervals = [];
+  for(let i = 1; i < recent.length; i++){
+    intervals.push(analysisDaysAgo(recent[i - 1], { asOfDate: recent[i] }));
+  }
+  const cycle = _relationshipMedian(intervals);
+  const gap = analysisDaysAgo(base.lastPurchaseDate, ctx);
+  base.cycleDays = cycle;
+  base.gapDays = gap;
+
+  if(gap >= P.redCycleMultiple * cycle && gap >= P.redMinGapDays){
+    return Object.assign(base, { status: 'red', color: 'red', label: 'ریسک قطع رابطه', reason: 'توقف خرید طولانی‌تر از الگوی مشتری' });
+  }
+  if(gap >= P.yellowCycleMultiple * cycle){
+    return Object.assign(base, { status: 'yellow', color: 'yellow', label: 'نیازمند توجه', reason: 'فاصله از خرید معمول بیشتر شده' });
+  }
+  const restarted = gap === 0;
+  return Object.assign(base, {
+    status: 'green', color: 'green', label: 'رابطه عادی',
+    reason: restarted ? 'خرید امروز ثبت شد؛ فاصله خرید از نو شروع شد' : 'خرید در چرخه معمول'
+  });
+}
+
+/* Single source for the three customer views (list, detail, Quick View). Memoized per context:
+   ctx.memo keys include ctx.asOfDate, so changing the reference day never serves another day's result. */
+/* One mapping status -> tone / colour class, used by the list, the detail page and Quick View.
+   The label always comes from the relation result itself (never from Risk, Action or legacy list flags). */
+function customerRelationshipPresentation(relation){
+  const map = {
+    red:           { tone: 'danger',  cls: 'radar-rel-red' },
+    yellow:        { tone: 'warning', cls: 'radar-rel-yellow' },
+    green:         { tone: 'neutral', cls: 'radar-rel-green' },
+    insufficient:  { tone: 'muted',   cls: null },
+    not_applicable:{ tone: 'muted',   cls: null }
+  };
+  const st = relation && relation.status;
+  const m = map[st] || { tone: 'muted', cls: null };
+  return { status: st || null, label: (relation && relation.label) || '', tone: m.tone, cls: m.cls };
+}
+
+function customerRelationshipHealth(cid, ctx){
+  if(!ctx || typeof ctx.customerInvoices !== 'function'){
+    const d = (typeof data !== 'undefined') ? data : { customers: [], invoices: [], payments: [] };
+    ctx = createComputationContext({ data: d });
+  }
+  return ctx.memo('customerRelationshipHealth', cid, function(){ return _relationshipCompute(cid, ctx); });
+}
+
 function customerBehavior(cid, ctx, skipMemo){
   if(ctx && typeof ctx.memo === 'function' && !skipMemo){
     return ctx.memo('customerBehavior', cid, function(){ return customerBehavior(cid, ctx, true); });
