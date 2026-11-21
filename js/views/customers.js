@@ -100,22 +100,20 @@
     return ids;
   }
 
-  /* v117 (revised): the PRIMARY badge is always the relationship status (customerRelationshipHealth).
-     Legacy / activity indicators (urgent action, behind-pattern, active / lost / inactive / new) are kept as
-     SECONDARY chips: their logic and inputs are unchanged, they never replace the relationship label. */
-  function customerListBadges(inp) {
-    const out = [];
-    const pres = (typeof customerRelationshipPresentation === 'function')
-      ? customerRelationshipPresentation({ status: inp.relation, label: inp.relationLabel })
-      : { label: '', tone: 'muted' };
-    if (pres.label) out.push({ label: pres.label, tone: pres.tone, primary: true });
-    if (inp.active === false) out.push({ label: 'غیرفعال شده', tone: 'muted', primary: false });
-    if (inp.urgent) out.push({ label: 'اقدام فوری', tone: 'danger', primary: false });
-    if (inp.behindPattern) out.push({ label: 'عقب‌افتاده', tone: 'warning', primary: false });
-    if (inp.status === 'lost') out.push({ label: 'از دست رفته', tone: 'muted', primary: false });
-    else if (inp.status === 'inactive') out.push({ label: 'سرد شده', tone: 'muted', primary: false });
-    else if (inp.status === 'new') out.push({ label: 'جدید', tone: 'neutral', primary: false });
-    return out;
+  /* Row label policy (list only): AT MOST ONE label per customer, chosen by priority.
+     A normal customer (green relationship, no flag) gets NO label.
+     Relationship colour / status stays unchanged in the detail page and Quick View. */
+  function customerListBadge(inp) {
+    if (inp.relation === 'red') return { label: 'ریسک قطع رابطه', tone: 'danger' };
+    if (inp.relation === 'yellow') return { label: 'نیازمند توجه', tone: 'warning' };
+    if (inp.urgent) return { label: 'اقدام فوری', tone: 'danger' };
+    if (inp.status === 'lost') return { label: 'از دست رفته', tone: 'muted' };
+    if (inp.active === false) return { label: 'غیرفعال شده', tone: 'muted' };
+    if (inp.behindPattern) return { label: 'عقب‌افتاده', tone: 'warning' };
+    if (inp.status === 'inactive') return { label: 'سرد شده', tone: 'muted' };
+    if (inp.relation === 'insufficient' || inp.status === 'new') return { label: 'سابقه ناکافی', tone: 'muted' };
+    if (inp.relation === 'not_applicable') return { label: 'مشتری یک‌بار‌مصرف', tone: 'muted' };
+    return null;
   }
 
   function renderCustomerListOnly() {
@@ -229,17 +227,16 @@
           : 0;
         const status = (typeof customerStatus === 'function') ? customerStatus(c.id, custCtx) : null;
 
-        const badges = customerListBadges({
+        const badge = customerListBadge({
           active: c.active,
           urgent: urgentActionIds.has(c.id),
           relation: relation ? relation.status : null,
-          relationLabel: relation ? relation.label : '',
           behindPattern: behavior.behindPattern === true,
           status: status
         });
-        const badgeHtml = badges.map(function (b) {
-          return '<span class="customer-row-status badge tone-' + b.tone + (b.primary ? '' : ' is-secondary') + '">' + esc(b.label) + '</span>';
-        }).join('');
+        const badgeHtml = badge
+          ? '<span class="customer-row-status badge tone-' + badge.tone + '">' + esc(badge.label) + '</span>'
+          : '';
 
         const days = (typeof customerStats === 'function')
         ? (function(){ try { return customerStats(c.id, custCtx).daysSinceLast; } catch(e){ return Infinity; } })()
