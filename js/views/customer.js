@@ -923,20 +923,25 @@
        no new score, threshold or signal. */
     let recommendedAction = null;
     let customerRiskLevel = null;
-    let customerHealthLabel = 'وضعیت عادی';
+    let customerHealthLabel = '';          // v117: always set from the relationship result below (never a generic default)
+    let customerRelationColor = null;
     let _storyTextRaw = '';
     if (isOneOffCustomer(c)) {
       // مشتری یک‌بار‌مصرف: امتیاز/ریسک/داستان رفتاری معنا ندارد (چند نفر زیر یک حساب)
-      customerHealthLabel = 'مشتری یک‌بار‌مصرف';
     } else {
       let priority = null, action = null;
       try { if (typeof calculateCustomerPriority === 'function') priority = calculateCustomerPriority(c.id, { ctx: ctx }); } catch (eP) { priority = null; }
       try { if (typeof calculateCustomerAction === 'function') action = calculateCustomerAction(c.id, priority, { ctx: ctx }); } catch (eA) { action = null; }
       recommendedAction = action && action.actionType !== 'no_action' ? action : null;
       const riskLevel = priority ? priority.riskLevel : null;
-      customerRiskLevel = riskLevel;
-      customerHealthLabel = (typeof getRiskBadge === 'function' ? getRiskBadge(riskLevel).label : '') || 'وضعیت عادی';
+      customerRiskLevel = riskLevel;   // still used only for the narrative box tone
       _storyTextRaw = (priority && priority.customerStory && priority.customerStory.summary) ? priority.customerStory.summary : '';
+    }
+    // v117 (revised): the health label/colour is the relationship status for EVERY customer, one-off included.
+    {
+      const relHealth = customerRelationshipPresentation(customerRelationshipHealth(c.id, ctx));
+      customerHealthLabel = relHealth.label;
+      customerRelationColor = (relHealth.status === 'red' || relHealth.status === 'yellow' || relHealth.status === 'green') ? relHealth.status : null;
     }
 
     // P0 (what matters now) + follow-ups waiting for this customer — presentation of existing Truth.
@@ -1446,7 +1451,7 @@
             '</div>'
           : '') +
         '<div class="bp-customer-health"><span class="bp-customer-health-label">وضعیت مشتری</span>' +
-          '<span class="bp-customer-health-value ' + (customerRiskLevel ? 'radar-risk-' + esc(customerRiskLevel) : '') + '">' +
+          '<span class="bp-customer-health-value ' + (customerRelationColor ? 'radar-rel-' + esc(customerRelationColor) : '') + '">' +
             esc(customerHealthLabel) +
           '</span></div>' +
         '<div class="customer-identity-meta">' +
@@ -1864,7 +1869,8 @@
     var totals = customerTotals(cid, ctx) || { balance: 0 };
     var story = priority && priority.customerStory && priority.customerStory.summary ? priority.customerStory.summary : '';
     var riskLevel = priority ? priority.riskLevel : null;
-    var health = (typeof getRiskBadge === 'function' ? getRiskBadge(riskLevel).label : '') || 'وضعیت عادی';
+    var relation = customerRelationshipPresentation(customerRelationshipHealth(cid, ctx));   // v117: same source as list and detail
+    var health = relation.label;
 
     // Recommended action (same calculateCustomerAction the Detail page and Dashboard queue use).
     // Signature: calculateCustomerAction(cid, precomputedPriority, { ctx }).
@@ -1913,7 +1919,7 @@
               '<span class="bp-qv-balance-label">' + esc(balanceStatusWord(totals.balance)) + '</span>' +
               (totals.balance !== 0 ? '<span class="bp-qv-balance-amount">' + toman(Math.abs(totals.balance)) + ' ت</span>' : '') +
             '</div>' +
-            '<div class="bp-qv-health radar-risk-' + esc(riskLevel || 'normal') + '">' + esc(health) + '</div>' +
+            '<div class="bp-qv-health' + (relation.cls ? ' ' + esc(relation.cls) : '') + '">' + esc(health) + '</div>' +
           '</div>' +
         '</div>' +
         alertHtml +

@@ -100,19 +100,22 @@
     return ids;
   }
 
-  /* Pure: list badge decision. Urgent comes only from the action queue; risk labels describe
-     risk (critical → «ریسک بالا», high → «ریسک فروش») and never reuse the action wording. */
-  function customerListBadge(inp) {
-    if (inp.active === false) return { label: 'غیرفعال شده', tone: 'muted' };
-    if (inp.oneOff) return { label: 'یک‌بار‌مصرف', tone: 'muted' };
-    if (inp.urgent) return { label: 'اقدام فوری', tone: 'danger' };
-    if (inp.riskLevel === 'critical') return { label: 'ریسک بالا', tone: 'danger' };
-    if (inp.riskLevel === 'high') return { label: 'ریسک فروش', tone: 'warning' };
-    if (inp.behindPattern) return { label: 'عقب‌افتاده', tone: 'warning' };
-    if (inp.status === 'lost') return { label: 'از دست رفته', tone: 'muted' };
-    if (inp.status === 'inactive') return { label: 'سرد شده', tone: 'muted' };
-    if (inp.status === 'new') return { label: 'جدید', tone: 'neutral' };
-    return { label: '', tone: 'neutral' };
+  /* v117 (revised): the PRIMARY badge is always the relationship status (customerRelationshipHealth).
+     Legacy / activity indicators (urgent action, behind-pattern, active / lost / inactive / new) are kept as
+     SECONDARY chips: their logic and inputs are unchanged, they never replace the relationship label. */
+  function customerListBadges(inp) {
+    const out = [];
+    const pres = (typeof customerRelationshipPresentation === 'function')
+      ? customerRelationshipPresentation({ status: inp.relation, label: inp.relationLabel })
+      : { label: '', tone: 'muted' };
+    if (pres.label) out.push({ label: pres.label, tone: pres.tone, primary: true });
+    if (inp.active === false) out.push({ label: 'غیرفعال شده', tone: 'muted', primary: false });
+    if (inp.urgent) out.push({ label: 'اقدام فوری', tone: 'danger', primary: false });
+    if (inp.behindPattern) out.push({ label: 'عقب‌افتاده', tone: 'warning', primary: false });
+    if (inp.status === 'lost') out.push({ label: 'از دست رفته', tone: 'muted', primary: false });
+    else if (inp.status === 'inactive') out.push({ label: 'سرد شده', tone: 'muted', primary: false });
+    else if (inp.status === 'new') out.push({ label: 'جدید', tone: 'neutral', primary: false });
+    return out;
   }
 
   function renderCustomerListOnly() {
@@ -213,9 +216,11 @@
 
         // One compact status badge + one activity metric. These are read-only
         // presentations of existing frozen outputs; no new scoring/thresholds.
-        const pr = priorityMap[c.id] || null;
-        const riskLevel = pr ? pr.riskLevel : null;
-        const riskCls = riskLevel ? 'radar-risk-' + riskLevel : '';
+        // v117: one relationship status for list / detail / Quick View (see customerRelationshipHealth).
+        const relation = (typeof customerRelationshipHealth === 'function')
+          ? customerRelationshipHealth(c.id, custCtx) : null;
+        const relColor = relation && relation.color ? relation.color : null;
+        const riskCls = relColor ? 'radar-rel-' + relColor : '';
         const behavior = (typeof customerBehavior === 'function')
           ? (function(){ try { return customerBehavior(c.id, custCtx) || {}; } catch(e){ return {}; } })()
           : {};
@@ -224,15 +229,17 @@
           : 0;
         const status = (typeof customerStatus === 'function') ? customerStatus(c.id, custCtx) : null;
 
-        const badge = customerListBadge({
-          active: c.active, oneOff: c.oneOff,
+        const badges = customerListBadges({
+          active: c.active,
           urgent: urgentActionIds.has(c.id),
-          riskLevel: riskLevel,
+          relation: relation ? relation.status : null,
+          relationLabel: relation ? relation.label : '',
           behindPattern: behavior.behindPattern === true,
           status: status
         });
-        const badgeLabel = badge.label;
-        const badgeTone = badge.tone;
+        const badgeHtml = badges.map(function (b) {
+          return '<span class="customer-row-status badge tone-' + b.tone + (b.primary ? '' : ' is-secondary') + '">' + esc(b.label) + '</span>';
+        }).join('');
 
         const days = (typeof customerStats === 'function')
         ? (function(){ try { return customerStats(c.id, custCtx).daysSinceLast; } catch(e){ return Infinity; } })()
@@ -255,9 +262,7 @@
           customerSparklineHtml(c.id, custCtx) +
           '</span>' +
           '<span class="customer-row-meta-line">' +
-          (badgeLabel
-            ? '<span class="customer-row-status badge tone-' + badgeTone + '">' + esc(badgeLabel) + '</span>'
-            : '') +
+          badgeHtml +
           '<span class="customer-row-meta">' + esc(daysText) + '</span>' +
           (watchCount > 0
             ? '<span class="customer-row-watch" aria-label="هشدار فعال" title="' + esc(watchTitle) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.55" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg></span>'
