@@ -995,7 +995,12 @@ function _behaviorReturnsInRange(returns, startISO, endISO, invs){
   }, 0);
 }
 
-function _behaviorISODaysAgo(n){
+function _behaviorISODaysAgo(n, ctx){
+  /* v117: reference day = ctx.asOfDate (falls back to the system day without a context). */
+  if (typeof analysisISODaysAgo === 'function') {
+    const iso = analysisISODaysAgo(n, ctx);
+    if (iso) return iso;
+  }
   const ref = new Date();
   const d = new Date(ref.getFullYear(), ref.getMonth(), ref.getDate() - n);
   const y = d.getFullYear();
@@ -1075,7 +1080,7 @@ function visitOverdueDays(cid, ctx, skipMemo){
   });
   const lastDate = sorted[0] && sorted[0].date;
   if(!lastDate) return 0;
-  const daysSince = (typeof daysAgo === 'function') ? daysAgo(lastDate) : null;
+  const daysSince = (typeof analysisDaysAgo === 'function') ? analysisDaysAgo(lastDate, ctx) : ((typeof daysAgo === 'function') ? daysAgo(lastDate) : null);
   if(daysSince == null || !isFinite(daysSince)) return 0;
   return Math.max(0, daysSince - cadence);
 }
@@ -1202,6 +1207,113 @@ function _behaviorVisitInvoiceStats(invs, visits){
   };
 }
 
+
+/* ============================================================
+   v117 — late-half purchase / return split per product (READ-ONLY, derived).
+   Shared by customerBehavior().decliningProducts and the raw Watch split in signals.js.
+
+   invs  : the customer's invoices sorted ascending (early = [0, mid), late = [mid, end])
+   Rules:
+   - a LINKED return (payment.invoiceId resolves to one of this customer's invoices) is allocated to the
+     section that holds its SOURCE INVOICE (never by the return's own date);
+   - an unlinked return, an unresolved / foreign source invoice, a product that is not on its source invoice,
+     or an ambiguous unit (raisin-pilaf rows mixing the weight / legacy-kg conventions) produce NO guessed
+     quantity: the reason is kept in `issues` and the product state becomes 'uncertain'.
+   latePurchaseState:
+     no_purchase    — nothing related in the late half (no purchase, no return) and nothing ambiguous
+     net_positive   — related purchase/return exists and late net > 0
+     net_nonpositive— related purchase/return exists and late net <= 0 (e.g. fully returned)
+     uncertain      — an issue that can touch the late half prevents a firm conclusion
+   ============================================================ */
+function _behaviorProductSplit(invs, returns, mid, ctxArg){
+  const raisinIds = _raisinPilafProductIds();
+  const sectionOfInv = Object.create(null);
+  const invById = Object.create(null);
+  invs.forEach(function(inv, i){
+    if(inv && inv.id){ sectionOfInv[inv.id] = i < mid ? 'early' : 'late'; invById[inv.id] = inv; }
+  });
+  const map = Object.create(null);
+  function keyOf(pid, name){ return pid || ('n:' + (name || '')); }
+  function ent(pid, name){
+    const k = keyOf(pid, name);
+    if(!map[k]) map[k] = { key: k, productId: pid || null, name: name || '—',
+      early: { gross: 0, ret: 0 }, late: { gross: 0, ret: 0 }, issues: [] };
+    return map[k];
+  }
+  function productOf(pid){
+    return (typeof data !== 'undefined' && Array.isArray(data.products)) ? data.products.find(function(x){ return x && x.id === pid; }) : null;
+  }
+  invs.forEach(function(inv, i){
+    const sec = i < mid ? 'early' : 'late';
+    (inv.items || []).forEach(function(it){
+      if(!it) return;
+      const isR = _isRaisinPilafItem(it, raisinIds);
+      const e = ent(it.productId || null, it.name || '—');
+      e[sec].gross += isR ? _raisinPilafPackages(it) : (it.qty || 0);
+      if(isR && !(it.weight && it.weight > 0)){
+        const pr = productOf(it.productId);
+        if(!(pr && pr.packageWeight > 0)){
+          e.issues.push({ code: 'unit_ambiguous', section: sec, invoiceId: inv.id || null, paymentId: null });
+        }
+      }
+    });
+  });
+  returns.forEach(function(p){
+    (p.returnItems || []).forEach(function(ri){
+      if(!ri || (!ri.productId && !ri.name)) return;
+      const e = ent(ri.productId || null, ri.name || '—');
+      const base = { paymentId: p.id || null, invoiceId: p.invoiceId || null };
+      /* A return cannot predate its sale: an unplaceable return registered before the late half started can
+         only concern the early half (quantity quality), anything later may touch the late half. */
+      const midDate = (invs[mid] && invs[mid].date) || null;
+      const unplaceable = (p.date && midDate && String(p.date) < String(midDate)) ? 'early' : 'unknown';
+      if(!p.invoiceId){
+        e.issues.push(Object.assign({ code: 'unlinked_return', section: unplaceable }, base));
+        return;
+      }
+      const src = invById[p.invoiceId];
+      if(!src){
+        let foreign = null;
+        if(typeof data !== 'undefined' && Array.isArray(data.invoices)) foreign = data.invoices.find(function(x){ return x && x.id === p.invoiceId; }) || null;
+        e.issues.push(Object.assign({ code: foreign ? 'source_invoice_foreign' : 'source_invoice_unresolved', section: unplaceable }, base));
+        return;
+      }
+      const sec = sectionOfInv[p.invoiceId];
+      const rows = (src.items || []).filter(function(x){ return x && ri.productId && x.productId === ri.productId; });
+      if(!rows.length){
+        e.issues.push(Object.assign({ code: 'return_item_not_in_source_invoice', section: sec }, base));
+        return;
+      }
+      let qty = ri.qty || 0;
+      if(_isRaisinPilafItem(rows[0], raisinIds)){
+        const hasWeight = rows.some(function(x){ return x.weight && x.weight > 0; });
+        const hasLegacy = rows.some(function(x){ return !(x.weight && x.weight > 0); });
+        if(hasWeight && hasLegacy){
+          e.issues.push(Object.assign({ code: 'unit_ambiguous', section: sec }, base));
+          return;
+        }
+        if(hasLegacy){
+          const pr = productOf(ri.productId);
+          const pw = pr && pr.packageWeight;
+          if(pw > 0) qty = Math.round((qty / pw) * 100) / 100;
+        }
+      }
+      e[sec].ret += qty;
+    });
+  });
+  Object.keys(map).forEach(function(k){
+    const e = map[k];
+    const lateIssue = e.issues.some(function(x){ return x.section === 'late' || x.section === 'unknown'; });
+    const lateNet = e.late.gross - e.late.ret;
+    let state;
+    if(lateIssue) state = 'uncertain';
+    else if(!(e.late.gross > 0) && !(e.late.ret > 0)) state = 'no_purchase';
+    else state = lateNet > 0 ? 'net_positive' : 'net_nonpositive';
+    e.latePurchaseState = state;
+  });
+  return map;
+}
+
 /**
  * Runtime derived behavior profile for sales decisions.
  * Purchase truth = invoices minus sales-returns (payments method==='return').
@@ -1249,8 +1361,11 @@ function customerBehavior(cid, ctx, skipMemo){
     }
   }
 
-  const daysSinceLastRaw = lastInvoiceDate ? daysAgo(lastInvoiceDate) : null;
-  const daysSinceLast = (daysSinceLastRaw != null && isFinite(daysSinceLastRaw)) ? daysSinceLastRaw : null;
+  /* v117: calendar-day distance to the shared reference date; invalid date => null; never below 0 */
+  const daysSinceLastRaw = lastInvoiceDate
+    ? (typeof analysisDaysAgo === 'function' ? analysisDaysAgo(lastInvoiceDate, ctx) : daysAgo(lastInvoiceDate))
+    : null;
+  const daysSinceLast = (daysSinceLastRaw != null && isFinite(daysSinceLastRaw)) ? Math.max(0, daysSinceLastRaw) : null;
   const behindPattern = (avgIntervalDays != null && daysSinceLast != null)
     ? (daysSinceLast > avgIntervalDays + 0.5)
     : null;
@@ -1288,14 +1403,20 @@ function customerBehavior(cid, ctx, skipMemo){
     ? (daysSinceLast > avgDistinctIntervalDays + 0.5)
     : null;
 
-  const today = (typeof todayISO === 'function') ? todayISO() : new Date().toISOString().slice(0,10);
-  const d30 = _behaviorISODaysAgo(30);
-  const d60 = _behaviorISODaysAgo(60);
-  const d90 = _behaviorISODaysAgo(90);
-  const d31 = _behaviorISODaysAgo(31);
-  const sales30 = _behaviorSalesInRange(invs, d30, today) - _behaviorReturnsInRange(returns, d30, today, invs);
-  const sales90 = _behaviorSalesInRange(invs, d90, today) - _behaviorReturnsInRange(returns, d90, today, invs);
-  const salesPrev30 = _behaviorSalesInRange(invs, d60, d31) - _behaviorReturnsInRange(returns, d60, d31, invs);
+  /* v117 sales windows (both ends inclusive, anchored on the shared reference date):
+       sales30     = asOf-29 .. asOf
+       salesPrev30 = asOf-59 .. asOf-30   (exactly 30 days, no gap / overlap with sales30)
+       sales90     = asOf-89 .. asOf
+     Only the time boundary changed; amount and return-allocation rules are the previous ones. */
+  const today = (typeof analysisToday === 'function') ? analysisToday(ctx)
+    : ((typeof todayISO === 'function') ? todayISO() : new Date().toISOString().slice(0,10));
+  const w30start = _behaviorISODaysAgo(29, ctx);
+  const wPrevStart = _behaviorISODaysAgo(59, ctx);
+  const wPrevEnd = _behaviorISODaysAgo(30, ctx);
+  const w90start = _behaviorISODaysAgo(89, ctx);
+  const sales30 = _behaviorSalesInRange(invs, w30start, today) - _behaviorReturnsInRange(returns, w30start, today, invs);
+  const sales90 = _behaviorSalesInRange(invs, w90start, today) - _behaviorReturnsInRange(returns, w90start, today, invs);
+  const salesPrev30 = _behaviorSalesInRange(invs, wPrevStart, wPrevEnd) - _behaviorReturnsInRange(returns, wPrevStart, wPrevEnd, invs);
 
   let amountTrend = null;
   if(count >= 2){
@@ -1350,61 +1471,34 @@ function customerBehavior(cid, ctx, skipMemo){
   let decliningProducts = [];
   if(count >= 4){
     const mid = Math.floor(count / 2);
-    const early = invs.slice(0, mid);
-    const late = invs.slice(mid);
-    const earlyMap = {}, lateMap = {};
-    function accSold(list, map){
-      list.forEach(inv => (inv.items||[]).forEach(it=>{
-        const key = it.productId || ('n:' + (it.name||''));
-        if(!map[key]) map[key] = { productId: it.productId||null, name: it.name||'—', qty: 0 };
-        /* کشمش پلویی: نرمال‌سازی به تعداد بسته/کارتن تا رکوردهای قدیمی (qty=کیلوگرم)
-           و جدید (qty=تعداد بسته) قابل مقایسه باشند — رجوع کن به _raisinPilafPackages بالای فایل. */
-        map[key].qty += _isRaisinPilafItem(it, _raisinIdsForBehavior) ? _raisinPilafPackages(it) : (it.qty||0);
-      }));
-    }
-    accSold(early, earlyMap);
-    accSold(late, lateMap);
-    /* Return allocation follows the same rule as _behaviorReturnsInRange:
-       linked returns use the original invoice date; account-only or
-       unresolvable returns fall back to the return's own date. */
-    const midDate = invs[mid] && invs[mid].date ? invs[mid].date : null;
-    let returnInvById = null;
-    if(Array.isArray(invs)){
-      returnInvById = {};
-      invs.forEach(inv => {
-        if(inv && inv.id) returnInvById[inv.id] = inv;
-      });
-    }
-    if(midDate){
-      returns.forEach(p => {
-        let refDate = p.date || '';
-        if(returnInvById && p.invoiceId && returnInvById[p.invoiceId] && returnInvById[p.invoiceId].date){
-          refDate = returnInvById[p.invoiceId].date;
-        }
-        const target = refDate < midDate ? earlyMap : lateMap;
-        (p.returnItems || []).forEach(ri => {
-          const key = ri.productId || ('n:' + (ri.name||''));
-          if(!target[key]) target[key] = { productId: ri.productId||null, name: ri.name||'—', qty: 0 };
-          target[key].qty -= (ri.qty||0);
-        });
-      });
-    }
-    Object.keys(earlyMap).forEach(key => {
-      const e = earlyMap[key].qty;
-      const l = (lateMap[key] && lateMap[key].qty) || 0;
+    /* v117: gross / return / net per half, returns allocated by their SOURCE invoice, ambiguity kept
+       as evidence instead of being guessed (see _behaviorProductSplit). Thresholds are unchanged. */
+    const split = _behaviorProductSplit(invs, returns, mid, ctx);
+    const r2 = function(n){ return Math.round(n * 100) / 100; };
+    Object.keys(split).forEach(key => {
+      const x = split[key];
+      const e = x.early.gross - x.early.ret;
+      const lateNet = x.late.gross - x.late.ret;
+      const l = lateNet;
       if(e >= 2 && l < e * 0.6){
-        const pid = earlyMap[key].productId;
+        const pid = x.productId;
         if(pid){
           const prod = ctx && typeof ctx.productById === 'function'
             ? ctx.productById(pid)
-            : (data.products || []).find(x => x.id === pid);
+            : (data.products || []).find(y => y.id === pid);
           if(prod && prod.active === false) return; // exclude inactive from CURRENT signals
         }
         decliningProducts.push({
-          name: earlyMap[key].name,
-          productId: earlyMap[key].productId,
-          earlyQty: Math.max(0, Math.round(e * 100) / 100),
-          lateQty: Math.max(0, Math.round(l * 100) / 100)
+          name: x.name,
+          productId: x.productId,
+          earlyQty: Math.max(0, r2(e)),
+          lateQty: Math.max(0, r2(l)),
+          lateGrossQty: r2(x.late.gross),
+          lateReturnQty: r2(x.late.ret),
+          lateNetQty: r2(lateNet),
+          latePurchaseState: x.latePurchaseState,
+          quantityQuality: x.issues.length ? 'uncertain' : 'certain',
+          uncertaintyReasons: x.issues.map(function(i){ return { code: i.code, section: i.section, paymentId: i.paymentId, invoiceId: i.invoiceId }; })
         });
       }
     });
