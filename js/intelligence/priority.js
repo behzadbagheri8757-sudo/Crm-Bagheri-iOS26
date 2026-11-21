@@ -208,8 +208,10 @@
     if (overdue == null && typeof customerBehavior === 'function') {
       try {
         var b = customerBehavior(cid, ctx);
-        if (b && b.lastVisit && b.lastVisit.date && typeof daysAgo === 'function') {
-          var d = daysAgo(b.lastVisit.date);
+        if (b && b.lastVisit && b.lastVisit.date) {
+          // v117: calendar-day distance to the shared reference date (ctx.asOfDate)
+          var d = (typeof analysisDaysAgo === 'function') ? analysisDaysAgo(b.lastVisit.date, ctx)
+            : ((typeof daysAgo === 'function') ? daysAgo(b.lastVisit.date) : null);
           if (d != null && isFinite(d) && d !== Infinity) overdue = d;
         }
       } catch (e2) { /* ignore */ }

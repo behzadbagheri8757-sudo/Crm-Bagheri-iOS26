@@ -183,7 +183,75 @@
     } catch (e) { if (cb) cb(null); }
   }
 
+
+  /* ---------- v117: safe Restore / hydration ----------
+     replace = epoch++ -> memory EXACTLY the new snapshot (no merge) -> LS mirror aligned -> snapshot marked
+     pending -> written to IndexedDB in ONE transaction (clear + every put) when the DB is ready.
+     pending is cleared ONLY in transaction.oncomplete, and only if it still belongs to that snapshot's epoch;
+     error / abort / synchronous failures keep it, and the next hydration / write retries (no timers, no queues).
+     A hydration read remembers the epoch it started in: a late answer after a replace is ignored entirely. */
+  var _epoch = 0;
+  var _pending = null;            // { epoch, cbs, writing }
+  var _idbState = 'opening';      // 'opening' | 'ready' | 'unavailable'
+
+  function _currentRows() {
+    return _mem.slice();
+  }
+
+  function _runCbs(snap, ok) {
+    var cbs = snap.cbs || [];
+    snap.cbs = [];
+    for (var i = 0; i < cbs.length; i++) {
+      try { cbs[i](ok); } catch (e) { /* caller errors never break storage */ }
+    }
+  }
+
+  function _flushPending() {
+    var snap = _pending;
+    if (!snap || snap.writing) return;
+    if (!_idb) {
+      // no IndexedDB at all (unsupported / failed to open): memory + LS mirror are the persistence layer
+      if (_idbState === 'unavailable') { _pending = null; _runCbs(snap, true); }
+      return;                      // still opening: the first hydration / write after it is ready flushes
+    }
+    var tx = null;
+    try {
+      tx = _idb.transaction(ACK_PARAMS.idbStore, 'readwrite');
+      snap.writing = true;
+      tx.oncomplete = function () {
+        snap.writing = false;
+        if (_pending === snap && _epoch === snap.epoch) { _pending = null; _runCbs(snap, true); }
+      };
+      var failed = function () {
+        snap.writing = false;      // pending stays: retried by the next hydration / write
+        _runCbs(snap, false);
+      };
+      tx.onerror = failed;
+      tx.onabort = failed;
+      var st = tx.objectStore(ACK_PARAMS.idbStore);
+      st.clear();
+      var rows = _currentRows();
+      for (var i = 0; i < rows.length; i++) st.put(rows[i]);
+    } catch (e) {
+      snap.writing = false;
+      try { if (tx) tx.abort(); } catch (eA) { /* ignore */ }
+      _runCbs(snap, false);
+    }
+  }
+
+  function replaceAllAcks(rows, onDone) {
+    var prev = _pending;
+    _epoch++;
+    if (prev) _runCbs(prev, false);       // superseded snapshot: its caller must not assume success
+    _mem = (Array.isArray(rows) ? rows : []).filter(function (r) { return r && r.id; });
+    _saveLS();
+    _pending = { epoch: _epoch, cbs: (typeof onDone === 'function') ? [onDone] : [], writing: false };
+    _flushPending();
+    return { epoch: _epoch, dbPending: !!_pending };
+  }
+
   function _idbPut(rec) {
+    if (_pending) { _flushPending(); return; }
     if (!_idb || !rec) return;
     try {
       if (!_idb.objectStoreNames.contains(ACK_PARAMS.idbStore)) return;
@@ -192,20 +260,23 @@
   }
 
   function _idbHydrate(cb) {
-    if (!_idb || !_idb.objectStoreNames.contains(ACK_PARAMS.idbStore)) { if (cb) cb(); return; }
+    if (_pending) { _flushPending(); if (cb) cb(false); return; }
+    if (!_idb || !_idb.objectStoreNames.contains(ACK_PARAMS.idbStore)) { if (cb) cb(false); return; }
     try {
+      var startEpoch = _epoch;
       var req = _idb.transaction(ACK_PARAMS.idbStore, 'readonly').objectStore(ACK_PARAMS.idbStore).getAll();
       req.onsuccess = function () {
+        if (_epoch !== startEpoch || _pending) { _flushPending(); if (cb) cb(false); return; }
         var rows = req.result || [];
         var byId = Object.create(null);
         for (var i = 0; i < _mem.length; i++) byId[_mem[i].id] = _mem[i];     // LS mirror is fresher
         for (var j = 0; j < rows.length; j++) if (rows[j] && rows[j].id && !byId[rows[j].id]) byId[rows[j].id] = rows[j];
         _mem = Object.keys(byId).map(function (k) { return byId[k]; });
         _saveLS();
-        if (cb) cb();
+        if (cb) cb(true);
       };
-      req.onerror = function () { if (cb) cb(); };
-    } catch (e) { if (cb) cb(); }
+      req.onerror = function () { if (cb) cb(false); };
+    } catch (e) { if (cb) cb(false); }
   }
 
   function _persist(rec) { _saveLS(); _idbPut(rec); }
@@ -324,9 +395,20 @@
     finally { _watchSyncDepth--; }
   }
 
-  function _releaseWatchFor(ack) {
+  function _releaseWatchFor(ack, cause) {
     var occId = ack.source === 'watch' ? ack.sourceId : ack.watchOccurrenceId;
     if (!occId || typeof reverseWatchDecision !== 'function') return;
+    // v117: a pending Watch follow-up TASK does not depend on the life of its mirrored ACK. When the ACK merely
+    // EXPIRES, the follow-up stays pending until it is really completed (completeWatchFollowUp) or cancelled by
+    // the seller (reverseWatchDecision). Every other release path is unchanged.
+    if (cause === 'expiry' && typeof getPendingWatchFollowUps === 'function') {
+      try {
+        var pend = getPendingWatchFollowUps(ack.customerId) || [];
+        for (var pi = 0; pi < pend.length; pi++) {
+          if (pend[pi] && pend[pi].id === occId) return;
+        }
+      } catch (ePend) { /* fail-open: fall through to the legacy release */ }
+    }
     _watchSyncDepth++;
     try { reverseWatchDecision(occId); } catch (e) { /* best-effort */ }
     finally { _watchSyncDepth--; }
@@ -574,7 +656,7 @@
         if (exp && exp.getTime() <= now) {
           a.status = 'expired';
           _persist(a);
-          _releaseWatchFor(a);       // expiry and tombstone stay in step
+          _releaseWatchFor(a, 'expiry');       // expiry and tombstone stay in step (pending follow-up tasks excepted)
           n++;
         }
       }
@@ -722,19 +804,6 @@
 
   function exportAcks() { return _mem.slice(); }
 
-  function replaceAllAcks(rows) {
-    _mem = Array.isArray(rows) ? rows.filter(function (r) { return r && r.id; }) : [];
-    _saveLS();
-    if (_idb && _idb.objectStoreNames.contains(ACK_PARAMS.idbStore)) {
-      try {
-        var tx = _idb.transaction(ACK_PARAMS.idbStore, 'readwrite');
-        var st = tx.objectStore(ACK_PARAMS.idbStore);
-        st.clear();
-        _mem.forEach(function (r) { st.put(r); });
-      } catch (e) { /* LS mirror authoritative */ }
-    }
-  }
-
   /* ---------- small UI helper (customer + watch pages) ---------- */
 
   var DECISION_LABELS = {
@@ -788,7 +857,7 @@
   /* ---------- boot ---------- */
 
   _loadLS();
-  _openIdb(function (db) { if (db) _idbHydrate(function () {}); });
+  _openIdb(function (db) { _idbState = db ? 'ready' : 'unavailable'; if (db) _idbHydrate(function () {}); else _flushPending(); });
 
   global.ACK_PARAMS = ACK_PARAMS;
   global.AFFECT_TABLE = AFFECT_TABLE;
@@ -808,6 +877,7 @@
   global.ackWatchSyncActive = ackWatchSyncActive;
   global.exportAcks = exportAcks;
   global.replaceAllAcks = replaceAllAcks;
+  global._ackExportRows = _currentRows;   // test seam
   global.ackListHtml = ackListHtml;
   global.bindAckReverse = bindAckReverse;
   global.ensureAckStores = _ensureStores;

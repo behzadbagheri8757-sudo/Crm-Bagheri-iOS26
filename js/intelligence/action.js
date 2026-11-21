@@ -37,6 +37,7 @@
     'LONG_NO_VISIT',
     'VISIT_OVERDUE',
     'VISIT_CONVERSION_LOW',
+    'WATCH_FOLLOWUP_DUE',
     'OFFER_DEFERRED_FOLLOWUP',
     'PURCHASE_GROWTH',
   ];
@@ -128,6 +129,13 @@
       urgency: 'low',
       action: 'بررسی نرخ تبدیل ویزیت به سفارش',
     },
+    // v117: a Watch follow-up the seller scheduled himself (lifecycle pending task) whose due day has come.
+    // Built in this file from the real Watch lifecycle; never persisted, never a Signal.
+    WATCH_FOLLOWUP_DUE: {
+      actionType: 'follow_up',
+      urgency: 'medium',
+      action: 'پیگیری محصولی که زمان پیگیری‌اش رسیده',
+    },
     // Evidence-based opportunity (built in this file from a RECORDED `deferred` visit offer;
     // never persisted, never a Signal). Same urgency tier as PURCHASE_GROWTH.
     OFFER_DEFERRED_FOLLOWUP: {
@@ -148,6 +156,16 @@
     urgency: 'low',
     reason: 'بدون Signal فعال',
   };
+
+  /* v117: shared analysis reference date (ctx.asOfDate). Fallback only when no context / helper exists. */
+  function _aToday(ctx) {
+    if (typeof analysisToday === 'function') return analysisToday(ctx);
+    return (typeof todayISO === 'function') ? todayISO() : new Date().toISOString().slice(0, 10);
+  }
+  function _aDaysAgo(iso, ctx) {
+    if (typeof analysisDaysAgo === 'function') return analysisDaysAgo(iso, ctx);
+    return (typeof daysAgo === 'function') ? daysAgo(iso) : null;
+  }
 
   function _actionPriorityRank(category) {
     const idx = ACTION_PRIORITY_ORDER.indexOf(category);
@@ -218,12 +236,12 @@
       } catch (e) { /* ignore */ }
     }
     // Fallback: visitCadence + last visit if both available
-    if (typeof visitCadence === 'function' && typeof customerBehavior === 'function' && typeof daysAgo === 'function') {
+    if (typeof visitCadence === 'function' && typeof customerBehavior === 'function') {
       try {
         var cadence = visitCadence(customerId, ctx);
         var b = customerBehavior(customerId, ctx);
         if (cadence && b && b.lastVisit && b.lastVisit.date) {
-          var days = daysAgo(b.lastVisit.date);
+          var days = _aDaysAgo(b.lastVisit.date, ctx);
           if (days != null && isFinite(days) && days >= 0) {
             var buffer = Math.min(7, cadence * 0.5);
             // due soon: within cadence window (not heavily overdue)
@@ -399,7 +417,7 @@
   function _isActionEligible(winnerSignal, cid, ctx) {
     try {
       if (!winnerSignal || winnerSignal.category !== 'PURCHASE_DECLINE_SEVERE') return true;
-      if (typeof customerBehavior !== 'function' || typeof daysAgo !== 'function') return true;
+      if (typeof customerBehavior !== 'function') return true;
       if (typeof PERSISTENCE_PARAMS === 'undefined' || !PERSISTENCE_PARAMS ||
           typeof PERSISTENCE_PARAMS.windowDays !== 'number' ||
           !isFinite(PERSISTENCE_PARAMS.windowDays) || !(PERSISTENCE_PARAMS.windowDays > 0)) return true;
@@ -443,7 +461,7 @@
           const visit = visits[vi];
           if (!visit || typeof visit.date !== 'string' || !isoRe.test(visit.date) ||
               !Array.isArray(visit.offeredProducts)) continue;
-          const age = daysAgo(visit.date);
+          const age = _aDaysAgo(visit.date, ctx);
           if (age == null || !isFinite(age) || age < 0 || age > windowDays) continue;                // not a recent valid visit
           for (let oi = 0; oi < visit.offeredProducts.length; oi++) {
             const op = visit.offeredProducts[oi];
@@ -668,8 +686,8 @@
         current = true;                                  // only LIVE ACKs are loaded; expiry is the ACK's own
       } else if (r.source === 'watch' && r.held) {
         current = true;                                  // unreleased seller decision: held by the lifecycle
-      } else if (windowDays != null && typeof daysAgo === 'function') {
-        var age = daysAgo(r.date);
+      } else if (windowDays != null) {
+        var age = _aDaysAgo(r.date, ctx);
         current = (age != null && isFinite(age) && age >= 0 && age <= windowDays);
       }
       if (!current) return CTX_NONE;
@@ -685,7 +703,7 @@
       return CTX_NONE;
     }
 
-    return { famOf: famOf, windowDays: windowDays, byFam: byFam, lastPurchase: lastPurchase, visits: visits, verdict: verdict };
+    return { famOf: famOf, windowDays: windowDays, byFam: byFam, lastPurchase: lastPurchase, visits: visits, verdict: verdict, ctx: ctx || null };
   }
 
   // Product subjects of a signal (null = not product-specific: never touched by this layer).
@@ -772,7 +790,7 @@
   }
 
   function _recordedNextActionContext(rc) {
-    if (!rc || rc.windowDays == null || typeof daysAgo !== 'function') return null;
+    if (!rc || rc.windowDays == null) return null;
     var latest = null;
     rc.visits.forEach(function (v) {
       if (!v || typeof v.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(v.date)) return;
@@ -780,7 +798,7 @@
       if (!latest || key > latest.key) latest = { key: key, visit: v };
     });
     if (!latest || typeof latest.visit.nextAction !== 'string' || !latest.visit.nextAction.trim()) return null;
-    var age = daysAgo(latest.visit.date);
+    var age = _aDaysAgo(latest.visit.date, rc.ctx);
     if (age == null || !isFinite(age) || age < 0 || age > rc.windowDays) return null;
     var label = latest.visit.nextAction.trim();
     return { label: label, line: 'اقدام بعدی ثبت‌شده در ویزیت ' + _fmtDateFa(latest.visit.date) + ': ' + label };
@@ -813,6 +831,8 @@
           ? 'محصول کلیدی «' + vn[0] + '» دیگر خریداری نمی‌شود'
           : 'محصولات کلیدی (' + vn.join('، ') + ') دیگر خریداری نمی‌شوند';
       }
+    } else if (cat === 'WATCH_FOLLOWUP_DUE') {
+      if (_validName(winner.productName)) text += ' («' + winner.productName + '»)';
     } else if (cat === 'OFFER_DEFERRED_FOLLOWUP') {
       var oPhrase = _namesPhrase(((winner.evidence && winner.evidence.offers) || []).map(function (o) { return o.name; }));
       if (oPhrase) text += ' (' + oPhrase + ')';
@@ -892,13 +912,145 @@
         !(rcx && (rcx.obstacles.length || rcx.followups.length || rcx.deferred.length))) {
       var rvAt = String(winner.ackReviewed.createdAt || '').slice(0, 10);
       var rvTo = String(winner.ackReviewed.expiresAt || '').slice(0, 10);
-      var isToday = (typeof todayISO === 'function') ? (rvAt === todayISO()) : false;
+      var isToday = rvAt === _aToday(rc && rc.ctx);
       text = (isToday ? 'بررسی‌شده در ویزیت امروز' : 'بررسی‌شده در ویزیت ' + (rvAt ? _fmtDateFa(rvAt) : '')) +
              '؛ پیگیری بعدی: ' + (rvTo ? _fmtDateFa(rvTo) : '');
       actionTypeOverride = 'follow_up';
       urgencyOverride = 'low';
     }
     return { text: text, reason: reason, extra: extra, actionType: actionTypeOverride, urgency: urgencyOverride };
+  }
+
+
+  /* ============================================================
+     v117 — customer-level visit interrupt + independent exceptions
+
+     A LIVE visit_reviewed ACK (decision visit_reviewed, source visit, scope account, status active — liveness
+     and exact-timestamp expiry come from the existing ACK API, never re-implemented here) interrupts the
+     customer: no ordinary candidate may put him back in the queue, whatever its rank.
+     Only these pass:
+       - a valid CHECK_BOUNCED signal
+       - a valid PAYMENT_OVERDUE signal
+       - an invoice with a REAL due date in the past and a remainder (ctx.receivableAttention:
+         refKind === 'invoice_due' && daysSince > 0; 'invoice_date' alone is not enough)
+       - the Watch follow-up (lifecycle pending task) whose own valid due day is today or earlier
+     One exception never opens the door for an unrelated task.
+     ============================================================ */
+  var INTERRUPT_EXCEPTION_SIGNALS = { CHECK_BOUNCED: true, PAYMENT_OVERDUE: true };
+
+  function _liveVisitInterrupt(cid) {
+    try {
+      if (typeof getActiveAcksForCustomer !== 'function') return false;
+      if (typeof isAckLayerActive === 'function' && !isAckLayerActive()) return false;
+      var acks = getActiveAcksForCustomer(cid) || [];
+      for (var i = 0; i < acks.length; i++) {
+        var a = acks[i];
+        if (!a || a.status !== 'active') continue;
+        if (a.decision === 'visit_reviewed' && a.source === 'visit' && a.scope === 'account') return true;
+      }
+    } catch (e) { /* fail-open: no interrupt */ }
+    return false;
+  }
+
+  // Valid immediate signal / independent candidate allowed through an interrupt.
+  function _isInterruptException(sig) {
+    if (!sig || !sig.category) return false;
+    if (INTERRUPT_EXCEPTION_SIGNALS[sig.category]) {
+      return sig.status !== 'pending' && sig.seasonallySuppressed !== true;
+    }
+    if (sig.category === 'WATCH_FOLLOWUP_DUE') return !!sig.followUpOccurrenceId;
+    return false;
+  }
+
+  /* Watch follow-up task whose due day has come. Read from the REAL lifecycle (getPendingWatchFollowUps:
+     closed-by-decision rows whose follow_up_later suppression is unreleased), so a seller-dismissed occurrence
+     with a still-pending follow-up counts, and the life of the mirrored ACK is irrelevant. Due day =
+     suppression.followUpDate compared with ctx.asOfDate; a missing / invalid date never produces a guessed task. */
+  function _dueWatchFollowUpCandidate(cid, ctx) {
+    try {
+      if (typeof getPendingWatchFollowUps !== 'function') return null;
+      var rows = getPendingWatchFollowUps(cid) || [];
+      var due = [];
+      for (var i = 0; i < rows.length; i++) {
+        var r = rows[i];
+        if (!r || !r.id || !r.suppression || r.suppression.releasedAt) continue;
+        var d = r.suppression.followUpDate;
+        if (typeof d !== 'string') continue;
+        var age = _aDaysAgo(d, ctx);
+        if (age == null || !isFinite(age) || age < 0) continue;     // invalid date, or due in the future
+        due.push({ rec: r, date: String(d).slice(0, 10) });
+      }
+      if (!due.length) return null;
+      due.sort(function (a, b) { return a.date < b.date ? -1 : (a.date > b.date ? 1 : (String(a.rec.id) < String(b.rec.id) ? -1 : 1)); });
+      var pick = due[0];
+      var pid = pick.rec.productId != null && pick.rec.productId !== '' ? pick.rec.productId : null;
+      var nm = pick.rec.productName || (pid ? _catalogName(pid) : null);
+      var cand = {
+        customerId: cid,
+        category: 'WATCH_FOLLOWUP_DUE',
+        type: 'opportunity',
+        severity: 'medium',
+        status: 'active',
+        sourceLevel: 'account',
+        productId: pid,
+        productName: _validName(nm) ? nm : null,
+        followUpOccurrenceId: pick.rec.id,
+        reason: 'زمان پیگیری ثبت‌شده (' + _fmtDateFa(pick.date) + ') رسیده است',
+        evidence: { occurrenceId: pick.rec.id, dueDate: pick.date, watchCategory: pick.rec.watchCategory || null },
+      };
+      if (pid && typeof resolveFamilyId === 'function') {
+        try { cand.familyId = resolveFamilyId(pid, ctx); } catch (eF) { /* ignore */ }
+      }
+      return cand;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /* Overdue-invoice candidate (only used as an interrupt exception). Contract of the existing receivable API:
+     refKind === 'invoice_due' && daysSince > 0. No remainder / balance is recomputed here. */
+  function _invoiceDueCandidate(cid, ctx) {
+    try {
+      if (!ctx || typeof ctx.receivableAttention !== 'function') return null;
+      var att = ctx.receivableAttention();
+      var row = att && att.byCustomerId ? att.byCustomerId[cid] : null;
+      if (!row || row.refKind !== 'invoice_due' || !(Number(row.daysSince) > 0)) return null;
+      return {
+        customerId: cid,
+        category: 'PAYMENT_OVERDUE',
+        type: 'risk',
+        severity: 'high',
+        status: 'active',
+        sourceLevel: 'account',
+        source: 'receivable',
+        reason: 'سررسید فاکتور گذشته و مانده وصول نشده است',
+        evidence: { refKind: 'invoice_due', invoiceId: row.invoiceId || null, daysSince: Number(row.daysSince), balance: row.balance },
+      };
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /* v117 — one place for: per-candidate eligibility -> independent exceptions -> customer-level interrupt -> rank.
+     Input: ordinary candidates after the context filters. Returns the winning candidate or null. */
+  function _chooseAction(actionCandidates, cid, ctx) {
+    // v117: eligibility is decided PER ORDINARY CANDIDATE before ranking, so an ineligible top candidate can
+    // no longer hide the next valid one. Signals / evidence are never touched; only the candidate list.
+    actionCandidates = actionCandidates.filter(function (cand) {
+      return _isActionEligible(cand, cid, ctx);
+    });
+    // Independent exceptions, each with its own validation (they are not ordinary candidates and are not
+    // run through the ordinary eligibility rules).
+    const interrupted = _liveVisitInterrupt(cid);
+    const followUpCand = _dueWatchFollowUpCandidate(cid, ctx);
+    if (followUpCand) actionCandidates = actionCandidates.concat([followUpCand]);
+    if (interrupted) {
+      const invoiceCand = _invoiceDueCandidate(cid, ctx);
+      if (invoiceCand) actionCandidates = actionCandidates.concat([invoiceCand]);
+      // customer-level interrupt: only the exceptions survive
+      actionCandidates = actionCandidates.filter(_isInterruptException);
+    }
+    return _pickActionSignal(actionCandidates);
   }
 
   function calculateCustomerAction(cid, precomputedPriority, opts, skipMemo) {
@@ -930,13 +1082,7 @@
       rcCtx = null;
       actionCandidates = _applyCurrentContextFilter(cid, priority.signals, ctx);
     }
-    let winner = _pickActionSignal(actionCandidates);
-    // Action Eligibility: the winner is chosen first; if it is no longer needed
-    // given a recent related visit, the existing NO_ACTION path is used. The next
-    // candidate is deliberately NOT promoted, and the signal itself is untouched.
-    if (winner && !_isActionEligible(winner, cid, ctx)) {
-      winner = null;
-    }
+    let winner = _chooseAction(actionCandidates, cid, ctx);
 
     if (!winner) {
       return Object.assign({
@@ -1083,8 +1229,8 @@
     if (typeof customerBehavior === 'function') {
       try {
         const b = customerBehavior(cid, ctx);
-        if (b && b.lastVisit && b.lastVisit.date && typeof daysAgo === 'function') {
-          const d = daysAgo(b.lastVisit.date);
+        if (b && b.lastVisit && b.lastVisit.date) {
+          const d = _aDaysAgo(b.lastVisit.date, ctx);
           if (d != null && isFinite(d) && d !== Infinity) {
             return d === 0 ? 'ویزیت امروز' : (Math.round(d) + ' روز از آخرین ویزیت');
           }
@@ -1115,6 +1261,12 @@
 
       if (cat === 'CHECK_BOUNCED' && _whyNowFinite(signal.value)) {
         return _whyNowNum(signal.value) + ' چک برگشتی ثبت‌شده';
+      }
+      if (cat === 'WATCH_FOLLOWUP_DUE' && signal.evidence && signal.evidence.dueDate) {
+        return 'موعد پیگیری ' + _fmtDateFa(signal.evidence.dueDate) + ' رسیده است';
+      }
+      if (cat === 'PAYMENT_OVERDUE' && signal.evidence && signal.evidence.refKind === 'invoice_due' && _whyNowFinite(signal.evidence.daysSince)) {
+        return _whyNowNum(signal.evidence.daysSince) + ' روز از سررسید فاکتور گذشته';
       }
       if (cat === 'PAYMENT_OVERDUE' && _whyNowFinite(signal.value)) {
         return _whyNowNum(signal.value) + ' چک سررسیدگذشته و وصول‌نشده';
@@ -1204,38 +1356,18 @@
     return out;
   }
 
-  /* Visit-ACK suppression of the daily suggested list (list-level filter ONLY).
-     While the customer's own "visit_reviewed" ACK (created by a saved visit) is still live,
-     the customer is not offered in the suggested list, even when a purchase-decline / product-delay
-     signal still holds. Signals, Watches and Risk are NOT touched here. The ACK's existing
-     expiresAt is used as-is (never created, extended or renewed here); once it lapses the
-     customer re-enters by today's state.
-     Exceptions (customer stays in the list): bounced check, overdue check / overdue invoice due date,
-     and a follow-up the seller dated himself (live follow_up_later ACK with a followUpDate).
-     Fail-open: any error / missing ACK layer => the customer is kept. */
+  /* Visit-ACK interrupt, list-level view (v117). The interrupt itself is applied per customer inside
+     calculateCustomerAction (see _liveVisitInterrupt / _isInterruptException), so every public API behaves the
+     same. This helper answers: "is this customer's base action blocked by a live visit_reviewed ACK?".
+     Exceptions: valid CHECK_BOUNCED, valid PAYMENT_OVERDUE, an invoice with a real past due date
+     (refKind invoice_due, daysSince > 0) and the due Watch follow-up of the lifecycle.
+     Fail-open: any error / missing ACK layer => not blocked. */
   function _visitAckHidesFromSuggested(cid, base, ctx) {
     try {
-      if (typeof getActiveAcksForCustomer !== 'function') return false;
-      if (typeof isAckLayerActive === 'function' && !isAckLayerActive()) return false;
-      var acks = getActiveAcksForCustomer(cid) || [];
-      var visitAck = false;
-      var datedFollowUp = false;
-      for (var i = 0; i < acks.length; i++) {
-        var a = acks[i];
-        if (!a || a.status !== 'active') continue;
-        if (a.decision === 'visit_reviewed' && a.source === 'visit' && a.scope === 'account') visitAck = true;
-        if (a.decision === 'follow_up_later' && a.followUpDate) datedFollowUp = true;
-      }
-      if (!visitAck) return false;
-      if (datedFollowUp) return false;
-      var cat = base && base.primarySignal && base.primarySignal.category;
-      if (cat === 'CHECK_BOUNCED' || cat === 'PAYMENT_OVERDUE') return false;
-      if (ctx && typeof ctx.receivableAttention === 'function') {
-        var att = ctx.receivableAttention();
-        var row = att && att.byCustomerId ? att.byCustomerId[cid] : null;
-        if (row && row.refKind === 'invoice_due' && Number(row.daysSince) > 0) return false;
-      }
-      return true;
+      if (!_liveVisitInterrupt(cid)) return false;
+      // Same rule as calculateCustomerAction: only an exception candidate may stay while the customer is
+      // interrupted. (calculateCustomerAction already enforces it; this keeps the list-level check consistent.)
+      return !_isInterruptException(base && base.primarySignal);
     } catch (e) {
       return false;
     }
@@ -1297,5 +1429,7 @@
   global.calculateCustomerAction = calculateCustomerAction;
   global.calculateAllCustomerActions = calculateAllCustomerActions;
   global.calculateAllActions = calculateAllActions;
+  global._visitAckHidesFromSuggested = _visitAckHidesFromSuggested;   // test seam
+  global._intelligenceChooseAction = _chooseAction;                    // test seam
 
 })(typeof window !== 'undefined' ? window : this);
