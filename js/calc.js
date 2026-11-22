@@ -1930,3 +1930,196 @@ async function hydrateMonthlySalesTarget(){
   _monthlySalesTargetCache = 0;
   return 0;
 }
+
+/* ============================================================
+   v118 — جست‌وجوی تاریخچهٔ یک مشتری (فقط خواندنی؛ هیچ داده‌ای تغییر نمی‌کند)
+
+   منابع: فاکتورها (کالا، تعداد، مبلغ، شماره، برگشت کالا)، پرداخت‌ها (مبلغ، روش، توضیح)،
+          ویزیت‌ها (نتیجه، دلیل، اقدام بعدی، یادداشت، پیشنهادهای قبول/رد و دلیل رد).
+   چک‌ها و هر اطلاعات چکی عمداً خارج از جست‌وجو هستند.
+
+   نرمال‌سازی 1:1 است (طول رشته تغییر نمی‌کند) تا اندیس‌های هایلایت دقیق بمانند:
+   ارقام فارسی/عربی → لاتین، ی/ك عربی → فارسی، نیم‌فاصله → فاصله، حروف لاتین → کوچک.
+   ============================================================ */
+const HISTORY_SEARCH_LIMIT = 200;
+const HISTORY_SYNONYMS = { 'ناموجود': ['موجود نبود'] };
+const HISTORY_METHOD_LABEL = { cash: 'نقد', card: 'کارت', transfer: 'انتقال بانکی', discount: 'تخفیف', return: 'مرجوعی' };
+const HISTORY_REACTION_LABEL = { accepted: 'قبول شد', rejected: 'رد شد', deferred: 'بعداً تصمیم می‌گیرد' };
+const HISTORY_REASON_LABEL = {
+  price: 'قیمت', quality: 'کیفیت', competitor: 'رقیب', unavailable: 'موجود نبود',
+  no_need: 'نیاز نداشت', still_stock: 'موجود داشت', other: 'سایر'
+};
+
+function historyNormalize(str){
+  const s = String(str == null ? '' : str);
+  let out = '';
+  for(let i = 0; i < s.length; i++){
+    const c = s.charCodeAt(i);
+    if(c >= 0x06F0 && c <= 0x06F9) out += String.fromCharCode(48 + c - 0x06F0);
+    else if(c >= 0x0660 && c <= 0x0669) out += String.fromCharCode(48 + c - 0x0660);
+    else if(c === 0x064A || c === 0x0649) out += '\u06CC';       // ي ى -> ی
+    else if(c === 0x0643) out += '\u06A9';                       // ك -> ک
+    else if(c === 0x200C) out += ' ';                            // نیم‌فاصله -> فاصله
+    else if(c >= 0x41 && c <= 0x5A) out += String.fromCharCode(c + 32);
+    else out += s.charAt(i);
+  }
+  return out;
+}
+
+/* Query -> tokens. A number followed by a unit word (میلیون/هزار/m/k) becomes ONE numeric token. */
+function parseHistoryQuery(raw){
+  const parts = historyNormalize(raw).trim().split(/\s+/).filter(Boolean);
+  const units = { 'میلیون': 1e6, 'ملیون': 1e6, 'میلون': 1e6, 'm': 1e6, 'هزار': 1e3, 'k': 1e3 };
+  const out = [];
+  for(let i = 0; i < parts.length; i++){
+    const t = parts[i].replace(/[,٬،]/g, '');
+    if(/^\d+(\.\d+)?$/.test(t)){
+      const next = parts[i + 1];
+      if(next && units[next] !== undefined){
+        out.push({ kind: 'num', value: Number(t) * units[next], text: t, hasUnit: true });
+        i++;
+      } else {
+        out.push({ kind: 'num', value: Number(t), text: t });
+      }
+    } else {
+      out.push({ kind: 'text', text: parts[i] });
+    }
+  }
+  return out;
+}
+
+/* A field is { text, amount? }. Returns ranges [start,end) of the text that match this token. */
+function historyFieldRanges(field, token){
+  const ranges = [];
+  const norm = historyNormalize(field.text || '');
+  if(token.kind === 'num'){
+    if(typeof field.amount === 'number' && Math.abs(field.amount - token.value) < 0.5){
+      ranges.push([0, norm.length]);
+    }
+    // a number written with a unit («۲ میلیون») is an AMOUNT: compare amounts only, never raw digits
+    // (otherwise the digit 2 would match quantities such as «۱۲»).
+    if(!ranges.length && !token.hasUnit && norm.indexOf(token.text) !== -1) {
+      let p = norm.indexOf(token.text);
+      while(p !== -1){ ranges.push([p, p + token.text.length]); p = norm.indexOf(token.text, p + token.text.length); }
+    }
+    return ranges;
+  }
+  const cands = [token.text].concat(HISTORY_SYNONYMS[token.text] || []);
+  cands.forEach(function(c){
+    let p = norm.indexOf(c);
+    while(p !== -1){ ranges.push([p, p + c.length]); p = norm.indexOf(c, p + c.length); }
+  });
+  return ranges;
+}
+
+function _historyFmtAmount(n){ return (typeof toman === 'function') ? toman(Math.abs(n)) + ' ت' : String(n); }
+function _historyFa(s){ return (typeof enToFaDigits === 'function') ? enToFaDigits(String(s)) : String(s); }
+function _historyDate(iso){ return (typeof faDate === 'function') ? faDate(iso) : String(iso || ''); }
+
+/* Builds every searchable event of ONE customer (read-only). Checks are never read here. */
+function _historyEvents(cid){
+  const d = (typeof data !== 'undefined') ? data : {};
+  const cust = (d.customers || []).find(function(c){ return c && c.id === cid; });
+  const prodName = function(pid, fallback){
+    const p = (d.products || []).find(function(x){ return x && x.id === pid; });
+    return (p && p.name) || fallback || 'کالا';
+  };
+  const payments = (d.payments || []).filter(function(p){ return p && p.customerId === cid; });
+  const returnsByInv = Object.create(null);
+  payments.forEach(function(p){
+    if(p.method === 'return' && p.invoiceId){
+      (returnsByInv[p.invoiceId] = returnsByInv[p.invoiceId] || []).push(p);
+    }
+  });
+  const events = [];
+
+  (d.invoices || []).filter(function(i){ return i && i.customerId === cid; }).forEach(function(inv){
+    const fields = [{ text: 'شماره فاکتور ' + _historyFa(inv.number || '') }];
+    (inv.items || []).forEach(function(it){
+      if(!it) return;
+      const name = it.name || prodName(it.productId);
+      const qty = Number(it.qty) || 0;
+      fields.push({ text: name });
+      fields.push({ text: 'تعداد ' + _historyFa(qty) });
+      const amt = (Number(it.price) || 0) * qty;
+      fields.push({ text: _historyFmtAmount(amt), amount: amt });
+    });
+    fields.push({ text: 'جمع فاکتور ' + _historyFmtAmount(inv.total || 0), amount: Number(inv.total) || 0 });
+    (returnsByInv[inv.id] || []).forEach(function(r){
+      fields.push({ text: 'مرجوعی ' + _historyFmtAmount(r.amount || 0), amount: Number(r.amount) || 0 });
+      (r.returnItems || []).forEach(function(ri){
+        if(!ri) return;
+        const rn = ri.name || prodName(ri.productId);
+        fields.push({ text: 'برگشت کالا: ' + rn + ' ' + _historyFa(Number(ri.qty) || 0) });
+      });
+    });
+    events.push({ kind: 'invoice', date: inv.date || '', time: '', title: 'خرید · فاکتور ' + _historyFa(inv.number || ''),
+      amount: Number(inv.total) || 0, fields: fields, target: { kind: 'invoice', id: inv.id } });
+  });
+
+  payments.forEach(function(p){
+    if(p.method === 'check') return;                           // cheques never enter the search
+    const isReturn = p.method === 'return';
+    if(isReturn && p.invoiceId) return;                        // linked returns are shown inside their invoice
+    const label = isReturn ? 'مرجوعی بدون فاکتور' : ('پرداخت · ' + (HISTORY_METHOD_LABEL[p.method] || p.method || ''));
+    const fields = [{ text: label }, { text: _historyFmtAmount(p.amount || 0), amount: Number(p.amount) || 0 }];
+    if(p.note) fields.push({ text: String(p.note) });
+    events.push({ kind: 'payment', date: p.date || '', time: '', title: label, amount: Number(p.amount) || 0,
+      fields: fields, target: { kind: 'payment', id: p.id, invoiceId: p.invoiceId || null } });
+  });
+
+  ((cust && cust.visits) || []).forEach(function(v){
+    if(!v) return;
+    const fields = [];
+    if(v.result) fields.push({ text: String(v.result) });
+    if(v.reason) fields.push({ text: String(v.reason) });
+    if(v.nextAction) fields.push({ text: String(v.nextAction) });
+    if(v.note) fields.push({ text: String(v.note) });
+    (Array.isArray(v.offeredProducts) ? v.offeredProducts : []).forEach(function(op){
+      if(!op || !op.productId) return;
+      fields.push({ text: prodName(op.productId) });
+      let meta = 'پیشنهاد: ' + (HISTORY_REACTION_LABEL[op.reaction] || op.reaction || '');
+      if(op.reaction === 'rejected' && HISTORY_REASON_LABEL[op.rejectionReason]) meta += ' · ' + HISTORY_REASON_LABEL[op.rejectionReason];
+      fields.push({ text: meta });
+    });
+    events.push({ kind: 'visit', date: v.date || '', time: v.time || '', title: 'ویزیت' + (v.result ? ' · ' + v.result : ''),
+      amount: null, fields: fields, target: { kind: 'visit', id: v.id } });
+  });
+
+  return events;
+}
+
+/* Public: search one customer's history. Returns newest first.
+   Result: [{ kind, date, time, title, amount, target, lines: [{ text, ranges }] }] */
+function customerHistorySearch(cid, query){
+  const tokens = parseHistoryQuery(query);
+  if(!tokens.length || !cid) return [];
+  const out = [];
+  _historyEvents(cid).forEach(function(ev){
+    const lines = [];
+    let allTokens = true;
+    tokens.forEach(function(tok){
+      let hit = false;
+      ev.fields.forEach(function(f){
+        const r = historyFieldRanges(f, tok);
+        if(r.length) hit = true;
+      });
+      if(!hit) allTokens = false;
+    });
+    if(!allTokens) return;
+    ev.fields.forEach(function(f){
+      const ranges = [];
+      tokens.forEach(function(tok){ historyFieldRanges(f, tok).forEach(function(r){ ranges.push(r); }); });
+      if(ranges.length){
+        ranges.sort(function(a, b){ return a[0] - b[0]; });
+        lines.push({ text: f.text, ranges: ranges });
+      }
+    });
+    out.push({ kind: ev.kind, date: ev.date, time: ev.time, title: ev.title, amount: ev.amount, target: ev.target, lines: lines });
+  });
+  out.sort(function(a, b){
+    const ka = (a.date || '') + ' ' + (a.time || ''), kb = (b.date || '') + ' ' + (b.time || '');
+    return ka < kb ? 1 : (ka > kb ? -1 : 0);
+  });
+  return out.slice(0, HISTORY_SEARCH_LIMIT);
+}
