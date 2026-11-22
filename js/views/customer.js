@@ -880,6 +880,110 @@
     });
   }
 
+  function customerHistoryNormalize(value) {
+    var s = String(value == null ? '' : value).toLowerCase();
+    var fa = '۰۱۲۳۴۵۶۷۸۹', ar = '٠١٢٣٤٥٦٧٨٩';
+    s = s.replace(/[۰-۹]/g, function (d) { return String(fa.indexOf(d)); })
+      .replace(/[٠-٩]/g, function (d) { return String(ar.indexOf(d)); })
+      .replace(/[٬,،]/g, '').replace(/\s+/g, ' ').trim();
+    return s;
+  }
+
+  function customerHistoryQueryVariants(query) {
+    var q = customerHistoryNormalize(query);
+    var variants = [q];
+    var million = q.match(/^(\d+(?:\.\d+)?)\s*(میلیون|مليون|میلیارد)?(?:\s*(?:تومان|تومن|ت))?$/);
+    if (million && (million[2] === 'میلیون' || million[2] === 'مليون')) variants.push(String(Number(million[1]) * 1000000));
+    if (million && million[2] === 'میلیارد') variants.push(String(Number(million[1]) * 1000000000));
+    return variants.filter(Boolean);
+  }
+
+  function customerHistoryProductName(productId) {
+    var product = (data.products || []).find(function (x) { return x && String(x.id) === String(productId); });
+    return product ? product.name : String(productId || '');
+  }
+
+  function customerHistoryBuildRecords(cid, invs, pays, visits) {
+    var records = [];
+    (invs || []).forEach(function (inv) {
+      var itemBits = (inv.items || []).map(function (it) {
+        var name = customerHistoryProductName(it.productId);
+        return name + ' ' + (it.qty == null ? '' : it.qty) + ' ' + (it.unitPrice == null ? '' : it.unitPrice);
+      });
+      var total = Number(inv.total || 0);
+      records.push({
+        type: 'invoice', date: inv.date || '', time: inv.time || '',
+        title: 'فاکتور ' + (inv.number ? 'شماره ' + inv.number : ''),
+        detail: itemBits.join('، ') || 'فاکتور فروش',
+        amount: total, searchable: [inv.number, inv.date, inv.time, inv.total, total, inv.buyerName, itemBits.join(' ')].join(' '),
+        href: '#/invoice?id=' + encodeURIComponent(inv.id) + '&fromCustomer=' + encodeURIComponent(cid) + '&fromSection=invoices'
+      });
+    });
+    (pays || []).forEach(function (pay) {
+      var method = paymentMethodLabel(pay.method);
+      var returns = (pay.returnItems || []).map(function (it) {
+        return customerHistoryProductName(it.productId) + ' ' + (it.qty == null ? '' : it.qty);
+      });
+      var isReturn = pay.method === 'return' || returns.length > 0;
+      records.push({
+        type: isReturn ? 'return' : 'payment', date: pay.date || '', time: pay.time || '',
+        title: isReturn ? 'برگشت کالا' : 'پرداخت ' + method,
+        detail: [method, pay.note || '', returns.join('، ')].filter(Boolean).join(' — '),
+        amount: Number(pay.amount || 0), searchable: [pay.date, pay.time, method, pay.note, pay.amount, Number(pay.amount || 0), returns.join(' ')].join(' '),
+        href: pay.invoiceId ? '#/invoice?id=' + encodeURIComponent(pay.invoiceId) + '&fromCustomer=' + encodeURIComponent(cid) + '&fromSection=payments' : '',
+        paymentId: pay.id,
+        editable: !pay.invoiceId && ['cash', 'card', 'transfer', 'discount'].includes(pay.method)
+      });
+    });
+    var reaction = { accepted: 'قبول', rejected: 'رد', deferred: 'بعداً' };
+    var reasons = { price: 'قیمت', quality: 'کیفیت', competitor: 'رقیب', unavailable: 'ناموجود', no_need: 'عدم نیاز', still_stock: 'موجود داشت', other: 'سایر' };
+    (visits || []).forEach(function (visit) {
+      var offers = (visit.offeredProducts || []).map(function (op) {
+        return [customerHistoryProductName(op.productId), reaction[op.reaction] || op.reaction || '', reasons[op.rejectionReason] || op.rejectionReason || ''].filter(Boolean).join(' — ');
+      });
+      var detail = [visit.reason, visit.opportunity, visit.threat, visit.nextAction, (visit.tags || []).join('، '), offers.join('؛ '), visit.note].filter(Boolean).join(' — ');
+      records.push({
+        type: 'visit', date: visit.date || '', time: visit.time || '',
+        title: visit.result || 'ویزیت', detail: detail || 'ثبت ویزیت',
+        amount: null, searchable: [visit.date, visit.time, visit.result, visit.reason, visit.opportunity, visit.threat, visit.nextAction, (visit.tags || []).join(' '), offers.join(' '), visit.note].join(' '),
+        href: '#/customer?id=' + encodeURIComponent(cid) + '&section=visits'
+      });
+    });
+    records.sort(function (a, b) {
+      return String(b.date).localeCompare(String(a.date)) || String(b.time).localeCompare(String(a.time));
+    });
+    return records;
+  }
+
+  function customerHistoryRenderResults(records, query) {
+    var target = document.getElementById('customer-history-results');
+    if (!target) return;
+    var q = customerHistoryNormalize(query);
+    if (!q) {
+      target.innerHTML = '<div class="sub" style="padding:8px 2px;">نام کالا، مبلغ یا عبارت را جست‌وجو کن.</div>';
+      return;
+    }
+    var variants = customerHistoryQueryVariants(query);
+    var matches = records.filter(function (record) {
+      var corpus = customerHistoryNormalize(record.searchable + ' ' + record.title + ' ' + record.detail + ' ' + (record.amount == null ? '' : record.amount));
+      return variants.some(function (variant) { return variant && corpus.indexOf(variant) !== -1; });
+    });
+    if (!matches.length) {
+      target.innerHTML = '<div class="empty" style="padding:12px 0;">نتیجه‌ای در فاکتورها، پرداخت‌ها و ویزیت‌های این مشتری پیدا نشد.</div>';
+      return;
+    }
+    var labels = { invoice: ['فاکتور', 'accent-olive'], payment: ['پرداخت', 'accent-amber'], return: ['برگشت', 'accent-rust'], visit: ['ویزیت', ''] };
+    target.innerHTML = '<div class="customer-tx-list customer-history-search-list">' + matches.map(function (record) {
+      var meta = labels[record.type] || labels.visit;
+      var date = record.date ? faDate(record.date) : 'بدون تاریخ';
+      var amount = record.amount != null ? '<span class="amount">' + toman(record.amount) + ' ت</span>' : '';
+      var content = '<span class="name"><span class="sub" style="display:inline-block;margin:0 0 3px;"><span class="' + meta[1] + '">' + meta[0] + '</span></span>' + esc(record.title) + '<span class="sub">' + esc(date + (record.time ? ' — ' + record.time : '')) + '</span>' + (record.detail ? '<span class="sub customer-history-detail">' + esc(record.detail) + '</span>' : '') + '</span><span class="filler"></span>' + amount;
+      if (record.href) return '<a class="ledger-row" href="' + record.href + '" style="text-decoration:none;color:inherit;">' + content + '</a>';
+      if (record.editable && record.paymentId) return '<div class="ledger-row" data-edit-payment="' + esc(record.paymentId) + '" role="button" tabindex="0" style="cursor:pointer;">' + content + '</div>';
+      return '<div class="ledger-row" style="cursor:default;">' + content + '</div>';
+    }).join('') + '</div><div class="sub" style="padding:8px 2px;">' + matches.length + ' نتیجه</div>';
+  }
+
   function drawCustomerPage(root, ctx) {
     if (!root) return;
     root.classList.add('customer-detail-view'); // UPDATED: Added for CSS scoping
@@ -1466,6 +1570,8 @@
         '</div>' +
       '</div>' +
 
+      (currentSection ? '' : '<div class="customer-history-search field" style="margin:0 0 14px;"><input id="customer-history-search" type="search" placeholder="جست‌وجو در فاکتورها، پرداخت‌ها و ویزیت‌ها..." autocomplete="off" aria-label="جست‌وجوی تاریخچه مشتری"><div id="customer-history-results" aria-live="polite"><div class="sub" style="padding:8px 2px;">نام کالا، مبلغ یا عبارت را جست‌وجو کن.</div></div></div>') +
+
       topAlertHtml +
       promiseCardHtml +
       storyHtml +
@@ -1504,6 +1610,20 @@
         '</div>') +
       sectionBodyHtml;
 
+    if (!root._customerHistorySearchBound) {
+      root._customerHistorySearchBound = true;
+      root.addEventListener('input', function (event) {
+        var input = event.target && event.target.closest ? event.target.closest('#customer-history-search') : null;
+        if (!input) return;
+        var activeCustomer = (data.customers || []).find(function (x) { return x && String(x.id) === String(currentCustomerId); });
+        if (!activeCustomer) return;
+        var searchInvoices = customerInvoices(activeCustomer.id, null) || [];
+        var searchPayments = customerPayments(activeCustomer.id, null) || [];
+        var searchVisits = activeCustomer.visits || [];
+        var records = customerHistoryBuildRecords(activeCustomer.id, searchInvoices, searchPayments, searchVisits);
+        customerHistoryRenderResults(records, input.value);
+      });
+    }
     if (typeof PromiseUI !== 'undefined') PromiseUI.bind(root, c.id);
     if (typeof DeliveryUI !== 'undefined') DeliveryUI.bind(root, c.id);
     if (typeof VisitPlanUI !== 'undefined') VisitPlanUI.bind(root, c.id);
@@ -2038,197 +2158,6 @@
     if (typeof setHeaderTitle === 'function') setHeaderTitle(PUSH_SECTION_LABELS[currentSection] || '', {});
   }
 
-  /* ---------------------------------------------------------------
-     v118 — جست‌وجو در تاریخچهٔ همین مشتری (فقط خواندنی).
-     موتور در calc.js (customerHistorySearch) است؛ این بخش فقط نمایش و هدایت است.
-     هایلایت با createTextNode/span انجام می‌شود؛ هیچ متن داده‌ای به‌صورت HTML تفسیر نمی‌شود.
-     --------------------------------------------------------------- */
-  var HIST_SEARCH_KIND_LABEL = { invoice: 'خرید', payment: 'پرداخت', visit: 'ویزیت' };
-  var historySearchState = { root: null, btn: null, overlay: null, cid: null, lastFocus: null, timer: null };
-
-  function historyHighlightedNode(text, ranges) {
-    var frag = document.createDocumentFragment();
-    var pos = 0;
-    (ranges || []).forEach(function (r) {
-      if (r[0] < pos) return;                                   // overlapping ranges: keep first
-      if (r[0] > pos) frag.appendChild(document.createTextNode(text.slice(pos, r[0])));
-      var mark = document.createElement('mark');
-      mark.className = 'cs-hit';
-      mark.textContent = text.slice(r[0], r[1]);
-      frag.appendChild(mark);
-      pos = r[1];
-    });
-    if (pos < text.length) frag.appendChild(document.createTextNode(text.slice(pos)));
-    return frag;
-  }
-
-  function historyAmountText(n) {
-    if (n == null) return '';
-    return (typeof toman === 'function' ? toman(Math.abs(n)) : String(n)) + ' ت';
-  }
-
-  function renderHistoryResults(list, query) {
-    var ul = historySearchState.overlay.querySelector('.cs-results');
-    var hint = historySearchState.overlay.querySelector('.cs-hint');
-    ul.innerHTML = '';
-    if (!query.trim()) { hint.textContent = 'عبارت جست‌وجو را وارد کنید: نام کالا، مبلغ، یادداشت ویزیت…'; hint.hidden = false; return; }
-    if (!list.length) { hint.textContent = 'نتیجه‌ای برای «' + query.trim() + '» پیدا نشد.'; hint.hidden = false; return; }
-    hint.hidden = true;
-    list.forEach(function (res, idx) {
-      var li = document.createElement('li');
-      li.className = 'cs-item';
-      var btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'cs-item-btn';
-      btn.setAttribute('data-kind', res.target.kind);
-      btn.setAttribute('data-id', res.target.id || '');
-      if (res.target.invoiceId) btn.setAttribute('data-invoice', res.target.invoiceId);
-      btn.setAttribute('data-idx', String(idx));
-
-      var head = document.createElement('div');
-      head.className = 'cs-item-head';
-      var kind = document.createElement('span');
-      kind.className = 'cs-kind cs-kind-' + res.kind;
-      kind.textContent = HIST_SEARCH_KIND_LABEL[res.kind] || '';
-      var when = document.createElement('span');
-      when.className = 'cs-when';
-      when.textContent = (typeof faDate === 'function' ? faDate(res.date) : res.date) + (res.time ? ' · ' + res.time : '');
-      head.appendChild(kind);
-      head.appendChild(when);
-      if (res.amount != null) {
-        var amt = document.createElement('span');
-        amt.className = 'cs-amount';
-        amt.textContent = historyAmountText(res.amount);
-        head.appendChild(amt);
-      }
-      btn.appendChild(head);
-
-      var title = document.createElement('div');
-      title.className = 'cs-item-title';
-      title.textContent = res.title;
-      btn.appendChild(title);
-
-      res.lines.forEach(function (ln) {
-        var row = document.createElement('div');
-        row.className = 'cs-line';
-        row.appendChild(historyHighlightedNode(ln.text, ln.ranges));
-        btn.appendChild(row);
-      });
-      li.appendChild(btn);
-      ul.appendChild(li);
-    });
-  }
-
-  function runHistorySearch() {
-    var o = historySearchState.overlay;
-    if (!o) return;
-    var q = o.querySelector('.cs-input').value;
-    o.querySelector('.cs-clear').hidden = !q;
-    var list = (q.trim() && typeof customerHistorySearch === 'function') ? customerHistorySearch(historySearchState.cid, q) : [];
-    renderHistoryResults(list, q);
-  }
-
-  function closeHistorySearch(restoreFocus) {
-    var st = historySearchState;
-    if (!st.overlay) return;
-    var o = st.overlay;
-    st.overlay = null;
-    o.classList.remove('is-open');
-    setTimeout(function () { if (o.parentNode) o.parentNode.removeChild(o); }, 220);
-    document.body.classList.remove('cs-search-open');
-    if (restoreFocus && st.btn) { try { st.btn.focus({ preventScroll: true }); } catch (e) { /* ignore */ } }
-  }
-
-  function openHistorySearch(cid) {
-    if (historySearchState.overlay) return;
-    historySearchState.cid = cid;
-    historySearchState.lastFocus = document.activeElement;
-    var o = document.createElement('div');
-    o.className = 'cs-search';
-    o.setAttribute('role', 'dialog');
-    o.setAttribute('aria-modal', 'true');
-    o.setAttribute('aria-label', 'جست‌وجو در تاریخچه مشتری');
-    o.innerHTML =
-      '<div class="cs-bar">' +
-        '<div class="cs-field">' +
-          '<svg class="cs-field-ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg>' +
-          '<input class="cs-input" type="search" inputmode="search" enterkeyhint="search" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="جست‌وجو در تاریخچه این مشتری" aria-label="عبارت جست‌وجو">' +
-          '<button type="button" class="cs-clear" aria-label="پاک‌کردن" hidden>' +
-            '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="currentColor"><circle cx="12" cy="12" r="10"/><path d="m8.5 8.5 7 7m0-7-7 7" stroke-width="2" stroke-linecap="round"/></svg>' +
-          '</button>' +
-        '</div>' +
-        '<button type="button" class="cs-close">بستن</button>' +
-      '</div>' +
-      '<p class="cs-hint"></p>' +
-      '<ul class="cs-results" role="list"></ul>';
-    document.body.appendChild(o);
-    historySearchState.overlay = o;
-    document.body.classList.add('cs-search-open');
-    // open animation: class is added on the next frame so the transition runs
-    requestAnimationFrame(function () { o.classList.add('is-open'); });
-
-    var input = o.querySelector('.cs-input');
-    input.focus({ preventScroll: true });                       // synchronous, inside the tap: keeps the iOS keyboard
-    input.addEventListener('input', function () {
-      clearTimeout(historySearchState.timer);
-      historySearchState.timer = setTimeout(runHistorySearch, 90);
-    });
-    o.querySelector('.cs-clear').addEventListener('click', function () {
-      input.value = ''; runHistorySearch(); input.focus({ preventScroll: true });
-    });
-    o.querySelector('.cs-close').addEventListener('click', function () { closeHistorySearch(true); });
-    o.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeHistorySearch(true); });
-    o.querySelector('.cs-results').addEventListener('click', function (e) {
-      var b = e.target.closest ? e.target.closest('.cs-item-btn') : null;
-      if (!b) return;
-      openHistoryTarget(b.getAttribute('data-kind'), b.getAttribute('data-id'), b.getAttribute('data-invoice'));
-    });
-    runHistorySearch();
-  }
-
-  function openHistoryTarget(kind, id, invoiceId) {
-    var cid = historySearchState.cid;
-    closeHistorySearch(false);
-    if (kind === 'invoice' && id && typeof AppRouter !== 'undefined') {
-      AppRouter.navigate('/invoice', { id: id });
-    } else if (kind === 'payment') {
-      if (invoiceId && typeof AppRouter !== 'undefined') { AppRouter.navigate('/invoice', { id: invoiceId }); return; }
-      if (typeof AppRouter !== 'undefined') AppRouter.navigate('/customer', { id: cid, section: 'payments' });
-      setTimeout(function () {
-        if (typeof openEditStandalonePayment === 'function' && id) openEditStandalonePayment(cid, id);
-      }, 350);
-    } else if (kind === 'visit' && typeof AppRouter !== 'undefined') {
-      AppRouter.navigate('/customer', { id: cid, section: 'visits' });
-    }
-  }
-
-  /* Header search button (same circular header style as the Back and + buttons). Added while the
-     customer detail view is mounted and removed on unmount, so no other page is affected. */
-  function ensureHistorySearchButton(cid) {
-    var header = document.querySelector('header');
-    if (!header) return;
-    var btn = header.querySelector('.hdr-search');
-    if (!btn) {
-      btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'hdr-btn hdr-search';
-      btn.setAttribute('aria-label', 'جست‌وجو در تاریخچه مشتری');
-      btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.15" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg>';
-      btn.addEventListener('click', function () { openHistorySearch(historySearchState.cid); });
-      header.appendChild(btn);
-    }
-    historySearchState.btn = btn;
-    historySearchState.cid = cid;
-  }
-
-  function removeHistorySearchButton() {
-    var header = document.querySelector('header');
-    var btn = header && header.querySelector('.hdr-search');
-    if (btn) btn.parentNode.removeChild(btn);
-    historySearchState.btn = null;
-    closeHistorySearch(false);
-  }
-
   function mount(root, params) {
     let refreshToken = null;
     if (!root) return function () {};
@@ -2239,7 +2168,6 @@
 
     currentCustomerId = params && params.id ? params.id : null;
     currentSection = params && params.section ? String(params.section) : null;
-    ensureHistorySearchButton(currentCustomerId);
     function refreshCustomer() {
       // Per-cycle, RAM-only Context: shared only so that reconcileWatchLifecycle's
       // Watch-observation pass and the subsequent Priority/Signals pass (both of
@@ -2264,7 +2192,6 @@
       refreshToken = null;
       currentCustomerId = null;
       currentSection = null;
-      removeHistorySearchButton();
       root.classList.remove('customer-detail-view'); // UPDATED: Added for CSS scoping cleanup
       root.innerHTML = '';
       rootEl = null;
