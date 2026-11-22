@@ -880,6 +880,110 @@
     });
   }
 
+  function customerHistoryNormalize(value) {
+    var s = String(value == null ? '' : value).toLowerCase();
+    var fa = '۰۱۲۳۴۵۶۷۸۹', ar = '٠١٢٣٤٥٦٧٨٩';
+    s = s.replace(/[۰-۹]/g, function (d) { return String(fa.indexOf(d)); })
+      .replace(/[٠-٩]/g, function (d) { return String(ar.indexOf(d)); })
+      .replace(/[٬,،]/g, '').replace(/\s+/g, ' ').trim();
+    return s;
+  }
+
+  function customerHistoryQueryVariants(query) {
+    var q = customerHistoryNormalize(query);
+    var variants = [q];
+    var million = q.match(/^(\d+(?:\.\d+)?)\s*(میلیون|مليون|میلیارد)?(?:\s*(?:تومان|تومن|ت))?$/);
+    if (million && (million[2] === 'میلیون' || million[2] === 'مليون')) variants.push(String(Number(million[1]) * 1000000));
+    if (million && million[2] === 'میلیارد') variants.push(String(Number(million[1]) * 1000000000));
+    return variants.filter(Boolean);
+  }
+
+  function customerHistoryProductName(productId) {
+    var product = (data.products || []).find(function (x) { return x && String(x.id) === String(productId); });
+    return product ? product.name : String(productId || '');
+  }
+
+  function customerHistoryBuildRecords(cid, invs, pays, visits) {
+    var records = [];
+    (invs || []).forEach(function (inv) {
+      var itemBits = (inv.items || []).map(function (it) {
+        var name = customerHistoryProductName(it.productId);
+        return name + ' ' + (it.qty == null ? '' : it.qty) + ' ' + (it.unitPrice == null ? '' : it.unitPrice);
+      });
+      var total = Number(inv.total || 0);
+      records.push({
+        type: 'invoice', date: inv.date || '', time: inv.time || '',
+        title: 'فاکتور ' + (inv.number ? 'شماره ' + inv.number : ''),
+        detail: itemBits.join('، ') || 'فاکتور فروش',
+        amount: total, searchable: [inv.number, inv.date, inv.time, inv.total, total, inv.buyerName, itemBits.join(' ')].join(' '),
+        href: '#/invoice?id=' + encodeURIComponent(inv.id) + '&fromCustomer=' + encodeURIComponent(cid) + '&fromSection=invoices'
+      });
+    });
+    (pays || []).forEach(function (pay) {
+      var method = paymentMethodLabel(pay.method);
+      var returns = (pay.returnItems || []).map(function (it) {
+        return customerHistoryProductName(it.productId) + ' ' + (it.qty == null ? '' : it.qty);
+      });
+      var isReturn = pay.method === 'return' || returns.length > 0;
+      records.push({
+        type: isReturn ? 'return' : 'payment', date: pay.date || '', time: pay.time || '',
+        title: isReturn ? 'برگشت کالا' : 'پرداخت ' + method,
+        detail: [method, pay.note || '', returns.join('، ')].filter(Boolean).join(' — '),
+        amount: Number(pay.amount || 0), searchable: [pay.date, pay.time, method, pay.note, pay.amount, Number(pay.amount || 0), returns.join(' ')].join(' '),
+        href: pay.invoiceId ? '#/invoice?id=' + encodeURIComponent(pay.invoiceId) + '&fromCustomer=' + encodeURIComponent(cid) + '&fromSection=payments' : '',
+        paymentId: pay.id,
+        editable: !pay.invoiceId && ['cash', 'card', 'transfer', 'discount'].includes(pay.method)
+      });
+    });
+    var reaction = { accepted: 'قبول', rejected: 'رد', deferred: 'بعداً' };
+    var reasons = { price: 'قیمت', quality: 'کیفیت', competitor: 'رقیب', unavailable: 'ناموجود', no_need: 'عدم نیاز', still_stock: 'موجود داشت', other: 'سایر' };
+    (visits || []).forEach(function (visit) {
+      var offers = (visit.offeredProducts || []).map(function (op) {
+        return [customerHistoryProductName(op.productId), reaction[op.reaction] || op.reaction || '', reasons[op.rejectionReason] || op.rejectionReason || ''].filter(Boolean).join(' — ');
+      });
+      var detail = [visit.reason, visit.opportunity, visit.threat, visit.nextAction, (visit.tags || []).join('، '), offers.join('؛ '), visit.note].filter(Boolean).join(' — ');
+      records.push({
+        type: 'visit', date: visit.date || '', time: visit.time || '',
+        title: visit.result || 'ویزیت', detail: detail || 'ثبت ویزیت',
+        amount: null, searchable: [visit.date, visit.time, visit.result, visit.reason, visit.opportunity, visit.threat, visit.nextAction, (visit.tags || []).join(' '), offers.join(' '), visit.note].join(' '),
+        href: '#/customer?id=' + encodeURIComponent(cid) + '&section=visits'
+      });
+    });
+    records.sort(function (a, b) {
+      return String(b.date).localeCompare(String(a.date)) || String(b.time).localeCompare(String(a.time));
+    });
+    return records;
+  }
+
+  function customerHistoryRenderResults(records, query) {
+    var target = document.getElementById('customer-history-results');
+    if (!target) return;
+    var q = customerHistoryNormalize(query);
+    if (!q) {
+      target.innerHTML = '<div class="sub" style="padding:8px 2px;">نام کالا، مبلغ یا عبارت را جست‌وجو کن.</div>';
+      return;
+    }
+    var variants = customerHistoryQueryVariants(query);
+    var matches = records.filter(function (record) {
+      var corpus = customerHistoryNormalize(record.searchable + ' ' + record.title + ' ' + record.detail + ' ' + (record.amount == null ? '' : record.amount));
+      return variants.some(function (variant) { return variant && corpus.indexOf(variant) !== -1; });
+    });
+    if (!matches.length) {
+      target.innerHTML = '<div class="empty" style="padding:12px 0;">نتیجه‌ای در فاکتورها، پرداخت‌ها و ویزیت‌های این مشتری پیدا نشد.</div>';
+      return;
+    }
+    var labels = { invoice: ['فاکتور', 'accent-olive'], payment: ['پرداخت', 'accent-amber'], return: ['برگشت', 'accent-rust'], visit: ['ویزیت', ''] };
+    target.innerHTML = '<div class="customer-tx-list customer-history-search-list">' + matches.map(function (record) {
+      var meta = labels[record.type] || labels.visit;
+      var date = record.date ? faDate(record.date) : 'بدون تاریخ';
+      var amount = record.amount != null ? '<span class="amount">' + toman(record.amount) + ' ت</span>' : '';
+      var content = '<span class="name"><span class="sub" style="display:inline-block;margin:0 0 3px;"><span class="' + meta[1] + '">' + meta[0] + '</span></span>' + esc(record.title) + '<span class="sub">' + esc(date + (record.time ? ' — ' + record.time : '')) + '</span>' + (record.detail ? '<span class="sub customer-history-detail">' + esc(record.detail) + '</span>' : '') + '</span><span class="filler"></span>' + amount;
+      if (record.href) return '<a class="ledger-row" href="' + record.href + '" style="text-decoration:none;color:inherit;">' + content + '</a>';
+      if (record.editable && record.paymentId) return '<div class="ledger-row" data-edit-payment="' + esc(record.paymentId) + '" role="button" tabindex="0" style="cursor:pointer;">' + content + '</div>';
+      return '<div class="ledger-row" style="cursor:default;">' + content + '</div>';
+    }).join('') + '</div><div class="sub" style="padding:8px 2px;">' + matches.length + ' نتیجه</div>';
+  }
+
   function drawCustomerPage(root, ctx) {
     if (!root) return;
     root.classList.add('customer-detail-view'); // UPDATED: Added for CSS scoping
@@ -1466,6 +1570,8 @@
         '</div>' +
       '</div>' +
 
+      (currentSection ? '' : '<div class="customer-history-search field" style="margin:0 0 14px;"><input id="customer-history-search" type="search" placeholder="جست‌وجو در فاکتورها، پرداخت‌ها و ویزیت‌ها..." autocomplete="off" aria-label="جست‌وجوی تاریخچه مشتری"><div id="customer-history-results" aria-live="polite"><div class="sub" style="padding:8px 2px;">نام کالا، مبلغ یا عبارت را جست‌وجو کن.</div></div></div>') +
+
       topAlertHtml +
       promiseCardHtml +
       storyHtml +
@@ -1504,6 +1610,20 @@
         '</div>') +
       sectionBodyHtml;
 
+    if (!root._customerHistorySearchBound) {
+      root._customerHistorySearchBound = true;
+      root.addEventListener('input', function (event) {
+        var input = event.target && event.target.closest ? event.target.closest('#customer-history-search') : null;
+        if (!input) return;
+        var activeCustomer = (data.customers || []).find(function (x) { return x && String(x.id) === String(currentCustomerId); });
+        if (!activeCustomer) return;
+        var searchInvoices = customerInvoices(activeCustomer.id, null) || [];
+        var searchPayments = customerPayments(activeCustomer.id, null) || [];
+        var searchVisits = activeCustomer.visits || [];
+        var records = customerHistoryBuildRecords(activeCustomer.id, searchInvoices, searchPayments, searchVisits);
+        customerHistoryRenderResults(records, input.value);
+      });
+    }
     if (typeof PromiseUI !== 'undefined') PromiseUI.bind(root, c.id);
     if (typeof DeliveryUI !== 'undefined') DeliveryUI.bind(root, c.id);
     if (typeof VisitPlanUI !== 'undefined') VisitPlanUI.bind(root, c.id);
