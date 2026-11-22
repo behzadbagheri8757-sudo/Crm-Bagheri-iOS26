@@ -19,39 +19,6 @@ main .empty{margin:14px 0;}
 #main.customer-detail-view .customer-trend-card{margin:0 0 16px;padding:13px 14px 11px;border:1px solid var(--vg-color-border);border-radius:var(--vg-radius-raised);background:var(--vg-color-surface);box-shadow:var(--vg-shadow-group);}
 #main.customer-detail-view .customer-trend-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:7px;}
 #main.customer-detail-view .customer-trend-head>div{display:flex;align-items:baseline;gap:7px;min-width:0;}
-/* v118 — جست‌وجوی تاریخچهٔ مشتری (کادر و دکمه؛ توکن‌های موجود، RTL و Light/Dark خودکار) */
-header button.hdr-search{inset-inline-end:8px;}
-body.cs-search-open{overflow:hidden;}
-.cs-search{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;background:var(--vg-color-bg);padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);opacity:0;transform:translateY(12px);transition:opacity 200ms cubic-bezier(.22,1,.36,1),transform 220ms cubic-bezier(.22,1,.36,1);}
-.cs-search.is-open{opacity:1;transform:none;}
-@media (prefers-reduced-motion:reduce){.cs-search{transition:none;transform:none;}}
-.cs-bar{display:flex;align-items:center;gap:10px;padding:10px 14px 8px;}
-.cs-field{position:relative;flex:1;min-width:0;display:flex;align-items:center;height:40px;border-radius:12px;background:var(--vg-color-surface);box-shadow:0 1px 2px rgba(0,0,0,.06);padding-inline:34px 34px;}
-.cs-field-ico{position:absolute;inset-inline-start:10px;top:50%;transform:translateY(-50%);width:18px;height:18px;color:var(--vg-color-text-secondary);pointer-events:none;}
-.cs-field .cs-input{flex:1;min-width:0;height:100%;margin:0;padding:0;border:0;border-radius:0;outline:0;box-shadow:none;background:transparent;background-image:none;color:var(--vg-color-text);font:inherit;font-size:17px;min-height:0;}
-.cs-field .cs-input:focus{outline:none;border:0;box-shadow:none;background-image:none;}
-.cs-field .cs-input::-webkit-search-cancel-button,.cs-field .cs-input::-webkit-search-decoration{-webkit-appearance:none;display:none;}
-.cs-field .cs-input::placeholder{color:var(--vg-color-text-secondary);}
-.cs-clear{position:absolute;inset-inline-end:8px;top:50%;transform:translateY(-50%);width:20px;height:20px;padding:0;border:0;background:transparent;color:var(--vg-color-neutral);cursor:pointer;}
-.cs-clear[hidden]{display:none;}
-.cs-clear path{stroke:var(--vg-color-surface);}
-.cs-close{flex:none;border:0;background:transparent;color:var(--vg-color-primary);font:inherit;font-size:17px;padding:6px 2px;cursor:pointer;}
-.cs-hint{margin:6px 18px 4px;font-size:14px;color:var(--vg-color-text-secondary);}
-.cs-hint[hidden]{display:none;}
-.cs-results{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;list-style:none;margin:0;padding:4px 14px 24px;}
-.cs-item{margin:0 0 10px;}
-.cs-item-btn{display:block;width:100%;text-align:start;border:0;border-radius:14px;background:var(--vg-color-surface);padding:11px 13px;color:var(--vg-color-text);font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;}
-.cs-item-btn:active{background:var(--vg-color-surface-soft);}
-.cs-item-head{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--vg-color-text-secondary);}
-.cs-kind{padding:2px 8px;border-radius:999px;background:var(--vg-color-neutral-soft);color:var(--vg-color-neutral);font-weight:600;}
-.cs-kind-invoice{background:var(--vg-color-primary-soft);color:var(--vg-color-primary);}
-.cs-kind-payment{background:var(--vg-color-success-soft);color:var(--vg-color-success);}
-.cs-kind-visit{background:var(--vg-color-warning-soft);color:var(--vg-color-warning);}
-.cs-when{flex:1;min-width:0;}
-.cs-amount{font-variant-numeric:tabular-nums;color:var(--vg-color-text);font-weight:600;}
-.cs-item-title{margin-top:6px;font-size:15px;font-weight:600;}
-.cs-line{margin-top:4px;font-size:14px;line-height:1.5;color:var(--vg-color-text);overflow-wrap:anywhere;}
-.cs-hit{background:var(--vg-color-primary-soft);color:inherit;border-radius:4px;padding:0 2px;}
 #main.customer-detail-view .customer-trend-period{font-size:11px;color:var(--vg-color-text-muted);white-space:nowrap;}
 #main.customer-detail-view .customer-trend-head .label{margin:0;}
 #main.customer-detail-view .customer-trend-note{font-size:12px;color:var(--vg-color-text-muted);white-space:nowrap;}
