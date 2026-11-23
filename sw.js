@@ -27,6 +27,7 @@
    scrollY 1:1 and reverses identically. Removed the now-duplicate "داشبورد"
    <h2> inside Dashboard's own content — the header already shows it as the
    page title since the brand-name/page-title fix) */
+/* CHANGED: v119 -> v120 — single location capsule with drill-down sheet, grouped iOS rows for business type and questions, count line replaces summary cards. */
 /* CHANGED: v118 -> v119 — Shop evaluation list: search moved to top, target card compacted, location filters as glass capsules, sort moved left, numbered options and separators in evaluation, double-tap skip guard. New css/11-v119-prospects.css added to PRECACHE_URLS. */
 /* CHANGED: v63 -> v64 (Computation Bank is now part of the offline app shell. Added js/computation-bank.js to PRECACHE_URLS and bumped the shell cache version so the execution-scoped bank is available offline. No business logic changed.)
    */
