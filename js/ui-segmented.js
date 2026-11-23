@@ -25,6 +25,11 @@
       if (c.classList.contains('ios-on') !== yes) c.classList.toggle('ios-on', yes);
       if (yes) on = c;
     });
+    // ios-has-on لنز را نمایان می‌کند. (در نسخهٔ قبلی این کلاس جا افتاده بود و
+    // لنز همیشه opacity:0 می‌ماند.) فقط در صورت تغییر، کلاس عوض می‌شود تا حلقهٔ
+    // MutationObserver ایجاد نشود.
+    var hasOn = !!on;
+    if (seg.classList.contains('ios-has-on') !== hasOn) seg.classList.toggle('ios-has-on', hasOn);
     if (on && on.offsetWidth > 0) {
       seg.style.setProperty('--seg-x', on.offsetLeft + 'px');
       seg.style.setProperty('--seg-w', on.offsetWidth + 'px');
