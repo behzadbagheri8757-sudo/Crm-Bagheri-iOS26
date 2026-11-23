@@ -27,6 +27,7 @@
    scrollY 1:1 and reverses identically. Removed the now-duplicate "داشبورد"
    <h2> inside Dashboard's own content — the header already shows it as the
    page title since the brand-name/page-title fix) */
+/* CHANGED: v118 -> v119 — Shop evaluation list: search moved to top, target card compacted, location filters as glass capsules, sort moved left, numbered options and separators in evaluation, double-tap skip guard. New css/11-v119-prospects.css added to PRECACHE_URLS. */
 /* CHANGED: v63 -> v64 (Computation Bank is now part of the offline app shell. Added js/computation-bank.js to PRECACHE_URLS and bumped the shell cache version so the execution-scoped bank is available offline. No business logic changed.)
    */
 /* CHANGED: v61 -> v62 (offline-shell fix only: css/shamsi-calendar.css and
@@ -40,11 +41,14 @@
    entry. It was already in PRECACHE_URLS; no asset list, route, or business
    logic otherwise changed.) */
 /* CHANGED: v99 -> v100 (Quick View pre-visit summary: customer.js, app.js BagheriPresent.lastOfferMap export, additive CSS. No asset list or route changed.) */
+/* CHANGED: v116 -> v117 — Customer product purchase-history push page (derived read-only stats) and scoped CSS. No schema, stored data, accounting, stock or backup changes. */
 /* CHANGED: v112 -> v113 — Stage 2 UX: normalized buttons and states, accessible sheet focus handling, customer action layout, and keyboard-accessible report chart. UI-only; no CRM data or accounting behavior changed. */
 /* CHANGED: v111 -> v112 — UI typography, shared segmented filters, theme-aware form colors and validation states. Removed the obsolete bundled font asset from the offline precache. */
 /* Previous v110 -> v111 — 00-chrome.css and 10-disclosure.css were missing from PRECACHE_URLS (first load / offline showed unstyled header and disclosure surfaces until the network fetch finished). Both added; cache bumped so devices re-fetch the updated CSS instead of serving the stale cached copy. */
 /* CHANGED: v98 -> v99 (Soft iOS look: CSS-only visual refresh — tokens in visual-grammar.css and a new layer at the end of visual-grammar-pages.css. No asset list, route or business logic changed.) */
-const CACHE_NAME = 'baqeri-shell-v117';
+const CACHE_NAME = 'baqeri-shell-v119';
+
+/* CHANGED: v117 -> v118 — Restored unified section-heading styling from the blue patch on top of the product purchase-history baseline. No prospect-evaluation UX, segment, data, schema or business-logic changes. */
 
 /** App Shell — paths relative to this SW (same directory as index.html). */
 const PRECACHE_URLS = [
@@ -55,6 +59,7 @@ const PRECACHE_URLS = [
   './css/visual-grammar-pages.css',
   './css/00-chrome.css',
   './css/10-disclosure.css',
+  './css/11-v119-prospects.css',
   './css/shamsi-calendar.css',
   './js/shamsi-calendar.js',
   './js/models.js',
