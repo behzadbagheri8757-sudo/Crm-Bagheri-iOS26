@@ -1,6 +1,5 @@
-/* v119 — صفحهٔ ارزیابی مغازه‌ها (لیست مشتریان بالقوه) + جزئیات ارزیابی.
-   فقط استایل؛ بدون تغییر منطق. این فایل آخرین شیت است و عمداً با سلکتورهای
-   مشخص‌تر نوشته شده تا روی قواعد قبلی بنشیند. */
+/* v119/v120 — صفحهٔ ارزیابی مغازه‌ها (لیست مشتریان بالقوه) + فرم ارزیابی.
+   فقط استایل؛ بدون تغییر منطق. آخرین شیت است و با سلکتورهای مشخص نوشته شده. */
 
 /* 1) نوار جست‌وجو در کل پروژه: متن کوچک‌تر و نازک‌تر */
 input[type="search"],
@@ -8,7 +7,7 @@ input[placeholder*="جستجو"]{font-size:14px;font-weight:300;}
 input[type="search"]::placeholder,
 input[placeholder*="جستجو"]::placeholder{font-weight:300;}
 
-/* 2) کارت هدف: ارتفاع کمتر، شاخص‌ها در یک ردیف */
+/* 2) کارت هدف: کوتاه‌تر */
 #prospect-target .prospect-daily-target{padding:10px 12px;}
 #prospect-target .prospect-daily-target .pdt-head{margin-bottom:4px;}
 #prospect-target .prospect-daily-target .pdt-hero{flex-direction:row;align-items:baseline;justify-content:center;gap:6px;padding:0 0 4px;}
@@ -17,35 +16,48 @@ input[placeholder*="جستجو"]::placeholder{font-weight:300;}
 #prospect-target .prospect-daily-target .pdt-of,
 #prospect-target .prospect-daily-target .pdt-caption{font-size:12px;}
 
-/* 3) فیلترهای منطقه/مسیر/محله: کپسول شیشه‌ای iOS 26 به‌جای select */
-#main .pl-cap-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:0 0 8px;}
-#main .pl-cap{display:flex;align-items:center;gap:5px;min-width:0;min-height:36px;padding:5px 10px 5px 12px;border:1px solid var(--ios-glass-border, var(--vg-glass-border));border-radius:999px;background:var(--vg-glass-sheen),var(--vg-glass-tint);-webkit-backdrop-filter:var(--vg-glass-blur);backdrop-filter:var(--vg-glass-blur);box-shadow:var(--vg-glass-rim),0 1px 3px rgba(26,38,52,.06);color:var(--vg-color-text);font-family:inherit;font-size:12px;line-height:1.2;cursor:pointer;transition:transform var(--ios-touch, .15s) ease;}
+/* 3) ردیف ابزار: کپسول موقعیت (راست) + مرتب‌سازی کوچک (چپ) */
+#main .pl-toolbar{display:flex;align-items:center;gap:8px;margin:0 0 8px;}
+#main .pl-toolbar .pl-sort{display:flex;align-items:center;gap:6px;margin-inline-start:auto;}
+#main .pl-sort label{font-size:12px;color:var(--vg-color-text-muted);white-space:nowrap;}
+#main .pl-sort select{width:auto;min-width:0;height:32px;min-height:32px;margin:0;padding:4px 26px 4px 10px;font-size:12px;border-radius:999px;background-position:left 9px center;}
+
+#main .pl-cap{display:inline-flex;align-items:center;gap:6px;min-height:32px;max-width:100%;padding:4px 12px;border:1px solid var(--vg-glass-border);border-radius:999px;background:var(--vg-glass-sheen),var(--vg-glass-tint);-webkit-backdrop-filter:var(--vg-glass-blur);backdrop-filter:var(--vg-glass-blur);box-shadow:var(--vg-glass-rim),0 1px 3px rgba(26,38,52,.06);color:var(--vg-color-text);font-family:inherit;font-size:12px;line-height:1.2;cursor:pointer;}
 #main .pl-cap:active{transform:scale(.97);}
-#main .pl-cap::after{content:"";flex:none;width:5px;height:5px;margin-inline-start:auto;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:translateY(-2px) rotate(45deg);opacity:.5;}
-#main .pl-cap:disabled{opacity:.45;cursor:default;}
-#main .pl-cap-title{flex:none;color:var(--vg-color-text-muted);font-weight:400;white-space:nowrap;}
-#main .pl-cap-value{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;}
+#main .pl-cap-title{color:var(--vg-color-text-muted);font-weight:400;white-space:nowrap;}
+#main .pl-cap-value{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;max-width:140px;}
+#main .pl-cap::after{content:"";flex:none;width:5px;height:5px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:translateY(-2px) rotate(45deg);opacity:.5;}
 #main .pl-cap.is-set{border-color:var(--vg-color-primary);}
 #main .pl-cap.is-set .pl-cap-title,
 #main .pl-cap.is-set .pl-cap-value{color:var(--vg-color-primary);}
 
+#main #prospect-summary.pl-count{display:block;background:transparent;border:0;box-shadow:none;overflow:visible;padding:0 4px;margin:0 0 8px;font-size:12px;color:var(--vg-color-text-muted);font-variant-numeric:tabular-nums;}
+html[data-theme="dark"] #main #prospect-summary.pl-count{border:0;}
+
+/* برگهٔ موقعیت (drill-down) */
 .pl-sheet-title{margin:0 0 12px;text-align:center;font-size:17px;font-weight:600;color:var(--vg-color-text);}
-.pl-sheet-list{display:flex;flex-direction:column;gap:6px;max-height:60vh;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.pl-sheet-back{display:block;margin:0 0 6px;padding:4px 2px;border:0;background:transparent;color:var(--vg-color-primary);font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;}
+.pl-sheet-list{display:flex;flex-direction:column;gap:6px;max-height:58vh;overflow-y:auto;-webkit-overflow-scrolling:touch;}
 .pl-sheet-item{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:46px;padding:10px 14px;border:0;border-radius:14px;background:var(--vg-color-surface-soft);color:var(--vg-color-text);font-family:inherit;font-size:15px;font-weight:500;text-align:start;cursor:pointer;}
-.pl-sheet-item.is-selected{color:var(--vg-color-primary);font-weight:600;}
-.pl-sheet-check{flex:none;color:var(--vg-color-primary);font-weight:700;}
+.pl-sheet-check{flex:none;color:var(--vg-color-text-muted);font-size:18px;line-height:1;}
+.pl-sheet-manage{display:block;width:100%;margin-top:12px;min-height:44px;border:0;border-radius:14px;background:transparent;color:var(--vg-color-primary);font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;}
 
-/* 4) مرتب‌سازی: کوچک‌تر و در سمت چپ صفحه (در RTL، flex-end = چپ) */
-#main .tx-toolbar.pl-sort{display:flex;justify-content:flex-end;align-items:center;gap:6px;min-height:0;margin:0 0 10px;}
-#main .pl-sort .tx-toolbar-label{font-size:12px;}
-#main .pl-sort .tx-toolbar-select{width:auto;min-width:0;max-width:none;height:32px;min-height:32px;padding:4px 26px 4px 10px;font-size:12px;border-radius:999px;background-position:left 9px center;}
+/* 4) فرم ارزیابی: گزینه‌ها و کسب‌وکار به‌صورت لیست گروهی iOS با جداکننده */
+.eval-ios-group{display:flex;flex-direction:column;margin-top:8px;background:var(--vg-color-surface);border-radius:var(--vg-radius-soft);box-shadow:var(--vg-shadow-group);overflow:hidden;}
+.eval-ios-row{display:flex;align-items:center;gap:10px;width:100%;min-height:50px;padding:12px 14px;border:0;border-bottom:.5px solid rgba(31,41,55,.12);background:transparent;color:var(--vg-color-text);font-family:inherit;font-size:15px;font-weight:500;text-align:start;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+.eval-ios-row:last-child{border-bottom:0;}
+.eval-ios-row:active{background:var(--vg-color-surface-soft);}
+.eval-ios-row .eval-ios-label{flex:1 1 auto;min-width:0;line-height:1.5;}
+.eval-ios-row .eval-ios-check{flex:none;color:var(--vg-color-primary);font-weight:700;opacity:0;}
+.eval-ios-row.selected{color:var(--vg-color-primary);font-weight:600;}
+.eval-ios-row.selected .eval-ios-check{opacity:1;}
+.eval-ios-row.selected .eval-opt-num{background:var(--vg-color-primary);color:#fff;}
+html[data-theme="dark"] .eval-ios-row{border-bottom-color:rgba(255,255,255,.12);}
+.eval-opt-num{display:inline-flex;align-items:center;justify-content:center;flex:none;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:var(--vg-color-neutral-soft);color:var(--vg-color-text-muted);font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;}
 
-/* 5) خط جداکننده و شماره‌گذاری پاسخ‌ها */
+/* 5) پاسخ‌های خلاصه: جداکننده و شماره */
 .evaluation-answers-card .answer-row{border-bottom:1px solid rgba(31,41,55,.09);}
 .evaluation-answers-card .answer-row:last-child{border-bottom:0;}
 html[data-theme="dark"] .evaluation-answers-card .answer-row{border-bottom-color:rgba(255,255,255,.12);}
 .answer-index{display:inline-flex;align-items:center;justify-content:center;flex:none;min-width:24px;height:20px;padding:0 6px;border-radius:999px;background:var(--vg-color-primary-soft);color:var(--vg-color-primary);font-weight:600;font-size:11px;font-variant-numeric:tabular-nums;}
-.eval-opt-num{display:inline-flex;align-items:center;justify-content:center;flex:none;min-width:20px;height:20px;padding:0 5px;margin-inline-end:8px;border-radius:999px;background:var(--vg-color-neutral-soft);color:var(--vg-color-text-muted);font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;vertical-align:middle;}
-.eval-opt-num + *{vertical-align:middle;}
-.chip-opt.selected .eval-opt-num{background:rgba(255,255,255,.25);color:#fff;}
-.answer-a .eval-opt-num{margin-inline-end:6px;}
+.answer-a .eval-opt-num{margin-inline-end:6px;min-width:18px;height:18px;font-size:10px;vertical-align:middle;}
