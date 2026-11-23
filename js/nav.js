@@ -1158,6 +1158,14 @@ function updateHeaderCondensedState(){
   const y = window.scrollY || window.pageYOffset || 0;
   const progress = Math.max(0, Math.min(1, y / HEADER_COLLAPSE_RANGE));
   header.style.setProperty('--header-progress', String(progress));
+  const condensed = progress >= 0.5;
+  header.classList.toggle('header-condensed', condensed);
+  const date = header.querySelector('#header-date');
+  if(date && header.classList.contains('header-root')){
+    const fullText = date.dataset.fullText || date.textContent || '';
+    const shortText = date.dataset.shortText || '';
+    date.textContent = condensed && shortText ? shortText : fullText;
+  }
 }
 
 /* iOS Large Title collapse: the header starts large (Phase 6). As the page
@@ -1197,10 +1205,17 @@ function ensureHeaderDate(){
     const now = new Date();
     const weekday = FA_WEEKDAYS[now.getDay()] || '';
     const dayStr = (typeof enToFaDigits === 'function') ? enToFaDigits(String(jd)) : String(jd);
+    const monthStr = (typeof enToFaDigits === 'function') ? enToFaDigits(String(jm)) : String(jm);
     const yearStr = (typeof enToFaDigits === 'function') ? enToFaDigits(String(jy)) : String(jy);
-    el.textContent = weekday
+    const fullText = weekday
       ? (weekday + '، ' + dayStr + ' ' + monthName + ' ' + yearStr)
       : (dayStr + ' ' + monthName + ' ' + yearStr);
+    el.dataset.fullText = fullText;
+    el.dataset.shortText = dayStr + '/' + monthStr + '/' + yearStr;
+    const header = el.closest('header');
+    el.textContent = header && header.classList.contains('header-condensed')
+      ? el.dataset.shortText
+      : fullText;
   }catch(e){
     el.textContent = '';
   }
