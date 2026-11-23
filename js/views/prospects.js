@@ -135,8 +135,7 @@
     else if (pSort === 'newest' || pSort === 'last_evaluation') rows.sort((a,b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
     else rows.sort((a,b) => b.latestScore - a.latestScore);
 
-    sum.innerHTML = `<div class="card"><div class="label">تعداد مغازه (فیلتر)</div><div class="value">${enToFaDigits(String(rows.length))}</div></div>
-      <div class="card"><div class="label">کل مغازه‌ها</div><div class="value">${enToFaDigits(String(prospectState.shops.length))}</div></div>`;
+    sum.innerHTML = enToFaDigits(String(rows.length)) + ' از ' + enToFaDigits(String(prospectState.shops.length)) + ' مغازه';
 
     if (!rows.length) {
       list.innerHTML = `<div class="empty">${prospectState.shops.length ? 'موردی پیدا نشد' : 'هنوز مغازه‌ای ثبت نشده. با + یا «ثبت مغازه» شروع کنید.'}</div>`;
@@ -160,34 +159,14 @@
     // Click listener is bound once in drawProspectsPage (not on every list re-render).
   }
 
-  function renderProspectLocFilterOptionsHTML() {
-    const regions = listRegions();
-    const routes = pLocFilter.regionId ? listRoutes(pLocFilter.regionId) : [];
-    const neighs = pLocFilter.routeId ? listNeighborhoods(pLocFilter.routeId) : [];
-    const opt = function (list, selId) {
-      return '<option value="">— همه —</option>' + list.map(function (x) {
-        return '<option value="' + esc(x.id) + '" ' + (x.id === selId ? 'selected' : '') + '>' + esc(x.name) + '</option>';
-      }).join('');
-    };
-    return (
-      '<div class="field"><label>منطقه</label><select id="p-loc-filter-region">' + opt(regions, pLocFilter.regionId) + '</select></div>' +
-      '<div class="field"><label>مسیر</label><select id="p-loc-filter-route" ' + (!pLocFilter.regionId ? 'disabled' : '') + '>' + opt(routes, pLocFilter.routeId) + '</select></div>' +
-      '<div class="field"><label>محله</label><select id="p-loc-filter-neigh" ' + (!pLocFilter.routeId ? 'disabled' : '') + '>' + opt(neighs, pLocFilter.neighborhoodId) + '</select></div>'
-    );
-  }
-
   function drawProspectsPage(root) {
     const chip = function (id, label) {
       return `<button type="button" class="chip ${pFilter === id ? 'active' : ''}" data-pf="${id}">${label}</button>`;
     };
     root.innerHTML = `
       <h2 class="section-title">مشتریان بالقوه</h2>
-      <div class="prospect-subnav">
-        <a class="btn small secondary" data-nav-evaluation href="#/evaluation">ثبت مغازه + ارزیابی</a>
-        <a class="btn small secondary" data-nav-routes href="#/locations">موقعیت‌ها</a>
-      </div>
+      <div class="field pl-search"><input id="prospect-search" placeholder="جستجوی نام مغازه..." value="${esc(pQuery)}" autocomplete="off"></div>
       <div id="prospect-target" class="cards" style="margin-bottom:12px;"></div>
-      <div class="field"><input id="prospect-search" placeholder="جستجوی نام مغازه..." value="${esc(pQuery)}" autocomplete="off"></div>
       <div class="chip-row segmented-control" id="prospect-chips">
         ${chip('all','همه')}
         ${chip('active','فعال')}
@@ -196,20 +175,21 @@
         ${chip('A','رتبه A')}
         ${chip('B','رتبه B')}
       </div>
-      <div class="tx-toolbar">
-        <label class="tx-toolbar-label" for="prospect-sort">مرتب‌سازی</label>
-        <select id="prospect-sort" class="tx-toolbar-select">
-          <option value="score_desc" ${pSort === 'score_desc' ? 'selected' : ''}>بیشترین امتیاز</option>
-          <option value="score_asc" ${pSort === 'score_asc' ? 'selected' : ''}>کمترین امتیاز</option>
-          <option value="name" ${pSort === 'name' ? 'selected' : ''}>نام</option>
-          <option value="last_evaluation" ${pSort === 'last_evaluation' ? 'selected' : ''}>آخرین ارزیابی</option>
-        </select>
+      <div class="pl-toolbar">
+        <button type="button" class="pl-cap" id="pl-loc-cap" aria-haspopup="dialog">
+          <span class="pl-cap-title">موقعیت</span><span class="pl-cap-value" id="pl-loc-value"></span>
+        </button>
+        <div class="pl-sort">
+          <label for="prospect-sort">مرتب‌سازی</label>
+          <select id="prospect-sort">
+            <option value="score_desc" ${pSort === 'score_desc' ? 'selected' : ''}>بیشترین امتیاز</option>
+            <option value="score_asc" ${pSort === 'score_asc' ? 'selected' : ''}>کمترین امتیاز</option>
+            <option value="name" ${pSort === 'name' ? 'selected' : ''}>نام</option>
+            <option value="last_evaluation" ${pSort === 'last_evaluation' ? 'selected' : ''}>آخرین ارزیابی</option>
+          </select>
+        </div>
       </div>
-      <div id="prospect-summary" class="cards" style="margin-bottom:10px;"></div>
-      <div id="p-loc-filter-row" class="field-ops-loc">${renderProspectLocFilterOptionsHTML()}</div>
-      <div class="chip-row" style="margin-bottom:8px;">
-        <button type="button" class="chip ${pLocFilter.unassigned ? 'active' : ''}" id="p-loc-filter-unassigned">بدون موقعیت</button>
-      </div>
+      <div id="prospect-summary" class="pl-count"></div>
       <div id="prospect-list" class="tx-list"></div>
     `;
 
@@ -240,67 +220,8 @@
     };
     sortEl.addEventListener('change', sortHandler);
 
-    function wireProspectLocFilterSelects() {
-      const regionSel = document.getElementById('p-loc-filter-region');
-      const routeSel = document.getElementById('p-loc-filter-route');
-      const neighSel = document.getElementById('p-loc-filter-neigh');
-      const unassignedBtn = document.getElementById('p-loc-filter-unassigned');
-      if (regionSel) regionSel.addEventListener('change', function () {
-        pLocFilter.regionId = regionSel.value;
-        pLocFilter.routeId = '';
-        pLocFilter.neighborhoodId = '';
-        pLocFilter.unassigned = false;
-        const row = document.getElementById('p-loc-filter-row');
-        row.innerHTML = renderProspectLocFilterOptionsHTML();
-        wireProspectLocFilterSelects();
-        if (unassignedBtn) unassignedBtn.classList.remove('active');
-        renderProspectListOnly();
-      });
-      if (routeSel) routeSel.addEventListener('change', function () {
-        pLocFilter.routeId = routeSel.value;
-        pLocFilter.neighborhoodId = '';
-        pLocFilter.unassigned = false;
-        const row = document.getElementById('p-loc-filter-row');
-        row.innerHTML = renderProspectLocFilterOptionsHTML();
-        wireProspectLocFilterSelects();
-        if (unassignedBtn) unassignedBtn.classList.remove('active');
-        renderProspectListOnly();
-      });
-      if (neighSel) neighSel.addEventListener('change', function () {
-        pLocFilter.neighborhoodId = neighSel.value;
-        pLocFilter.unassigned = false;
-        if (unassignedBtn) unassignedBtn.classList.remove('active');
-        renderProspectListOnly();
-      });
-    }
-    wireProspectLocFilterSelects();
-
-    const pUnassignedBtn = document.getElementById('p-loc-filter-unassigned');
-    if (pUnassignedBtn) {
-      pUnassignedBtn.addEventListener('click', function () {
-        pLocFilter.unassigned = !pLocFilter.unassigned;
-        if (pLocFilter.unassigned) {
-          pLocFilter.regionId = '';
-          pLocFilter.routeId = '';
-          pLocFilter.neighborhoodId = '';
-          const row = document.getElementById('p-loc-filter-row');
-          row.innerHTML = renderProspectLocFilterOptionsHTML();
-          wireProspectLocFilterSelects();
-        }
-        pUnassignedBtn.classList.toggle('active', pLocFilter.unassigned);
-        renderProspectListOnly();
-      });
-    }
-
-    // Navigation buttons
-    root.querySelector('[data-nav-evaluation]').addEventListener('click', function (e) {
-      e.preventDefault();
-      navigateToEvaluation(null);
-    });
-    root.querySelector('[data-nav-routes]').addEventListener('click', function (e) {
-      e.preventDefault();
-      AppRouter.navigate('/locations');
-    });
+    const locCap = document.getElementById('pl-loc-cap');
+    if (locCap) locCap.addEventListener('click', openProspectLocSheet);
 
     // Delegated list click — once per draw (same pattern as Customers/Checks)
     const listEl = document.getElementById('prospect-list');
@@ -313,7 +234,133 @@
     if (listEl) listEl.addEventListener('click', listClickHandler);
 
     renderTargetCard();
+    updateLocCapUI();
     renderProspectListOnly();
+  }
+
+  // ---- Location filter: ONE capsule that opens a drill-down sheet
+  //      (منطقه › مسیر › محله). Replaces the three stacked selects.
+
+  let locSheetView = { level: 'root', regionId: '', routeId: '' };
+
+  function currentLocLabel() {
+    if (pLocFilter.unassigned) return 'بدون موقعیت';
+    if (pLocFilter.neighborhoodId) { const n = getNeighborhood(pLocFilter.neighborhoodId); if (n) return n.name; }
+    if (pLocFilter.routeId) { const r = getRoute(pLocFilter.routeId); if (r) return r.name; }
+    if (pLocFilter.regionId) { const g = getRegion(pLocFilter.regionId); if (g) return g.name; }
+    return 'همه';
+  }
+
+  function updateLocCapUI() {
+    const val = document.getElementById('pl-loc-value');
+    if (val) val.textContent = currentLocLabel();
+    const cap = document.getElementById('pl-loc-cap');
+    if (cap) cap.classList.toggle('is-set', !!(pLocFilter.unassigned || pLocFilter.regionId || pLocFilter.routeId || pLocFilter.neighborhoodId));
+  }
+
+  function setLocFilter(next) {
+    pLocFilter = Object.assign({ regionId: '', routeId: '', neighborhoodId: '', unassigned: false }, next);
+    updateLocCapUI();
+    renderProspectListOnly();
+  }
+
+  function locSheetRow(label, attrs, chevron) {
+    return '<button type="button" class="pl-sheet-item" ' + attrs + '><span>' + esc(label) + '</span>' +
+      '<span class="pl-sheet-check" aria-hidden="true">' + (chevron ? '›' : '') + '</span></button>';
+  }
+
+  function renderLocSheet() {
+    const v = locSheetView;
+    let title = 'موقعیت';
+    let back = '';
+    let rows = '';
+    if (v.level === 'root') {
+      rows = locSheetRow('همه مغازه‌ها', 'data-apply="all"', false) +
+        locSheetRow('بدون موقعیت', 'data-apply="unassigned"', false) +
+        listRegions().map(function (g) { return locSheetRow(g.name, 'data-drill-region="' + esc(g.id) + '"', true); }).join('');
+    } else if (v.level === 'region') {
+      const g = getRegion(v.regionId);
+      title = g ? g.name : 'منطقه';
+      back = '<button type="button" class="pl-sheet-back" data-back="1">‹ موقعیت‌ها</button>';
+      rows = locSheetRow('کل ' + title, 'data-apply-region="' + esc(v.regionId) + '"', false) +
+        listRoutes(v.regionId).map(function (r) {
+          return listNeighborhoods(r.id).length
+            ? locSheetRow(r.name, 'data-drill-route="' + esc(r.id) + '"', true)
+            : locSheetRow(r.name, 'data-apply-route="' + esc(r.id) + '"', false);
+        }).join('');
+    } else {
+      const r = getRoute(v.routeId);
+      title = r ? r.name : 'مسیر';
+      back = '<button type="button" class="pl-sheet-back" data-back="1">‹ ' + esc(r ? (getRegion(r.regionId) || {}).name || 'منطقه' : 'منطقه') + '</button>';
+      rows = locSheetRow('کل ' + title, 'data-apply-route="' + esc(v.routeId) + '"', false) +
+        listNeighborhoods(v.routeId).map(function (n) { return locSheetRow(n.name, 'data-apply-neigh="' + esc(n.id) + '"', false); }).join('');
+    }
+    openSheet(
+      back +
+      '<h3 class="pl-sheet-title">' + esc(title) + '</h3>' +
+      '<div class="pl-sheet-list">' + rows + '</div>' +
+      '<button type="button" class="pl-sheet-manage" data-manage-locations="1">مدیریت موقعیت‌ها</button>'
+    );
+    bindLocSheet();
+  }
+
+  function bindLocSheet() {
+    const on = function (sel, fn) {
+      document.querySelectorAll(sel).forEach(function (b) { b.addEventListener('click', fn); });
+    };
+    on('[data-back]', function () {
+      locSheetView = locSheetView.level === 'route' ? { level: 'region', regionId: getRoute(locSheetView.routeId) ? getRoute(locSheetView.routeId).regionId : '', routeId: '' } : { level: 'root', regionId: '', routeId: '' };
+      renderLocSheet();
+    });
+    on('[data-drill-region]', function (e) {
+      locSheetView = { level: 'region', regionId: e.currentTarget.getAttribute('data-drill-region'), routeId: '' };
+      renderLocSheet();
+    });
+    on('[data-drill-route]', function (e) {
+      locSheetView = { level: 'route', regionId: locSheetView.regionId, routeId: e.currentTarget.getAttribute('data-drill-route') };
+      renderLocSheet();
+    });
+    on('[data-apply]', function (e) {
+      const k = e.currentTarget.getAttribute('data-apply');
+      closeModal();
+      setLocFilter(k === 'unassigned' ? { unassigned: true } : {});
+    });
+    on('[data-apply-region]', function (e) {
+      const id = e.currentTarget.getAttribute('data-apply-region');
+      closeModal();
+      setLocFilter({ regionId: id });
+    });
+    on('[data-apply-route]', function (e) {
+      const id = e.currentTarget.getAttribute('data-apply-route');
+      const r = getRoute(id);
+      closeModal();
+      setLocFilter({ regionId: r ? r.regionId : '', routeId: id });
+    });
+    on('[data-apply-neigh]', function (e) {
+      const id = e.currentTarget.getAttribute('data-apply-neigh');
+      const n = getNeighborhood(id);
+      const r = n ? getRoute(n.routeId) : null;
+      closeModal();
+      setLocFilter({ regionId: r ? r.regionId : '', routeId: n ? n.routeId : '', neighborhoodId: id });
+    });
+    on('[data-manage-locations]', function () {
+      closeModal();
+      AppRouter.navigate('/locations');
+    });
+  }
+
+  function openProspectLocSheet() {
+    // Start from the current selection's level so the user lands where they were.
+    if (pLocFilter.neighborhoodId || pLocFilter.routeId) {
+      const rid = pLocFilter.routeId || (getNeighborhood(pLocFilter.neighborhoodId) || {}).routeId;
+      const r = getRoute(rid);
+      locSheetView = { level: 'route', regionId: r ? r.regionId : '', routeId: rid };
+    } else if (pLocFilter.regionId) {
+      locSheetView = { level: 'region', regionId: pLocFilter.regionId, routeId: '' };
+    } else {
+      locSheetView = { level: 'root', regionId: '', routeId: '' };
+    }
+    renderLocSheet();
   }
 
   function mount(root, params) {

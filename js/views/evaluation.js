@@ -139,13 +139,13 @@
 
   function renderTypeStep() {
     const types = (formState.profile && PROSPECT_BUSINESS_TYPES[formState.profile]) || [];
-    const chips = types.map(function (t) {
+    const rows = types.map(function (t) {
       const active = formState.businessType === t.key;
-      return `<button type="button" class="chip-opt${active ? ' selected' : ''}" data-biztype="${esc(t.key)}">${esc(t.label)}</button>`;
+      return `<button type="button" class="eval-ios-row${active ? ' selected' : ''}" data-biztype="${esc(t.key)}"><span class="eval-ios-label">${esc(t.label)}</span><span class="eval-ios-check" aria-hidden="true">✓</span></button>`;
     }).join('');
     return `
       <div class="eval-step-label">نوع کسب‌وکار</div>
-      <div class="chip-wrap eval-q-options field-eval-opts">${chips}</div>
+      <div class="eval-ios-group">${rows}</div>
       <div class="eval-back-row"><button type="button" class="btn secondary small" id="eval-step-back">مرحله قبلی</button></div>
     `;
   }
@@ -157,7 +157,7 @@
     if (!q) return '<div class="empty">پروفایل انتخاب نشده</div>';
     const opts = q.options.map(function (o, oIdx) {
       const active = formState.answers[q.id] === o.key;
-      return `<button type="button" class="chip-opt eval-q-opt${active ? ' selected' : ''}${o.unknown ? ' eval-q-opt-unknown' : ''}" data-qid="${esc(q.id)}" data-value="${esc(o.key)}"><span class="eval-opt-num" aria-hidden="true">${enToFaDigits(String(oIdx + 1))}</span>${esc(o.label)}</button>`;
+      return `<button type="button" class="eval-ios-row eval-q-opt${active ? ' selected' : ''}${o.unknown ? ' eval-q-opt-unknown' : ''}" data-qid="${esc(q.id)}" data-value="${esc(o.key)}"><span class="eval-opt-num" aria-hidden="true">${enToFaDigits(String(oIdx + 1))}</span><span class="eval-ios-label">${esc(o.label)}</span><span class="eval-ios-check" aria-hidden="true">✓</span></button>`;
     }).join('');
     return `
       <div class="eval-progress-bar" aria-hidden="true">
@@ -167,7 +167,7 @@
         <div class="eval-q-progress">سؤال ${enToFaDigits(String(qIdx + 1))} از ${enToFaDigits(String(STEP_Q_COUNT))}</div>
         <div class="q-title">${esc(q.label)}</div>
         ${q.hint ? `<div class="sub eval-q-hint">${esc(q.hint)}</div>` : ''}
-        <div class="chip-wrap eval-q-options field-eval-opts">${opts}</div>
+        <div class="eval-ios-group eval-q-group">${opts}</div>
         <div class="eval-back-row"><button type="button" class="btn secondary small" id="eval-step-back">${qIdx === 0 ? 'نوع کسب‌وکار' : 'سؤال قبلی'}</button></div>
       </div>
     `;
