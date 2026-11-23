@@ -27,6 +27,7 @@
    scrollY 1:1 and reverses identically. Removed the now-duplicate "داشبورد"
    <h2> inside Dashboard's own content — the header already shows it as the
    page title since the brand-name/page-title fix) */
+/* CHANGED: v120 -> v121 — one iOS-style segmented control rule for the whole project (js/ui-segmented.js + css/12-ios-segmented.css), added to PRECACHE_URLS. */
 /* CHANGED: v119 -> v120 — single location capsule with drill-down sheet, grouped iOS rows for business type and questions, count line replaces summary cards. */
 /* CHANGED: v118 -> v119 — Shop evaluation list: search moved to top, target card compacted, location filters as glass capsules, sort moved left, numbered options and separators in evaluation, double-tap skip guard. New css/11-v119-prospects.css added to PRECACHE_URLS. */
 /* CHANGED: v63 -> v64 (Computation Bank is now part of the offline app shell. Added js/computation-bank.js to PRECACHE_URLS and bumped the shell cache version so the execution-scoped bank is available offline. No business logic changed.)
@@ -47,7 +48,7 @@
 /* CHANGED: v111 -> v112 — UI typography, shared segmented filters, theme-aware form colors and validation states. Removed the obsolete bundled font asset from the offline precache. */
 /* Previous v110 -> v111 — 00-chrome.css and 10-disclosure.css were missing from PRECACHE_URLS (first load / offline showed unstyled header and disclosure surfaces until the network fetch finished). Both added; cache bumped so devices re-fetch the updated CSS instead of serving the stale cached copy. */
 /* CHANGED: v98 -> v99 (Soft iOS look: CSS-only visual refresh — tokens in visual-grammar.css and a new layer at the end of visual-grammar-pages.css. No asset list, route or business logic changed.) */
-const CACHE_NAME = 'baqeri-shell-v120';
+const CACHE_NAME = 'baqeri-shell-v121';
 
 /* CHANGED: v117 -> v118 — Restored unified section-heading styling from the blue patch on top of the product purchase-history baseline. No prospect-evaluation UX, segment, data, schema or business-logic changes. */
 
@@ -61,6 +62,8 @@ const PRECACHE_URLS = [
   './css/00-chrome.css',
   './css/10-disclosure.css',
   './css/11-v119-prospects.css',
+  './css/12-ios-segmented.css',
+  './js/ui-segmented.js',
   './css/shamsi-calendar.css',
   './js/shamsi-calendar.js',
   './js/models.js',
