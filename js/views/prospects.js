@@ -135,11 +135,12 @@
     else if (pSort === 'newest' || pSort === 'last_evaluation') rows.sort((a,b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
     else rows.sort((a,b) => b.latestScore - a.latestScore);
 
-    sum.innerHTML = `<div class="card"><div class="label">تعداد مغازه (فیلتر)</div><div class="value">${enToFaDigits(String(rows.length))}</div></div>
-      <div class="card"><div class="label">کل مغازه‌ها</div><div class="value">${enToFaDigits(String(prospectState.shops.length))}</div></div>`;
+    sum.innerHTML = `<div class="prospect-summary-item"><span class="prospect-summary-label">نتیجه فیلتر</span><strong class="prospect-summary-value">${enToFaDigits(String(rows.length))}</strong></div>
+      <span class="prospect-summary-divider" aria-hidden="true"></span>
+      <div class="prospect-summary-item"><span class="prospect-summary-label">کل مغازه‌ها</span><strong class="prospect-summary-value">${enToFaDigits(String(prospectState.shops.length))}</strong></div>`;
 
     if (!rows.length) {
-      list.innerHTML = `<div class="empty">${prospectState.shops.length ? 'موردی پیدا نشد' : 'هنوز مغازه‌ای ثبت نشده. با + یا «ثبت مغازه» شروع کنید.'}</div>`;
+      list.innerHTML = `<div class="empty">${prospectState.shops.length ? 'موردی پیدا نشد' : 'هنوز مغازه‌ای ثبت نشده. برای شروع، دکمهٔ + را بزنید.'}</div>`;
       return;
     }
     list.innerHTML = rows.map(s => {
@@ -161,19 +162,90 @@
   }
 
   function renderProspectLocFilterOptionsHTML() {
-    const regions = listRegions();
-    const routes = pLocFilter.regionId ? listRoutes(pLocFilter.regionId) : [];
-    const neighs = pLocFilter.routeId ? listNeighborhoods(pLocFilter.routeId) : [];
-    const opt = function (list, selId) {
-      return '<option value="">— همه —</option>' + list.map(function (x) {
-        return '<option value="' + esc(x.id) + '" ' + (x.id === selId ? 'selected' : '') + '>' + esc(x.name) + '</option>';
-      }).join('');
+    const region = listRegions().find(function (x) { return x.id === pLocFilter.regionId; });
+    const route = pLocFilter.regionId ? listRoutes(pLocFilter.regionId).find(function (x) { return x.id === pLocFilter.routeId; }) : null;
+    const neighborhood = pLocFilter.routeId ? listNeighborhoods(pLocFilter.routeId).find(function (x) { return x.id === pLocFilter.neighborhoodId; }) : null;
+    const trigger = function (type, label, value, disabled) {
+      return `<button type="button" class="ios-filter-trigger" data-open-loc-picker="${type}"${disabled ? ' disabled' : ''}>
+        <span class="ios-filter-trigger-label">${label}</span>
+        <span class="ios-filter-trigger-value">${esc(value)}</span>
+        <span class="ios-filter-chevron" aria-hidden="true"></span>
+      </button>`;
     };
-    return (
-      '<div class="field"><label>منطقه</label><select id="p-loc-filter-region">' + opt(regions, pLocFilter.regionId) + '</select></div>' +
-      '<div class="field"><label>مسیر</label><select id="p-loc-filter-route" ' + (!pLocFilter.regionId ? 'disabled' : '') + '>' + opt(routes, pLocFilter.routeId) + '</select></div>' +
-      '<div class="field"><label>محله</label><select id="p-loc-filter-neigh" ' + (!pLocFilter.routeId ? 'disabled' : '') + '>' + opt(neighs, pLocFilter.neighborhoodId) + '</select></div>'
-    );
+    return `<div class="prospect-loc-controls">
+      ${trigger('region', 'منطقه', region ? region.name : 'همه مناطق', false)}
+      ${trigger('route', 'مسیر', route ? route.name : 'همه مسیرها', !pLocFilter.regionId)}
+      ${trigger('neighborhood', 'محله', neighborhood ? neighborhood.name : 'همه محله‌ها', !pLocFilter.routeId)}
+      <button type="button" class="prospect-unassigned-filter${pLocFilter.unassigned ? ' is-active' : ''}" id="p-loc-filter-unassigned">بدون موقعیت</button>
+    </div>`;
+  }
+
+  function openProspectLocationPicker(type) {
+    const config = {
+      region: { title: 'انتخاب منطقه', all: 'همه مناطق', items: listRegions(), selected: pLocFilter.regionId },
+      route: { title: 'انتخاب مسیر', all: 'همه مسیرها', items: pLocFilter.regionId ? listRoutes(pLocFilter.regionId) : [], selected: pLocFilter.routeId },
+      neighborhood: { title: 'انتخاب محله', all: 'همه محله‌ها', items: pLocFilter.routeId ? listNeighborhoods(pLocFilter.routeId) : [], selected: pLocFilter.neighborhoodId }
+    }[type];
+    if (!config || (type === 'route' && !pLocFilter.regionId) || (type === 'neighborhood' && !pLocFilter.routeId)) return;
+    const options = [{ id: '', name: config.all }].concat(config.items).map(function (item) {
+      const active = String(item.id) === String(config.selected);
+      return `<button type="button" class="ios-picker-option${active ? ' is-selected' : ''}" data-loc-option="${esc(item.id)}">
+        <span>${esc(item.name)}</span><span class="ios-picker-check" aria-hidden="true">${active ? '✓' : ''}</span>
+      </button>`;
+    }).join('');
+    openSheet(`<div class="ios-picker-sheet" data-picker-type="${type}">
+      <div class="ios-picker-heading">${config.title}</div>
+      <div class="ios-picker-options">${options || '<div class="empty">موردی ثبت نشده</div>'}</div>
+    </div>`);
+    const sheet = document.querySelector('.ios-picker-sheet');
+    if (!sheet) return;
+    sheet.querySelectorAll('[data-loc-option]').forEach(function (option) {
+      option.addEventListener('click', function () {
+        const value = option.getAttribute('data-loc-option') || '';
+        if (type === 'region') {
+          pLocFilter.regionId = value;
+          pLocFilter.routeId = '';
+          pLocFilter.neighborhoodId = '';
+        } else if (type === 'route') {
+          pLocFilter.routeId = value;
+          pLocFilter.neighborhoodId = '';
+        } else {
+          pLocFilter.neighborhoodId = value;
+        }
+        pLocFilter.unassigned = false;
+        closeModal();
+        refreshProspectLocationFilters();
+        renderProspectListOnly();
+      });
+    });
+  }
+
+  function refreshProspectLocationFilters() {
+    const row = document.getElementById('p-loc-filter-row');
+    if (!row) return;
+    row.innerHTML = renderProspectLocFilterOptionsHTML();
+    wireProspectLocFilterControls();
+  }
+
+  function wireProspectLocFilterControls() {
+    const row = document.getElementById('p-loc-filter-row');
+    if (!row) return;
+    row.querySelectorAll('[data-open-loc-picker]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        openProspectLocationPicker(button.getAttribute('data-open-loc-picker'));
+      });
+    });
+    const unassigned = row.querySelector('#p-loc-filter-unassigned');
+    if (unassigned) unassigned.addEventListener('click', function () {
+      pLocFilter.unassigned = !pLocFilter.unassigned;
+      if (pLocFilter.unassigned) {
+        pLocFilter.regionId = '';
+        pLocFilter.routeId = '';
+        pLocFilter.neighborhoodId = '';
+      }
+      refreshProspectLocationFilters();
+      renderProspectListOnly();
+    });
   }
 
   function drawProspectsPage(root) {
@@ -182,34 +254,32 @@
     };
     root.innerHTML = `
       <h2 class="section-title">مشتریان بالقوه</h2>
+      <div class="field prospect-search-field"><input id="prospect-search" type="search" placeholder="جستجوی نام مغازه..." value="${esc(pQuery)}" autocomplete="off"></div>
       <div class="prospect-subnav">
-        <a class="btn small secondary" data-nav-evaluation href="#/evaluation">ثبت مغازه + ارزیابی</a>
-        <a class="btn small secondary" data-nav-routes href="#/locations">موقعیت‌ها</a>
+        <a class="btn small secondary" data-nav-routes href="#/locations">مدیریت موقعیت‌ها</a>
       </div>
-      <div id="prospect-target" class="cards" style="margin-bottom:12px;"></div>
-      <div class="field"><input id="prospect-search" placeholder="جستجوی نام مغازه..." value="${esc(pQuery)}" autocomplete="off"></div>
-      <div class="chip-row segmented-control" id="prospect-chips">
-        ${chip('all','همه')}
-        ${chip('active','فعال')}
-        ${chip('converted','تبدیل‌شده')}
-        ${chip('A+','رتبه A+')}
-        ${chip('A','رتبه A')}
-        ${chip('B','رتبه B')}
+      <div id="prospect-target" class="cards prospect-target-wrap"></div>
+      <div class="prospect-controls-row">
+        <div class="chip-row segmented-control" id="prospect-chips">
+          ${chip('all','همه')}
+          ${chip('active','فعال')}
+          ${chip('converted','تبدیل‌شده')}
+          ${chip('A+','A+')}
+          ${chip('A','A')}
+          ${chip('B','B')}
+        </div>
+        <div class="tx-toolbar prospect-sort-toolbar">
+          <label class="tx-toolbar-label" for="prospect-sort">مرتب‌سازی</label>
+          <select id="prospect-sort" class="tx-toolbar-select prospect-sort-select">
+            <option value="score_desc" ${pSort === 'score_desc' ? 'selected' : ''}>امتیاز بیشتر</option>
+            <option value="score_asc" ${pSort === 'score_asc' ? 'selected' : ''}>امتیاز کمتر</option>
+            <option value="name" ${pSort === 'name' ? 'selected' : ''}>نام</option>
+            <option value="last_evaluation" ${pSort === 'last_evaluation' ? 'selected' : ''}>آخرین ارزیابی</option>
+          </select>
+        </div>
       </div>
-      <div class="tx-toolbar">
-        <label class="tx-toolbar-label" for="prospect-sort">مرتب‌سازی</label>
-        <select id="prospect-sort" class="tx-toolbar-select">
-          <option value="score_desc" ${pSort === 'score_desc' ? 'selected' : ''}>بیشترین امتیاز</option>
-          <option value="score_asc" ${pSort === 'score_asc' ? 'selected' : ''}>کمترین امتیاز</option>
-          <option value="name" ${pSort === 'name' ? 'selected' : ''}>نام</option>
-          <option value="last_evaluation" ${pSort === 'last_evaluation' ? 'selected' : ''}>آخرین ارزیابی</option>
-        </select>
-      </div>
-      <div id="prospect-summary" class="cards" style="margin-bottom:10px;"></div>
+      <div id="prospect-summary" class="prospect-summary-strip"></div>
       <div id="p-loc-filter-row" class="field-ops-loc">${renderProspectLocFilterOptionsHTML()}</div>
-      <div class="chip-row" style="margin-bottom:8px;">
-        <button type="button" class="chip ${pLocFilter.unassigned ? 'active' : ''}" id="p-loc-filter-unassigned">بدون موقعیت</button>
-      </div>
       <div id="prospect-list" class="tx-list"></div>
     `;
 
@@ -239,64 +309,9 @@
       renderProspectListOnly();
     };
     sortEl.addEventListener('change', sortHandler);
-
-    function wireProspectLocFilterSelects() {
-      const regionSel = document.getElementById('p-loc-filter-region');
-      const routeSel = document.getElementById('p-loc-filter-route');
-      const neighSel = document.getElementById('p-loc-filter-neigh');
-      const unassignedBtn = document.getElementById('p-loc-filter-unassigned');
-      if (regionSel) regionSel.addEventListener('change', function () {
-        pLocFilter.regionId = regionSel.value;
-        pLocFilter.routeId = '';
-        pLocFilter.neighborhoodId = '';
-        pLocFilter.unassigned = false;
-        const row = document.getElementById('p-loc-filter-row');
-        row.innerHTML = renderProspectLocFilterOptionsHTML();
-        wireProspectLocFilterSelects();
-        if (unassignedBtn) unassignedBtn.classList.remove('active');
-        renderProspectListOnly();
-      });
-      if (routeSel) routeSel.addEventListener('change', function () {
-        pLocFilter.routeId = routeSel.value;
-        pLocFilter.neighborhoodId = '';
-        pLocFilter.unassigned = false;
-        const row = document.getElementById('p-loc-filter-row');
-        row.innerHTML = renderProspectLocFilterOptionsHTML();
-        wireProspectLocFilterSelects();
-        if (unassignedBtn) unassignedBtn.classList.remove('active');
-        renderProspectListOnly();
-      });
-      if (neighSel) neighSel.addEventListener('change', function () {
-        pLocFilter.neighborhoodId = neighSel.value;
-        pLocFilter.unassigned = false;
-        if (unassignedBtn) unassignedBtn.classList.remove('active');
-        renderProspectListOnly();
-      });
-    }
-    wireProspectLocFilterSelects();
-
-    const pUnassignedBtn = document.getElementById('p-loc-filter-unassigned');
-    if (pUnassignedBtn) {
-      pUnassignedBtn.addEventListener('click', function () {
-        pLocFilter.unassigned = !pLocFilter.unassigned;
-        if (pLocFilter.unassigned) {
-          pLocFilter.regionId = '';
-          pLocFilter.routeId = '';
-          pLocFilter.neighborhoodId = '';
-          const row = document.getElementById('p-loc-filter-row');
-          row.innerHTML = renderProspectLocFilterOptionsHTML();
-          wireProspectLocFilterSelects();
-        }
-        pUnassignedBtn.classList.toggle('active', pLocFilter.unassigned);
-        renderProspectListOnly();
-      });
-    }
+    wireProspectLocFilterControls();
 
     // Navigation buttons
-    root.querySelector('[data-nav-evaluation]').addEventListener('click', function (e) {
-      e.preventDefault();
-      navigateToEvaluation(null);
-    });
     root.querySelector('[data-nav-routes]').addEventListener('click', function (e) {
       e.preventDefault();
       AppRouter.navigate('/locations');
