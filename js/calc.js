@@ -1420,6 +1420,96 @@ function _relationshipPurchaseDays(invs, ctx, cid){
   return { days: Object.keys(set).sort(), counts: counts };   // ascending ISO days
 }
 
+/* Product-level purchase history for one customer. READ-ONLY / derived-only.
+   Counts invoices containing a positive net product quantity. Average interval is
+   calculated from distinct calendar purchase days, so multiple same-day invoices
+   do not create artificial zero-day gaps. Fully returned product lines are excluded;
+   partial returns remain a purchase. Ambiguous weighted/legacy raisin rows are kept. */
+function customerProductPurchaseHistory(cid, ctx, skipMemo){
+  if(!ctx || typeof ctx.customerInvoices !== 'function'){
+    var source = (typeof data !== 'undefined') ? data : {};
+    ctx = (typeof createComputationContext === 'function') ? createComputationContext({ data: source }) : null;
+  }
+  if(!ctx) return [];
+  if(typeof ctx.memo === 'function' && !skipMemo){
+    return ctx.memo('customerProductPurchaseHistory', cid, function(){ return customerProductPurchaseHistory(cid, ctx, true); });
+  }
+  var invs = (ctx.customerInvoices(cid) || []).slice();
+  var invIds = Object.create(null);
+  invs.forEach(function(inv){ if(inv && inv.id) invIds[inv.id] = true; });
+  var ret = (typeof _relationshipReturnIndex === 'function')
+    ? _relationshipReturnIndex(cid, invIds, ctx)
+    : { byInv: Object.create(null) };
+  var byProduct = Object.create(null);
+  invs.forEach(function(inv){
+    if(!inv || !inv.id || !(Number(inv.total) > 0) || !Array.isArray(inv.items)) return;
+    var day = (typeof _analysisNormalizeDay === 'function') ? _analysisNormalizeDay(inv.date) : null;
+    if(!day) return;
+    var age = (typeof analysisDaysAgo === 'function') ? analysisDaysAgo(day, ctx) : null;
+    if(age == null || age < 0) return;
+    var soldByProduct = Object.create(null);
+    var nameByProduct = Object.create(null);
+    inv.items.forEach(function(it){
+      if(!it || !it.productId || !(Number(it.qty) > 0)) return;
+      var pid = String(it.productId);
+      soldByProduct[pid] = (soldByProduct[pid] || 0) + Number(it.qty);
+      if(it.name) nameByProduct[pid] = it.name;
+    });
+    Object.keys(soldByProduct).forEach(function(pid){
+      var sold = soldByProduct[pid];
+      var returned = Number((ret.byInv[inv.id] || {})[pid]) || 0;
+      var rows = inv.items.filter(function(it){ return it && String(it.productId) === pid; });
+      var ambiguous = false;
+      if(returned > 0 && typeof _isRaisinPilafItem === 'function' && typeof _raisinPilafProductIds === 'function'){
+        var raisinIds = _raisinPilafProductIds();
+        if(rows.length && _isRaisinPilafItem(rows[0], raisinIds)){
+          var hasWeighted = rows.some(function(x){ return Number(x.weight) > 0; });
+          var hasLegacy = rows.some(function(x){ return !(Number(x.weight) > 0); });
+          ambiguous = hasWeighted && hasLegacy;
+        }
+      }
+      if(!ambiguous && returned >= sold - 1e-9) return;
+      var entry = byProduct[pid] || (byProduct[pid] = {
+        productId: pid, name: nameByProduct[pid] || '—', invoiceCount: 0,
+        purchaseDays: Object.create(null), lastDate: null, lastInvoiceNumber: null
+      });
+      entry.invoiceCount++;
+      entry.purchaseDays[day] = true;
+      if(!entry.lastDate || day > entry.lastDate ||
+        (day === entry.lastDate && String(inv.number || '').localeCompare(String(entry.lastInvoiceNumber || '')) > 0)){
+        entry.lastDate = day;
+        entry.lastInvoiceNumber = inv.number || null;
+        entry.name = nameByProduct[pid] || entry.name;
+      }
+    });
+  });
+  var products = (ctx.data && Array.isArray(ctx.data.products)) ? ctx.data.products : [];
+  return Object.keys(byProduct).map(function(pid){
+    var x = byProduct[pid];
+    var days = Object.keys(x.purchaseDays).sort();
+    var gaps = [];
+    for(var i=1;i<days.length;i++){
+      var diff = (typeof _behaviorDaysDiff === 'function') ? _behaviorDaysDiff(days[i-1], days[i]) : null;
+      if(diff != null && diff > 0) gaps.push(diff);
+    }
+    var avg = gaps.length ? gaps.reduce(function(a,b){ return a+b; },0) / gaps.length : null;
+    var prod = products.find(function(p){ return p && String(p.id) === pid; });
+    var lastAge = (typeof analysisDaysAgo === 'function') ? analysisDaysAgo(x.lastDate, ctx) : null;
+    return {
+      productId: x.productId,
+      name: (prod && prod.name) || x.name || '—',
+      invoiceCount: x.invoiceCount,
+      purchaseDayCount: days.length,
+      lastDate: x.lastDate,
+      daysSinceLast: (lastAge != null && lastAge >= 0) ? lastAge : null,
+      avgIntervalDays: avg,
+      lastInvoiceNumber: x.lastInvoiceNumber
+    };
+  }).sort(function(a,b){
+    return String(b.lastDate || '').localeCompare(String(a.lastDate || '')) || a.name.localeCompare(b.name, 'fa');
+  });
+}
+
 function _relationshipMedian(values){
   const a = values.slice().sort(function(x, y){ return x - y; });
   const n = a.length;
