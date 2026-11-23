@@ -1050,31 +1050,3 @@ header,.bottom-nav,.sheet:not(.inv-sheet-host),.more-sheet,.prod-drop-panel,.bp-
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
 header,.bottom-nav,.sheet:not(.inv-sheet-host),.more-sheet,.prod-drop-panel,.bp-qv-card{background:var(--vg-color-surface);}
 }
-
-/* Unified section-heading grammar — match the headings on the More page. */
-#main .more-group-title,
-#main .dash-section-label,
-#main .rp-sec-title,
-#main .gc-section-title,
-#main .mgmt-section-title,
-#main .sup-group-title,
-#main .pp-section-title,
-#main .inv-section-title,
-#main .bp-qv-section-label,
-#main .customer-detail-helper-title {
-  margin-top:0;
-  font-size:12px;
-  font-weight:var(--vg-weight-label);
-  color:var(--vg-color-text-muted);
-  line-height:1.35;
-  letter-spacing:.01em;
-}
-#main .dash-section-label{gap:7px;}
-#main .rp-sec-title{font-size:12px;font-weight:var(--vg-weight-label);}
-#main .rp-chart-hint{font-size:11px;color:var(--vg-color-text-muted);}
-#main .rp-card{position:relative;margin-top:18px;padding-top:14px;}
-#main .rp-card>.rp-sec-head{position:absolute;top:-20px;inset-inline:4px;margin:0;min-height:16px;align-items:center;background:transparent;}
-#main .rp-card>.rp-sec-head .rp-sec-title{font-size:12px;font-weight:var(--vg-weight-label);color:var(--vg-color-text-muted);}
-#main .rp-card>.rp-sec-head .rp-chart-hint{font-size:11px;color:var(--vg-color-text-muted);}
-#main .rp-card>.rp-sec-head .rp-sec-link{padding:0;font-size:11px;}
-#main .dashboard-shell .dash-section-label{font-size:12px;font-weight:var(--vg-weight-label);color:var(--vg-color-text-muted);}

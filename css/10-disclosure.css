@@ -30,6 +30,17 @@ html[data-theme="dark"]{--disc-sep:var(--vg-color-divider);}
 #main.customer-detail-view .cd-push-page .ledger-row > .amount{grid-area:amount;font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;color:var(--vg-color-text);white-space:nowrap;}
 #main.customer-detail-view .cd-push-page .ledger-row::after{grid-area:chev;position:static;justify-self:center;width:12px;height:12px;margin:0;transform:none;}
 #main.customer-detail-view .cd-push-context{margin:0 4px 8px;font-size:13px;font-weight:500;color:var(--vg-color-text-muted);}
+#main.customer-detail-view .cd-product-history-list{margin:0;padding:0;background:var(--vg-color-surface);border:1px solid var(--vg-color-divider);border-radius:14px;overflow:hidden;}
+#main.customer-detail-view .cd-product-history-item{padding:14px 15px;background:transparent;border-bottom:.5px solid var(--disc-sep);}
+#main.customer-detail-view .cd-product-history-item:last-child{border-bottom:0;}
+#main.customer-detail-view .cd-product-history-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 12px;}
+#main.customer-detail-view .cd-product-history-name{min-width:0;font-size:15px;font-weight:600;line-height:1.45;color:var(--vg-color-text);}
+#main.customer-detail-view .cd-product-history-count{flex:0 0 auto;font-size:12px;font-weight:600;color:var(--vg-color-text-muted);font-variant-numeric:tabular-nums;}
+#main.customer-detail-view .cd-product-history-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 16px;}
+#main.customer-detail-view .cd-product-history-stat{display:flex;flex-direction:column;gap:4px;min-width:0;}
+#main.customer-detail-view .cd-product-history-stat>span{font-size:12px;font-weight:500;line-height:1.35;color:var(--vg-color-text-muted);}
+#main.customer-detail-view .cd-product-history-stat>strong{font-size:14px;font-weight:600;line-height:1.4;color:var(--vg-color-text);font-variant-numeric:tabular-nums;overflow-wrap:anywhere;}
+@media(max-width:360px){#main.customer-detail-view .cd-product-history-grid{column-gap:10px;}}
 #main.customer-detail-view .cd-push-page .customer-visit-row-detail{display:block;max-height:2.7em;overflow:hidden;margin-top:2px;}
 #main.customer-detail-view .cd-push-page .ledger-row.is-open .customer-visit-row-detail{max-height:none;overflow:visible;}
 #main.customer-detail-view .cd-push-page .ledger-row:not(a){cursor:pointer;}
