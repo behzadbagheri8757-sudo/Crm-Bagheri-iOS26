@@ -1418,6 +1418,7 @@
     var rejectionRowHtml = rejectionSectionHtml
       ? '<a class="cd-push-row" href="#/customer?id=' + encodeURIComponent(c.id) + '&section=rejections"><span class="cd-push-label">کالاهای ردشده توسط مشتری</span><svg class="cd-push-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></a>'
       : '';
+    var productHistory = productPurchaseHistoryHtml(c.id, ctx);
     var visitRowHtml = '<a class="cd-push-row" href="#/customer?id=' + encodeURIComponent(c.id) + '&section=visits">' + '<span class="cd-push-label">ویزیت‌ها و ارزیابی‌ها</span>' + '<span class="cd-push-meta">' + visits.length + '</span>' + '<svg class="cd-push-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></a>';
     var visitSectionHtml = '<details class="cd-history-details" data-section="visits">' +
       '<summary class="customer-behavior-summary">ویزیت‌ها و ارزیابی‌ها (' + visits.length + ')</summary>' +
@@ -1435,6 +1436,7 @@
       : currentSection === 'decisions' ? ackSectionHtml
       : currentSection === 'history' ? historySectionHtml
       : currentSection === 'rejections' ? rejectionSectionHtml
+      : currentSection === 'product-history' ? productHistory.section
       : '';
     root.innerHTML =
 
@@ -1500,7 +1502,7 @@
       followUpTopHtml +
       behaviorHtml +
       (currentSection ? '' : '<div class="cd-records-nav">' +
-        watchRowHtml + behaviorRowHtml + invoiceRowHtml + paymentRowHtml + checkRowHtml + visitRowHtml + ackRowHtml + rejectionRowHtml + historyRowHtml +
+        watchRowHtml + behaviorRowHtml + productHistory.row + invoiceRowHtml + paymentRowHtml + checkRowHtml + visitRowHtml + ackRowHtml + rejectionRowHtml + historyRowHtml +
         '</div>') +
       sectionBodyHtml;
 
@@ -2000,7 +2002,37 @@
      Reuses the already-rendered section list (moved, not re-rendered) so every
      bound handler keeps working. The delegated handlers live on #main, which
      stays the same element. */
-  var PUSH_SECTION_LABELS = { invoices: 'فاکتورها', payments: 'پرداخت‌ها', checks: 'چک‌ها', visits: 'ویزیت‌ها و ارزیابی‌ها', watches: 'هشدارها', behavior: 'تحلیل رفتار خرید', decisions: 'تصمیم‌های ثبت‌شده', history: 'تاریخچهٔ وعده‌ها و قول‌های تحویل', rejections: 'کالاهای ردشده توسط مشتری' };
+  var PUSH_SECTION_LABELS = { 'product-history': 'سابقه خرید کالاها', invoices: 'فاکتورها', payments: 'پرداخت‌ها', checks: 'چک‌ها', visits: 'ویزیت‌ها و ارزیابی‌ها', watches: 'هشدارها', behavior: 'تحلیل رفتار خرید', decisions: 'تصمیم‌های ثبت‌شده', history: 'تاریخچهٔ وعده‌ها و قول‌های تحویل', rejections: 'کالاهای ردشده توسط مشتری' };
+  function productPurchaseHistoryHtml(customerId, ctx) {
+    if (typeof customerProductPurchaseHistory !== 'function') return { row: '', section: '' };
+    var stats = customerProductPurchaseHistory(customerId, ctx) || [];
+    if (!stats.length) return { row: '', section: '' };
+    var P = global.BagheriPresent || {};
+    var n0 = typeof P.n0 === 'function' ? P.n0 : function (v) { return String(v); };
+    var rows = stats.map(function (item) {
+      var avgText = item.avgIntervalDays != null
+        ? n0(Math.round(item.avgIntervalDays * 10) / 10) + ' روز'
+        : 'سابقه کافی نیست';
+      var ageText = item.daysSinceLast != null ? n0(item.daysSinceLast) + ' روز' : '—';
+      var invoiceText = item.lastInvoiceNumber ? 'فاکتور ' + item.lastInvoiceNumber : 'شماره فاکتور ثبت نشده';
+      return '<article class="cd-product-history-item">' +
+        '<div class="cd-product-history-head"><span class="cd-product-history-name">' + esc(item.name) + '</span>' +
+        '<span class="cd-product-history-count">' + n0(item.invoiceCount) + ' بار خرید</span></div>' +
+        '<div class="cd-product-history-grid">' +
+          '<div class="cd-product-history-stat"><span>آخرین خرید</span><strong>' + esc(faDate(item.lastDate)) + '</strong></div>' +
+          '<div class="cd-product-history-stat"><span>از آخرین خرید</span><strong>' + ageText + '</strong></div>' +
+          '<div class="cd-product-history-stat"><span>میانگین فاصله خرید</span><strong>' + avgText + '</strong></div>' +
+          '<div class="cd-product-history-stat"><span>آخرین فاکتور</span><strong>' + esc(invoiceText) + '</strong></div>' +
+        '</div></article>';
+    }).join('');
+    var row = '<a class="cd-push-row" href="#/customer?id=' + encodeURIComponent(customerId) + '&section=product-history">' +
+      '<span class="cd-push-label">سابقه خرید کالاها</span>' +
+      '<span class="cd-push-meta">' + n0(stats.length) + ' کالا</span>' +
+      '<svg class="cd-push-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></a>';
+    var section = '<div data-section="product-history"><div class="cd-product-history-list">' + rows + '</div></div>';
+    return { row: row, section: section };
+  }
+
   function applyPushSection(root) {
     if (!root || !currentSection) return;
     var det = root.querySelector('[data-section="' + currentSection + '"]');
