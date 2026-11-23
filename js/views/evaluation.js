@@ -38,6 +38,9 @@
   };
 
   let handlers = []; // {el, type, fn} — all cleared on unmount
+  // True while an option tap is waiting for its auto-advance delay. Without it a
+  // second quick tap queued a second advance and silently skipped a question.
+  let advancePending = false;
 
   function setEvaluationDirty(){
     if (typeof window.__setRouteDirtyState === 'function') {
@@ -152,9 +155,9 @@
     const qIdx = formState.step - STEP_Q_FIRST; // 0-based within this profile's questions
     const q = questions[qIdx];
     if (!q) return '<div class="empty">پروفایل انتخاب نشده</div>';
-    const opts = q.options.map(function (o) {
+    const opts = q.options.map(function (o, oIdx) {
       const active = formState.answers[q.id] === o.key;
-      return `<button type="button" class="chip-opt eval-q-opt${active ? ' selected' : ''}${o.unknown ? ' eval-q-opt-unknown' : ''}" data-qid="${esc(q.id)}" data-value="${esc(o.key)}">${esc(o.label)}</button>`;
+      return `<button type="button" class="chip-opt eval-q-opt${active ? ' selected' : ''}${o.unknown ? ' eval-q-opt-unknown' : ''}" data-qid="${esc(q.id)}" data-value="${esc(o.key)}"><span class="eval-opt-num" aria-hidden="true">${enToFaDigits(String(oIdx + 1))}</span>${esc(o.label)}</button>`;
     }).join('');
     return `
       <div class="eval-progress-bar" aria-hidden="true">
@@ -248,11 +251,13 @@
     }).join('');
     const answerRows = questions.map(function (q, idx) {
       const key = formState.answers[q.id];
-      const opt = key ? q.options.find(function (o) { return o.key === key; }) : null;
+      const optIdx = key ? q.options.findIndex(function (o) { return o.key === key; }) : -1;
+      const opt = optIdx >= 0 ? q.options[optIdx] : null;
       const answerLabel = opt ? opt.label : '—';
+      const numHtml = opt ? `<span class="eval-opt-num" aria-hidden="true">${enToFaDigits(String(optIdx + 1))}</span>` : '';
       return `<div class="answer-row answer-row-editable" data-jump-q="${esc(String(idx))}">
-        <div class="answer-q"><span class="answer-index">${String(idx + 1).padStart(2, '0')}</span><span>${esc(q.shortLabel || q.label)}</span></div>
-        <div class="answer-a">${esc(answerLabel)} <span class="answer-edit-hint">ویرایش</span></div>
+        <div class="answer-q"><span class="answer-index">${enToFaDigits(String(idx + 1))}</span><span>${esc(q.shortLabel || q.label)}</span></div>
+        <div class="answer-a">${numHtml}${esc(answerLabel)} <span class="answer-edit-hint">ویرایش</span></div>
       </div>`;
     }).join('');
 
@@ -444,6 +449,8 @@
       });
       root.querySelectorAll('.eval-q-opt').forEach(function (btn) {
         on(btn, 'click', function () {
+          if (advancePending) return;
+          advancePending = true;
           setEvaluationDirty();
           const qid = btn.getAttribute('data-qid');
           const value = btn.getAttribute('data-value');
@@ -455,6 +462,7 @@
           // brief-delay pattern the legacy Evaluation used, so the tap
           // feedback stays visible before the view changes (spec §22).
           setTimeout(function () {
+            advancePending = false;
             goToStep(formState.step + 1);
             drawEvaluation(root);
           }, 180);
@@ -474,6 +482,7 @@
     // existing prospect is a lightweight Follow-up Visit, handled from the
     // Prospect Detail view instead of here).
     clearEvaluationDirty();
+    advancePending = false;
     formState = {
       name: '',
       routeId: null,
