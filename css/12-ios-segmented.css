@@ -1,0 +1,64 @@
+/* css/12-ios-segmented.css — سگمنت یکدست برای کل پروژه (شبیه iOS).
+   آخرین شیت است. یک قانون برای همه: کانتینر .ios-seg، دکمه .ios-seg-item،
+   و لنز ::before که با --seg-x و --seg-w (توسط js/ui-segmented.js) حرکت می‌کند.
+   سلکتورها دو بار .ios-seg دارند تا بر قواعد قدیمی هر view غلبه کنند. */
+
+/* ---- کانتینر ---- */
+.ios-seg.ios-seg{
+  position:relative;display:flex;flex-wrap:nowrap;align-items:stretch;gap:0;
+  width:100%;min-width:0;margin:0 0 12px;padding:3px;box-sizing:border-box;
+  border:0;border-radius:999px;
+  background:rgba(118,118,128,.12);
+  overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;
+}
+.ios-seg.ios-seg::-webkit-scrollbar{display:none;}
+html[data-theme="dark"] .ios-seg.ios-seg{background:rgba(118,118,128,.24);}
+/* gc-seg در حالت قبلی فقط به اندازهٔ محتوا بود؛ همان را نگه می‌داریم */
+.ios-seg.ios-seg.gc-seg{display:inline-flex;width:auto;align-self:flex-start;margin:0 0 12px;}
+
+/* ---- لنز (نشانگر) ---- */
+.ios-seg.ios-seg::before{
+  content:"";position:absolute;top:3px;bottom:3px;left:0;
+  width:var(--seg-w,0px);translate:var(--seg-x,0px) 0;
+  border-radius:999px;pointer-events:none;z-index:0;
+  background:var(--vg-color-surface,#fff);
+  box-shadow:0 1px 2px rgba(0,0,0,.08),0 3px 8px rgba(0,0,0,.06),inset 0 0 0 .5px rgba(255,255,255,.7);
+  opacity:0;
+}
+.ios-seg.ios-seg.ios-has-on::before{opacity:1;}
+.ios-seg.ios-seg.ios-ready::before{
+  transition:translate .5s cubic-bezier(.34,1.45,.64,1),width .45s cubic-bezier(.34,1.3,.64,1),opacity .2s ease;
+}
+/* فشردگی: لنز کمی بزرگ می‌شود، مثل لنز واقعی iOS */
+.ios-seg.ios-seg:active::before{scale:1.04 1.02;}
+html[data-theme="dark"] .ios-seg.ios-seg::before{
+  background:rgba(118,118,128,.5);
+  box-shadow:0 1px 2px rgba(0,0,0,.35),0 3px 8px rgba(0,0,0,.25),inset 0 0 0 .5px rgba(255,255,255,.14);
+}
+
+/* ---- دکمه‌ها ---- */
+.ios-seg.ios-seg>.ios-seg-item{
+  position:relative;z-index:1;flex:1 0 auto;min-width:0;
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  min-height:34px;margin:0;padding:6px 12px;
+  border:0;border-radius:999px;background:transparent;box-shadow:none;
+  color:var(--vg-color-text-muted,#667085);
+  font-family:inherit;font-size:13px;font-weight:500;line-height:1.2;white-space:nowrap;text-align:center;
+  cursor:pointer;-webkit-tap-highlight-color:transparent;
+  transition:color .25s ease;
+}
+.ios-seg.ios-seg>.ios-seg-item:active{transform:none;}
+.ios-seg.ios-seg>.ios-seg-item.ios-on{
+  background:transparent;box-shadow:none;
+  color:var(--vg-color-text,#101828);font-weight:600;
+}
+html[data-theme="dark"] .ios-seg.ios-seg>.ios-seg-item.ios-on{background:transparent;box-shadow:none;}
+
+/* اندازه‌ها برای ردیف‌های پرتعداد: وقتی جا کم است، اسکرول افقی */
+.ios-seg.ios-seg>.ios-seg-item{flex:1 0 auto;}
+.ios-seg.ios-seg.rp-seg-sm>.ios-seg-item{font-size:12px;padding-inline:8px;}
+.ios-seg.ios-seg.gc-seg>.ios-seg-item{min-width:72px;}
+.ios-seg.ios-seg>.ios-seg-item .bp-watch-chip-count{flex:none;}
+
+/* کپسول‌های وضعیت بدون شمارنده شبیه گذشته، ولی یکدست */
+.ios-seg.ios-seg.bp-watch-filters>.ios-seg-item{gap:6px;}
