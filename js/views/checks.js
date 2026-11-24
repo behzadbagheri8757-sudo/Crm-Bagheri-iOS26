@@ -59,6 +59,14 @@
     cleared: { label: 'پرداخت‌شده', cls: 'accent-olive' },
     bounced: { label: 'برگشتی', cls: 'accent-rust' }
   };
+  // خلاصهٔ استاندارد صفحهٔ لیست: «n چک · جمع» + شمارنده‌های هشدار که با یک ضربه فیلتر را فعال می‌کنند.
+  function checkSummaryHtml(count, total, flags) {
+    const flagHtml = (flags || []).filter(f => f.n > 0).map(f =>
+      `<button type="button" class="lp-flag ${f.cls || ''}" data-cf="${f.id}">${enToFaDigits(String(f.n))} ${f.label}</button>`
+    ).join('');
+    return `<span class="lp-count">${enToFaDigits(String(count))} چک · ${toman(total)} ت</span>${flagHtml}`;
+  }
+
   function renderSupplierCheckList(listEl, sumEl) {
     let rows = (typeof supplierCheckEntries === 'function' ? supplierCheckEntries() : []).map((e, i) => ({
       e, i,
@@ -84,12 +92,11 @@
     else if (chkSort === 'newest') rows.sort((a, b) => String(b.e.payment.date || '').localeCompare(String(a.e.payment.date || '')) || (b.i - a.i));
     else rows.sort((a, b) => dueOf(a).localeCompare(dueOf(b)));
 
-    const sum = list => list.reduce((s, r) => s + r.e.face, 0);
-    sumEl.innerHTML = `
-      <div class="card"><div class="label">تعداد چک (فیلتر)</div><div class="value">${enToFaDigits(String(rows.length))}</div></div>
-      <div class="card"><div class="label">جمع مبالغ</div><div class="value">${toman(sum(rows))} ت</div></div>
-      <div class="card wide"><div class="label">جمع در جریان (در فیلتر فعلی)</div><div class="value accent-amber">${toman(sum(rows.filter(r => r.e.status === 'pending')))} ت</div></div>
-    `;
+    const all = typeof supplierCheckEntries === 'function' ? supplierCheckEntries() : [];
+    sumEl.innerHTML = checkSummaryHtml(rows.length, rows.reduce((t, r) => t + r.e.face, 0), [
+      { id: 'overdue', n: all.filter(e => e.status === 'pending' && e.dueDiff !== null && e.dueDiff < 0).length, label: 'سررسید گذشته', cls: '' },
+      { id: 'bounced', n: all.filter(e => e.status === 'bounced').length, label: 'برگشتی', cls: 'warn' }
+    ]);
     if (!rows.length) {
       listEl.innerHTML = `<div class="empty">${total ? 'موردی پیدا نشد' : 'هنوز چکی به تامین‌کننده‌ای پرداخت نشده.'}</div>`;
       return;
@@ -153,12 +160,9 @@
     else rows.sort((a,b) => (a.ch.dueDate || '').localeCompare(b.ch.dueDate || ''));
 
     const totalAll = rows.reduce((s,r) => s + (r.ch.amount || 0), 0);
-    const pendingSum = rows.filter(r => r.st.key === 'pending').reduce((s,r) => s + (r.ch.amount || 0), 0);
-    sumEl.innerHTML = `
-      <div class="card"><div class="label">تعداد چک (فیلتر)</div><div class="value">${enToFaDigits(String(rows.length))}</div></div>
-      <div class="card"><div class="label">جمع مبالغ</div><div class="value">${toman(totalAll)} ت</div></div>
-      <div class="card wide"><div class="label">جمع در جریان (در فیلتر فعلی)</div><div class="value accent-amber">${toman(pendingSum)} ت</div></div>
-    `;
+    sumEl.innerHTML = checkSummaryHtml(rows.length, totalAll, [
+      { id: 'overdue', n: (data.checks || []).filter(c => isOverdue(c)).length, label: 'سررسید گذشته', cls: '' }
+    ]);
 
     if (!rows.length) {
       listEl.innerHTML = `<div class="empty">${(data.checks || []).length ? 'موردی پیدا نشد' : 'هنوز چکی ثبت نشده. با + ثبت کنید.'}</div>`;
@@ -222,11 +226,20 @@
         ${sideChip('customer', 'دریافتی از مشتری')}
         ${sideChip('supplier', 'پرداختی به تامین‌کننده')}
       </div>
-      <div class="check-tools-row">
-        <div class="field"><input id="check-search" placeholder="${isSup ? 'جستجوی تامین‌کننده، شماره چک، مبلغ...' : 'جستجوی مشتری، شماره چک، مبلغ...'}" value="${esc(chkQuery)}" autocomplete="off"></div>
-        <div class="tx-toolbar">
-          <label class="tx-toolbar-label" for="check-sort">مرتب‌سازی</label>
-          <select id="check-sort" class="tx-toolbar-select">
+      <div class="lp-search-row">
+        <div class="field lp-search"><input id="check-search" placeholder="${isSup ? 'جستجوی تامین‌کننده، شماره چک، مبلغ...' : 'جستجوی مشتری، شماره چک، مبلغ...'}" value="${esc(chkQuery)}" autocomplete="off"></div>
+      </div>
+      <div class="chip-row segmented-control" id="check-chips">
+        ${chip('all','همه')}
+        ${chip('pending','در جریان')}
+        ${chip('dueSoon','سررسید نزدیک')}
+        ${chip('cleared', isSup ? 'پرداخت‌شده' : 'وصول‌شده')}
+      </div>
+      <div class="lp-summary-row">
+        <div id="check-summary" class="lp-summary"></div>
+        <div class="lp-sort">
+          <label for="check-sort">مرتب‌سازی</label>
+          <select id="check-sort">
             <option value="dueAsc" ${chkSort === 'dueAsc' ? 'selected' : ''}>نزدیک‌ترین سررسید</option>
             <option value="dueDesc" ${chkSort === 'dueDesc' ? 'selected' : ''}>دورترین سررسید</option>
             <option value="amountDesc" ${chkSort === 'amountDesc' ? 'selected' : ''}>بیشترین مبلغ</option>
@@ -234,15 +247,6 @@
           </select>
         </div>
       </div>
-      <div class="chip-row segmented-control" id="check-chips">
-        ${chip('all','همه')}
-        ${chip('pending','در جریان')}
-        ${chip('cleared', isSup ? 'پرداخت‌شده' : 'وصول‌شده')}
-        ${isSup ? chip('bounced','برگشتی') : ''}
-        ${chip('dueSoon','سررسید نزدیک')}
-        ${chip('overdue','چک سررسیدگذشته')}
-      </div>
-      <div id="check-summary" class="cards" style="margin-bottom:12px;"></div>
       <p class="tx-hint">${isSup ? 'برای تغییر وضعیت یا ویرایش چک، روی ردیف بزنید تا صفحهٔ همان تامین‌کننده باز شود.' : 'برای تغییر وضعیت وصول، روی دکمه وضعیت هر چک بزنید.'}</p>
       <div id="check-list" class="tx-list"></div>
     `;
@@ -278,6 +282,18 @@
       };
       btn.addEventListener('click', fn);
       chipHandlers.push({ el: btn, fn: fn });
+    });
+
+    // شمارندهٔ هشدار در خلاصه: فیلتر متناظر را فعال می‌کند (جای سگمنت قدیمی)
+    const sumClickEl = document.getElementById('check-summary');
+    sumClickEl.addEventListener('click', function (e) {
+      const f = e.target.closest('[data-cf]');
+      if (!f) return;
+      chkFilter = f.getAttribute('data-cf');
+      document.querySelectorAll('#check-chips [data-cf]').forEach(function (b) {
+        b.classList.toggle('active', b.getAttribute('data-cf') === chkFilter);
+      });
+      renderCheckListOnly();
     });
 
     const sortEl = document.getElementById('check-sort');
