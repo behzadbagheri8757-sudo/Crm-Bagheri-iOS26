@@ -6,7 +6,6 @@ main .tx-hint,
 main>p.tx-hint{margin-top:-6px;margin-bottom:16px;}
 main>.field{margin-bottom:12px;}
 main>.chip-row{margin-bottom:12px;}
-main>.tx-toolbar{margin:0 0 14px;}
 main>.btn-row{margin-bottom:12px;}
 main .empty{margin:14px 0;}
 .customer-row-spark{position:relative;flex:0 0 46px;width:46px;height:16px;min-width:46px;display:inline-flex;align-items:center;color:var(--vg-color-primary);margin-inline-start:8px;direction:ltr;overflow:visible;}
@@ -237,14 +236,9 @@ html[data-theme="dark"] .watch-detail-reason .watch-detail-value{color:var(--vg-
 .bp-dashboard-watch-title{font-size:12px;font-weight:600;color:var(--vg-color-text);}
 .bp-dashboard-watch-reason{font-size:11px;line-height:1.65;color:var(--vg-color-text-muted);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
 .bp-dashboard-watch-severity{flex:0 0 auto;font-size:11px;font-weight:600;color:var(--vg-color-text-muted);padding:3px 7px;border-radius:999px;background:var(--vg-color-surface-2,var(--vg-color-bg));}
-.bp-sort-label{font-size:12px;color:var(--vg-color-text-muted);align-self:center;}
-.bp-customer-secondary-filters{margin-bottom:8px;}
 .bp-customer-health{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;margin-top:10px;border:.5px solid var(--vg-color-divider);border-radius:12px;background:var(--vg-color-surface);}
 .bp-customer-health-label{font-size:11px;color:var(--vg-color-text-muted);}
 .bp-customer-health-value{font-size:12px;font-weight:600;color:var(--vg-color-text);font-variant-numeric:tabular-nums;}
-.bp-customer-health-value.radar-risk-critical{color:var(--vg-color-danger,#D52B36);}
-.bp-customer-health-value.radar-risk-high{color:var(--vg-color-warning,#C47B00);}
-.bp-customer-health-value.radar-risk-medium{color:var(--vg-color-warning,#C47B00);}
 #main.customer-detail-view .cust-summary-label{font-size:11px;font-weight:600;color:var(--vg-color-text-muted);margin-bottom:4px;font-variant-numeric:tabular-nums;}
 .bp-customer-secondary-actions{margin:0 0 16px;border-top:.5px solid var(--vg-color-divider);padding-top:2px;}
 .bp-customer-secondary-title{font-size:12px;font-weight:600;color:var(--vg-color-text-muted);}
@@ -295,9 +289,6 @@ html[data-theme="dark"] .watch-detail-reason .watch-detail-value{color:var(--vg-
 .bp-qv-balance{font-size:13px;font-weight:600;color:var(--vg-color-text);font-variant-numeric:tabular-nums;}
 .bp-qv-balance.is-debt{color:var(--vg-color-danger);}
 .bp-qv-health{display:inline-flex;flex:none;padding:4px 8px;border-radius:999px;background:var(--vg-color-surface-2,var(--vg-color-bg));font-size:11px;font-weight:600;color:var(--vg-color-text-muted);}
-.bp-qv-health.radar-risk-critical{color:var(--vg-color-danger);}
-.bp-qv-health.radar-risk-high,
-.bp-qv-health.radar-risk-medium{color:var(--vg-color-warning);}
 /* v117: relationship status colours (reuse the existing palette; no layout change) */
 .bp-customer-health-value.radar-rel-red{color:var(--vg-color-danger,#D52B36);}
 .bp-customer-health-value.radar-rel-yellow{color:var(--vg-color-warning,#C47B00);}
@@ -536,14 +527,7 @@ details[open]>summary .rp-sum-chev{transform:rotate(90deg);}
 #main.customer-detail-view .customer-rejection-list{background:var(--vg-color-surface);border:1px solid var(--vg-color-border);border-radius:var(--vg-radius-raised);box-shadow:none;padding:2px 14px;margin-bottom:var(--vg-space-group);}
 #main.customer-detail-view .customer-tx-list .ledger-row,
 #main.customer-detail-view .customer-rejection-list .ledger-row{min-height:52px;}
-#main .cl-tools{display:flex;align-items:center;flex-wrap:nowrap;gap:8px;margin:0 0 6px;}
-#main .cl-tools .bp-sort-label{margin-inline-start:auto;white-space:nowrap;}
-#main .cl-tools .btn{white-space:nowrap;}
-#main .cl-tools .tx-toolbar-select{min-width:96px;max-width:132px;}
-#main .cl-count{font-size:12px;color:var(--vg-color-text-muted);padding:0 4px 4px;min-height:1.2em;}
 .customer-row-watch{color:var(--vg-color-warning);}
-#main .cl-tools .tx-toolbar-label{margin-inline-start:auto;white-space:nowrap;}
-#main .cl-tools .cl-count{padding:0;}
 #main .inv-detail h3.sub-title{margin:22px 0 10px;}
 #main .inv-detail .tx-identity.card{padding:16px;border-radius:var(--vg-radius-raised);box-shadow:none;margin-bottom:var(--vg-space-group);}
 #main .inv-detail .tx-identity-title{font-size:17px;}
@@ -666,9 +650,6 @@ html .sheet.inv-sheet-host .inv-mini-input:focus{border-color:var(--vg-color-pri
 .followup-status-none::before{background:var(--vg-color-neutral);}
 .bp-target-strip.is-ontrack .bp-target-strip-status{color:#0E7490;}
 html[data-theme="dark"] .bp-target-strip.is-ontrack .bp-target-strip-status{color:#22D3EE;}
-#main .cl-tools .btn.small,
-#main .cl-tools .tx-toolbar-select{min-height:40px;height:40px;box-sizing:border-box;font-weight:600;padding-top:8px;padding-bottom:8px;line-height:1.25;}
-#main .cl-tools .tx-toolbar-select{font-size:17px;}
 #main .customer-list-row{min-height:92px;}
 #main.customer-detail-view .cd-meta-v{min-width:0;flex:1 1 auto;}
 #main.customer-detail-view .cd-action-hint{margin:0 0 10px;}
@@ -795,8 +776,6 @@ h2.section-title::after{display:none;}
 .eval-location-context{box-shadow:var(--vg-shadow-group);border-color:transparent;}
 .eval-profile-card{border-color:transparent;border-radius:var(--vg-radius-soft);box-shadow:var(--vg-shadow-raised);font-size:13px;}
 .eval-profile-card.selected{border:1.5px solid var(--vg-color-primary);box-shadow:none;}
-.eval-q-options .chip-opt{border-color:transparent;box-shadow:var(--vg-shadow-group);}
-.eval-q-options .chip-opt.selected{border:1.5px solid var(--vg-color-primary);box-shadow:none;}
 .eval-one-q.card{box-shadow:var(--vg-shadow-group);border-color:transparent;}
 .eval-progress-bar{height:8px;border:0;border-radius:999px;background:var(--vg-color-neutral-soft);}
 .eval-progress-fill{border-radius:999px;background:linear-gradient(270deg,#4F8DF7,#34C58E);}
@@ -816,23 +795,6 @@ h2.section-title::after{display:none;}
 .rp-hero{border-color:transparent;}
 .customer-row-title-line{display:flex;align-items:center;gap:8px;}
 .customer-row-title-line .customer-row-name{flex:0 1 auto;}
-#payment-summary,
-#check-summary,
-#visit-summary,
-#prospect-summary{gap:0;background:var(--vg-color-surface);border-radius:var(--vg-radius-soft);box-shadow:var(--vg-shadow-group);overflow:hidden;}
-#payment-summary>.card,
-#check-summary>.card,
-#visit-summary>.card,
-#prospect-summary>.card{margin:0;border:0;border-radius:0;background:transparent;box-shadow:none;}
-html[data-theme="dark"] #payment-summary,
-html[data-theme="dark"] #check-summary,
-html[data-theme="dark"] #visit-summary,
-html[data-theme="dark"] #prospect-summary{border:1px solid var(--vg-color-border);}
-#main .check-tools-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(132px,auto);align-items:center;gap:8px;margin:0 0 10px;}
-#main .check-tools-row>.field{min-width:0;margin:0;}
-#main .check-tools-row .tx-toolbar{display:flex;align-items:center;gap:6px;min-width:0;margin:0;}
-#main .check-tools-row .tx-toolbar-label{font-size:11px;white-space:nowrap;}
-#main .check-tools-row .tx-toolbar-select{flex:1 1 auto;width:1px;min-width:0;max-width:none;min-height:44px;padding-inline:8px 28px;font-size:12px;}
 #main #payment-chips,
 #main #check-chips,
 #main #visit-chips,
@@ -1078,3 +1040,99 @@ header,.bottom-nav,.sheet:not(.inv-sheet-host),.more-sheet,.prod-drop-panel,.bp-
 #main .rp-card>.rp-sec-head .rp-chart-hint{font-size:11px;color:var(--vg-color-text-muted);}
 #main .rp-card>.rp-sec-head .rp-sec-link{padding:0;font-size:11px;}
 #main .dashboard-shell .dash-section-label{font-size:12px;font-weight:var(--vg-weight-label);color:var(--vg-color-text-muted);}
+
+/* ---- مغازه‌های بالقوه و فرم ارزیابی (ادغام css/11-v119-prospects.css) ---- */
+/* v119/v120 — صفحهٔ ارزیابی مغازه‌ها (لیست مشتریان بالقوه) + فرم ارزیابی.
+   فقط استایل؛ بدون تغییر منطق. این قواعد در فایل اصلی صفحات ادغام شده‌اند. */
+
+/* 1) نوار جست‌وجو در کل پروژه: متن کوچک‌تر و نازک‌تر */
+input[type="search"],
+input[placeholder*="جستجو"]{font-size:14px;font-weight:300;}
+input[type="search"]::placeholder,
+input[placeholder*="جستجو"]::placeholder{font-weight:300;}
+
+/* 2) کارت هدف: کوتاه‌تر */
+#prospect-target .prospect-daily-target{padding:10px 12px;}
+#prospect-target .prospect-daily-target .pdt-head{margin-bottom:4px;}
+#prospect-target .prospect-daily-target .pdt-hero{flex-direction:row;align-items:baseline;justify-content:center;gap:6px;padding:0 0 4px;}
+#prospect-target .prospect-daily-target .pdt-count{font-size:26px;}
+#prospect-target .prospect-daily-target .pdt-bar-wrap{margin:4px 0 6px;}
+#prospect-target .prospect-daily-target .pdt-of,
+#prospect-target .prospect-daily-target .pdt-caption{font-size:12px;}
+
+/* 3) ردیف ابزار: کپسول موقعیت (راست) + مرتب‌سازی کوچک (چپ) */
+#main .pl-toolbar{display:flex;align-items:center;gap:8px;margin:0 0 8px;}
+#main .pl-toolbar .pl-sort{display:flex;align-items:center;gap:6px;margin-inline-start:auto;}
+#main .pl-sort label{font-size:12px;color:var(--vg-color-text-muted);white-space:nowrap;}
+#main .pl-sort select{width:auto;min-width:0;height:32px;min-height:32px;margin:0;padding:4px 26px 4px 10px;font-size:12px;border-radius:999px;background-position:left 9px center;}
+
+#main .pl-cap{display:inline-flex;align-items:center;gap:6px;min-height:32px;max-width:100%;padding:4px 12px;border:1px solid var(--vg-glass-border);border-radius:999px;background:var(--vg-glass-sheen),var(--vg-glass-tint);-webkit-backdrop-filter:var(--vg-glass-blur);backdrop-filter:var(--vg-glass-blur);box-shadow:var(--vg-glass-rim),0 1px 3px rgba(26,38,52,.06);color:var(--vg-color-text);font-family:inherit;font-size:12px;line-height:1.2;cursor:pointer;}
+#main .pl-cap:active{transform:scale(.97);}
+#main .pl-cap-title{color:var(--vg-color-text-muted);font-weight:400;white-space:nowrap;}
+#main .pl-cap-value{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;max-width:140px;}
+#main .pl-cap::after{content:"";flex:none;width:5px;height:5px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:translateY(-2px) rotate(45deg);opacity:.5;}
+#main .pl-cap.is-set{border-color:var(--vg-color-primary);}
+#main .pl-cap.is-set .pl-cap-title,
+#main .pl-cap.is-set .pl-cap-value{color:var(--vg-color-primary);}
+
+#main #prospect-summary.pl-count{display:block;background:transparent;border:0;box-shadow:none;overflow:visible;padding:0 4px;margin:0 0 8px;font-size:12px;color:var(--vg-color-text-muted);font-variant-numeric:tabular-nums;}
+html[data-theme="dark"] #main #prospect-summary.pl-count{border:0;}
+
+/* برگهٔ موقعیت (drill-down) */
+.pl-sheet-title{margin:0 0 12px;text-align:center;font-size:17px;font-weight:600;color:var(--vg-color-text);}
+.pl-sheet-back{display:block;margin:0 0 6px;padding:4px 2px;border:0;background:transparent;color:var(--vg-color-primary);font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;}
+.pl-sheet-list{display:flex;flex-direction:column;gap:6px;max-height:58vh;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.pl-sheet-item{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:46px;padding:10px 14px;border:0;border-radius:14px;background:var(--vg-color-surface-soft);color:var(--vg-color-text);font-family:inherit;font-size:15px;font-weight:500;text-align:start;cursor:pointer;}
+.pl-sheet-check{flex:none;color:var(--vg-color-text-muted);font-size:18px;line-height:1;}
+.pl-sheet-manage{display:block;width:100%;margin-top:12px;min-height:44px;border:0;border-radius:14px;background:transparent;color:var(--vg-color-primary);font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;}
+
+/* 4) فرم ارزیابی: گزینه‌ها و کسب‌وکار به‌صورت لیست گروهی iOS با جداکننده */
+.eval-ios-group{display:flex;flex-direction:column;margin-top:8px;background:var(--vg-color-surface);border-radius:var(--vg-radius-soft);box-shadow:var(--vg-shadow-group);overflow:hidden;}
+.eval-ios-row{display:flex;align-items:center;gap:10px;width:100%;min-height:50px;padding:12px 14px;border:0;border-bottom:.5px solid rgba(31,41,55,.12);background:transparent;color:var(--vg-color-text);font-family:inherit;font-size:15px;font-weight:500;text-align:start;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+.eval-ios-row:last-child{border-bottom:0;}
+.eval-ios-row:active{background:var(--vg-color-surface-soft);}
+.eval-ios-row .eval-ios-label{flex:1 1 auto;min-width:0;line-height:1.5;}
+.eval-ios-row .eval-ios-check{flex:none;color:var(--vg-color-primary);font-weight:700;opacity:0;}
+.eval-ios-row.selected{color:var(--vg-color-primary);font-weight:600;}
+.eval-ios-row.selected .eval-ios-check{opacity:1;}
+.eval-ios-row.selected .eval-opt-num{background:var(--vg-color-primary);color:#fff;}
+html[data-theme="dark"] .eval-ios-row{border-bottom-color:rgba(255,255,255,.12);}
+.eval-opt-num{display:inline-flex;align-items:center;justify-content:center;flex:none;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:var(--vg-color-neutral-soft);color:var(--vg-color-text-muted);font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;}
+
+/* 5) پاسخ‌های خلاصه: جداکننده و شماره */
+.evaluation-answers-card .answer-row{border-bottom:1px solid rgba(31,41,55,.09);}
+.evaluation-answers-card .answer-row:last-child{border-bottom:0;}
+html[data-theme="dark"] .evaluation-answers-card .answer-row{border-bottom-color:rgba(255,255,255,.12);}
+.answer-index{display:inline-flex;align-items:center;justify-content:center;flex:none;min-width:24px;height:20px;padding:0 6px;border-radius:999px;background:var(--vg-color-primary-soft);color:var(--vg-color-primary);font-weight:600;font-size:11px;font-variant-numeric:tabular-nums;}
+.answer-a .eval-opt-num{margin-inline-end:6px;min-width:18px;height:18px;font-size:10px;vertical-align:middle;}
+
+/* ---- قرارداد صفحات لیست (ادغام css/13-list-contract.css) ---- */
+/* css/13-list-contract.css — قرارداد صفحهٔ لیست (یکدست در کل پروژه).
+   ترتیب: [سگمنت حداکثر ۴ گزینه] ← [جستجو + فیلتر در یک ردیف] ← [خلاصه … مرتب‌سازی] ← [لیست]
+   فیلتر ردیف جستجو در صفحاتی که برگهٔ فیلتر دارند اضافه می‌شود (.lp-filter-btn). */
+
+#main .lp-search-row{display:flex;align-items:center;gap:8px;margin:0 0 8px;}
+#main .lp-search-row>.field{flex:1 1 auto;min-width:0;margin:0;}
+#main .lp-filter-btn{position:relative;flex:none;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border:1px solid var(--vg-glass-border);border-radius:999px;background:var(--vg-glass-sheen),var(--vg-glass-tint);-webkit-backdrop-filter:var(--vg-glass-blur);backdrop-filter:var(--vg-glass-blur);box-shadow:var(--vg-glass-rim),0 1px 3px rgba(26,38,52,.06);color:var(--vg-color-text);cursor:pointer;}
+#main .lp-filter-btn .lp-badge{position:absolute;top:-3px;inset-inline-end:-3px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--vg-color-primary);color:#fff;font-size:10px;font-weight:700;line-height:18px;text-align:center;}
+
+#main .lp-summary-row{display:flex;align-items:center;gap:8px;min-height:32px;margin:0 0 10px;}
+#main #check-summary.lp-summary,
+#main .lp-summary{display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex:1 1 auto;min-width:0;min-height:30px;margin:0;padding:4px 6px 4px 12px;box-sizing:border-box;border:0;border-radius:999px;background:rgba(118,118,128,.10);box-shadow:none;grid-template-columns:none;font-size:12px;color:var(--vg-color-text-muted);font-variant-numeric:tabular-nums;}
+html[data-theme="dark"] #main #check-summary.lp-summary,
+html[data-theme="dark"] #main .lp-summary{background:rgba(118,118,128,.22);}
+#main .lp-count{display:inline-flex;align-items:center;gap:0;color:var(--vg-color-text);font-size:12px;font-weight:600;white-space:nowrap;}
+#main .lp-sep{display:inline-block;margin:0 7px;opacity:.4;font-weight:700;}
+#main .lp-flag{border:0;border-radius:999px;padding:3px 9px;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;background:rgba(220,38,38,.12);color:#b42318;}
+#main .lp-flag.warn{background:rgba(217,119,6,.14);color:#b45309;}
+html[data-theme="dark"] #main .lp-flag{background:rgba(248,113,113,.18);color:#fca5a5;}
+html[data-theme="dark"] #main .lp-flag.warn{background:rgba(251,191,36,.16);color:#fcd34d;}
+
+#main .lp-sort{display:flex;align-items:center;gap:6px;flex:none;margin-inline-start:auto;}
+#main .lp-sort label{font-size:12px;color:var(--vg-color-text-muted);white-space:nowrap;}
+#main .lp-sort select{width:auto;min-width:0;height:32px;min-height:32px;margin:0;padding:4px 26px 4px 10px;font-size:12px;border-radius:999px;background-position:left 9px center;}
+
+/* آیکون دکمهٔ فیلتر: بدون اندازهٔ صریح، SVG در دکمه بیرون می‌زد و نامرئی بود */
+#main .lp-filter-btn svg{width:20px;height:20px;flex:none;display:block;}
+#main .lp-filter-btn.active{border-color:var(--vg-color-primary);color:var(--vg-color-primary);}
+#main .lp-filter-btn .lp-badge{top:-4px;inset-inline-end:-4px;}

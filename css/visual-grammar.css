@@ -99,7 +99,6 @@ html[data-theme="dark"] .field select,
 html[data-theme="dark"] .field textarea,
 html[data-theme="dark"] input[type="search"],
 html[data-theme="dark"] input[placeholder*="جستجو"],
-html[data-theme="dark"] .tx-toolbar-select,
 html[data-theme="dark"] .inv-mini-input,
 html[data-theme="dark"] .inv-payment-panel>input,
 html[data-theme="dark"] .inv-payment-check-due input,
@@ -108,7 +107,6 @@ html[data-theme="dark"] .prod-drop-search{background-color:var(--vg-color-surfac
 html[data-theme="dark"] input::placeholder,
 html[data-theme="dark"] textarea::placeholder{color:var(--vg-color-text-muted);}
 html[data-theme="dark"] .field select,
-html[data-theme="dark"] .tx-toolbar-select,
 html[data-theme="dark"] .inv-discount-block select{background-color:var(--vg-color-surface-soft);}
 html[data-theme="dark"] .prod-drop-search-wrap{background:var(--vg-color-surface-soft);border-color:var(--vg-color-divider);}
 html[data-theme="dark"] .prod-drop-item:active,
