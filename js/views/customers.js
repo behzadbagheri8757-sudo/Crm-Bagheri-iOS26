@@ -193,7 +193,7 @@
 
     // Presentation only: result count under the filters (reads the already-computed rows).
     const countEl = document.getElementById('customer-count');
-    if (countEl) countEl.textContent = rows.length ? enToFaDigits(String(rows.length)) + ' مشتری' : '';
+    if (countEl) countEl.innerHTML = rows.length ? '<span class="lp-count">' + enToFaDigits(String(rows.length)) + ' مشتری</span>' : '';
 
     if (!rows.length) {
       listEl.innerHTML =
@@ -340,21 +340,14 @@
     });
   }
 
+  // نشانگر فیلتر موقعیت: عدد روی دکمهٔ فیلتر ردیف جستجو (پاک کردن داخل برگه است)
   function updateLocationFilterIndicator() {
-    const el = document.getElementById('customer-filter-indicator');
     const btn = document.getElementById('customer-filter');
-    if (!el || !btn) return;
+    if (!btn) return;
     const count = (locFilter.regionId ? 1 : 0) + (locFilter.routeId ? 1 : 0) + (locFilter.neighborhoodId ? 1 : 0) + (locFilter.unassigned ? 1 : 0);
-    el.innerHTML = count
-      ? '<span>فیلتر: ' + esc(getLocationDisplayString(locFilter.neighborhoodId || locFilter.routeId || locFilter.regionId)) + '</span><button type="button" class="chip" id="customer-filter-clear-inline">×</button>'
-      : '';
     btn.classList.toggle('active', count > 0);
-    const clear = document.getElementById('customer-filter-clear-inline');
-    if (clear) clear.onclick = function () {
-      locFilter = { regionId:'', routeId:'', neighborhoodId:'', unassigned:false };
-      updateLocationFilterIndicator();
-      renderCustomerListOnly();
-    };
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg>' +
+      (count ? '<span class="lp-badge">' + enToFaDigits(String(count)) + '</span>' : '');
   }
 
   function drawCustomersPage(root) {
@@ -362,22 +355,18 @@
       return '<button type="button" class="chip ' + (custFilter === id ? 'active' : '') + '" data-filter="' + id + '">' + label + '</button>';
     };
     root.innerHTML =
-      '<div class="field"><input id="customer-search" placeholder="جستجوی نام، آدرس، تلفن، منطقه و…" value="' + esc(custQuery) + '" autocomplete="off"></div>' +
+      '<div class="lp-search-row"><div class="field lp-search"><input id="customer-search" placeholder="جستجوی نام، آدرس، تلفن، منطقه و…" value="' + esc(custQuery) + '" autocomplete="off"></div>' +
+      '<button type="button" class="lp-filter-btn" id="customer-filter" aria-label="فیلتر منطقه"></button></div>' +
       '<div class="chip-row segmented-control" id="customer-chips">' + chip('all','همه') + chip('debt','بدهکار') + chip('settled','تسویه') + chip('credit','بستانکار') + '</div>' +
-      '<div class="bp-customer-secondary-filters">' +
-      '<div class="btn-row cl-tools">' +
-      '<button type="button" class="btn small secondary" id="customer-filter">فیلتر منطقه</button>' +
-      '<label class="bp-sort-label" for="customer-sort">مرتب‌سازی</label>' +
-      '<select class="tx-toolbar-select" id="customer-sort">' +
+      '<div class="lp-summary-row">' +
+      '<div id="customer-count" class="lp-summary"></div>' +
+      '<div class="lp-sort"><label for="customer-sort">مرتب‌سازی</label>' +
+      '<select id="customer-sort">' +
       '<option value="priority" ' + (custSortBy === 'priority' ? 'selected' : '') + '>اولویت</option>' +
       '<option value="last_visit" ' + (custSortBy === 'last_visit' ? 'selected' : '') + '>آخرین ویزیت</option>' +
       '<option value="debt" ' + (custSortBy === 'debt' ? 'selected' : '') + '>بدهی</option>' +
       '<option value="name" ' + (custSortBy === 'name' ? 'selected' : '') + '>نام</option>' +
-      '</select>' +
-      '</div>' +
-      '</div>' +
-      '<div id="customer-filter-indicator" class="customer-filter-indicator" aria-live="polite"></div>' +
-      '<div id="customer-count" class="cl-count" aria-live="polite"></div>' +
+      '</select></div></div>' +
       '<div class="customer-list-trend-hint"><span class="customer-list-trend-sample"><i></i><b></b></span><span>روند خرید · ۸ هفته اخیر</span></div>' +
       '<div id="customer-list"></div>';
 
