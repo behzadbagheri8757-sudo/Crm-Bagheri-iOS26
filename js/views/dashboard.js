@@ -672,8 +672,7 @@
   function commitmentCard(tab, label, n) {
     return '<a class="cm-card" href="#/dashboard?section=commitments&tab=' + tab + '">' +
       '<span class="cm-card-count">' + commitmentCountHtml(n) + '</span>' +
-      '<span class="cm-card-label">' + label + '</span>' +
-      '<span class="cm-card-chev" aria-hidden="true">›</span>' +
+      '<span class="cm-card-label">' + label + '<span class="cm-card-chev" aria-hidden="true">›</span></span>' +
       '</a>';
   }
   function openPaymentCount() {
