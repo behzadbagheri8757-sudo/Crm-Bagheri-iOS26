@@ -27,6 +27,12 @@
    scrollY 1:1 and reverses identically. Removed the now-duplicate "داشبورد"
    <h2> inside Dashboard's own content — the header already shows it as the
    page title since the brand-name/page-title fix) */
+/* CHANGED: v130 -> v131 — shared location sheet (region → route → neighborhood, labelled 'موقعیت') used by Customers and Prospects; both use the filter button in the search row. */
+/* CHANGED: v129 -> v130 — Customers list converted to the list contract (search row with filter button, summary+sort row, badge on filter). */
+/* CHANGED: v128 -> v129 — Payments (filter sheet for secondary types, 4 segments, summary pill) and Invoices (search row, summary+sort row) converted to the list contract. */
+/* CHANGED: v127 -> v128 — Products and Visits converted to the list contract (search row, max-4 segments, summary+sort row, shortcut flags for negative stock and closed stores). */
+/* CHANGED: v126 -> v127 — Suppliers list converted to the list contract (search row, summary+sort row, summary line). */
+/* CHANGED: v125 -> v126 — cache bump only, to force devices still showing the v124 header to fetch the v125 shell and CSS. */
 /* CHANGED: v124 -> v125 — iOS 26 header: transparent, no hairline, progressive blur under content. New css/14-header-ios26.css in PRECACHE_URLS. */
 /* CHANGED: v123 -> v124 — list summary restyled as a glass pill (was plain text on background). */
 /* CHANGED: v122 -> v123 — list-page contract pilot on Checks (search row, max-4 segments, summary+sort row, flag shortcuts). New css/13-list-contract.css in PRECACHE_URLS. */
@@ -52,7 +58,7 @@
 /* CHANGED: v111 -> v112 — UI typography, shared segmented filters, theme-aware form colors and validation states. Removed the obsolete bundled font asset from the offline precache. */
 /* Previous v110 -> v111 — 00-chrome.css and 10-disclosure.css were missing from PRECACHE_URLS (first load / offline showed unstyled header and disclosure surfaces until the network fetch finished). Both added; cache bumped so devices re-fetch the updated CSS instead of serving the stale cached copy. */
 /* CHANGED: v98 -> v99 (Soft iOS look: CSS-only visual refresh — tokens in visual-grammar.css and a new layer at the end of visual-grammar-pages.css. No asset list, route or business logic changed.) */
-const CACHE_NAME = 'baqeri-shell-v129';
+const CACHE_NAME = 'baqeri-shell-v131';
 
 /* CHANGED: v117 -> v118 — Restored unified section-heading styling from the blue patch on top of the product purchase-history baseline. No prospect-evaluation UX, segment, data, schema or business-logic changes. */
 
@@ -70,6 +76,7 @@ const PRECACHE_URLS = [
   './css/13-list-contract.css',
   './css/14-header-ios26.css',
   './js/ui-segmented.js',
+  './js/ui-location-sheet.js',
   './css/shamsi-calendar.css',
   './js/shamsi-calendar.js',
   './js/models.js',
