@@ -64,7 +64,7 @@
     const flagHtml = (flags || []).filter(f => f.n > 0).map(f =>
       `<button type="button" class="lp-flag ${f.cls || ''}" data-cf="${f.id}">${enToFaDigits(String(f.n))} ${f.label}</button>`
     ).join('');
-    return `<span class="lp-count">${enToFaDigits(String(count))} چک · ${toman(total)} ت</span>${flagHtml}`;
+    return `<span class="lp-count">${enToFaDigits(String(count))} چک<span class="lp-sep" aria-hidden="true">·</span>${toman(total)} ت</span>${flagHtml}`;
   }
 
   function renderSupplierCheckList(listEl, sumEl) {
