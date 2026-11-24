@@ -115,17 +115,7 @@
       0
     );
 
-    // Final Retouch: compact payment-summary (same totals; presentation only)
-    sumEl.innerHTML = `
-      <div class="card">
-        <div class="label">تعداد پرداخت (فیلتر)</div>
-        <div class="value">${enToFaDigits(String(rows.length))}</div>
-      </div>
-      <div class="card">
-        <div class="label">جمع مبالغ (فیلتر فعلی)</div>
-        <div class="value">${toman(totalAmount)} ت</div>
-      </div>
-    `;
+    sumEl.innerHTML = `<span class="lp-count">${enToFaDigits(String(rows.length))} پرداخت<span class="lp-sep" aria-hidden="true">·</span>${toman(totalAmount)} ت</span>`;
 
     if (!rows.length) {
       listEl.innerHTML = `
@@ -260,6 +250,35 @@
     };
   }
 
+  // فیلترهای ثانویه (برگشت / تخفیف / تامین‌کننده) داخل برگهٔ فیلتر هستند، نه سگمنت.
+  const PAY_EXTRA = [
+    { id: 'return', label: 'برگشت' },
+    { id: 'discount', label: 'تخفیف' },
+    { id: 'supplier', label: 'تامین‌کننده' }
+  ];
+  function payExtraActive() { return PAY_EXTRA.some(function (x) { return x.id === payFilter; }); }
+
+  function openPayFilterSheet() {
+    const rowsHtml = [{ id: 'all', label: 'همه' }].concat(PAY_EXTRA).map(function (x) {
+      const sel = payFilter === x.id;
+      return '<button type="button" class="pl-sheet-item' + (sel ? ' is-selected' : '') + '" data-pay-pick="' + x.id + '">' +
+        '<span>' + x.label + '</span><span class="pl-sheet-check" aria-hidden="true">' + (sel ? '✓' : '') + '</span></button>';
+    }).join('');
+    openSheet('<h3 class="pl-sheet-title">فیلتر پرداخت</h3><div class="pl-sheet-list">' + rowsHtml + '</div>');
+    document.querySelectorAll('[data-pay-pick]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        payFilter = b.getAttribute('data-pay-pick');
+        closeModal();
+        document.querySelectorAll('#payment-chips [data-pf]').forEach(function (c) {
+          c.classList.toggle('active', c.getAttribute('data-pf') === payFilter);
+        });
+        const fb = document.getElementById('payment-filter-btn');
+        if (fb) fb.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg>' + (payExtraActive() ? '<span class="lp-badge">۱</span>' : '');
+        renderPaymentListOnly();
+      });
+    });
+  }
+
   function drawPaymentsPage(root) {
     const chip = function (id, label) {
       return `
@@ -274,13 +293,19 @@
     };
 
     root.innerHTML = `
-      <div class="field">
-        <input
-          id="payment-search"
-          placeholder="جستجوی مشتری، تامین‌کننده، مبلغ، توضیح..."
-          value="${esc(payQuery)}"
-          autocomplete="off"
-        >
+      <div class="lp-search-row">
+        <div class="field lp-search">
+          <input
+            id="payment-search"
+            placeholder="جستجوی مشتری، تامین‌کننده، مبلغ، توضیح..."
+            value="${esc(payQuery)}"
+            autocomplete="off"
+          >
+        </div>
+        <button type="button" class="lp-filter-btn" id="payment-filter-btn" aria-label="فیلترهای بیشتر">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+          ${payExtraActive() ? '<span class="lp-badge">۱</span>' : ''}
+        </button>
       </div>
 
       <div class="chip-row segmented-control" id="payment-chips">
@@ -288,49 +313,20 @@
         ${chip('cash', 'نقد')}
         ${chip('card', 'کارت')}
         ${chip('transfer', 'انتقال')}
-        ${chip('return', 'برگشت')}
-        ${chip('discount', 'تخفیف')}
-        ${chip('supplier', 'تامین‌کننده')}
       </div>
 
-      <div class="tx-toolbar">
-        <label class="tx-toolbar-label" for="payment-sort">مرتب‌سازی</label>
-        <select id="payment-sort" class="tx-toolbar-select">
-          <option
-            value="newest"
-            ${paySort === 'newest' ? 'selected' : ''}
-          >
-            جدیدترین
-          </option>
-
-          <option
-            value="oldest"
-            ${paySort === 'oldest' ? 'selected' : ''}
-          >
-            قدیمی‌ترین
-          </option>
-
-          <option
-            value="amountDesc"
-            ${paySort === 'amountDesc' ? 'selected' : ''}
-          >
-            بیشترین مبلغ
-          </option>
-
-          <option
-            value="amountAsc"
-            ${paySort === 'amountAsc' ? 'selected' : ''}
-          >
-            کمترین مبلغ
-          </option>
-        </select>
+      <div class="lp-summary-row">
+        <div id="payment-summary" class="lp-summary"></div>
+        <div class="lp-sort">
+          <label for="payment-sort">مرتب‌سازی</label>
+          <select id="payment-sort">
+            <option value="newest" ${paySort === 'newest' ? 'selected' : ''}>جدیدترین</option>
+            <option value="oldest" ${paySort === 'oldest' ? 'selected' : ''}>قدیمی‌ترین</option>
+            <option value="amountDesc" ${paySort === 'amountDesc' ? 'selected' : ''}>بیشترین مبلغ</option>
+            <option value="amountAsc" ${paySort === 'amountAsc' ? 'selected' : ''}>کمترین مبلغ</option>
+          </select>
+        </div>
       </div>
-
-      <div
-        id="payment-summary"
-        class="cards"
-        style="margin-bottom:12px;"
-      ></div>
 
       <div id="payment-list" class="tx-list"></div>
     `;
@@ -347,6 +343,9 @@
       'input',
       searchHandler
     );
+
+    const payFilterBtn = document.getElementById('payment-filter-btn');
+    if (payFilterBtn) payFilterBtn.addEventListener('click', openPayFilterSheet);
 
     chipHandlers = [];
 

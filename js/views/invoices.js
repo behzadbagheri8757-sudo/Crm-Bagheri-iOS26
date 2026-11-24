@@ -117,21 +117,23 @@
       return `<button type="button" class="chip ${invFilter===id?'active':''}" data-if="${id}">${label}</button>`;
     };
     root.innerHTML = `
-      <div class="field"><input id="invoice-search" placeholder="جستجوی شماره فاکتور یا نام مشتری..." value="${esc(invQuery)}" autocomplete="off"></div>
+      <div class="lp-search-row"><div class="field lp-search"><input id="invoice-search" placeholder="جستجوی شماره فاکتور یا نام مشتری..." value="${esc(invQuery)}" autocomplete="off"></div></div>
       <div class="chip-row segmented-control" id="invoice-chips">
         ${chip('all','همه')}
         ${chip('paid','پرداخت‌شده')}
         ${chip('debt','بدهکار')}
       </div>
-      <div class="tx-toolbar cl-tools">
-        <span id="invoice-count" class="cl-count" aria-live="polite"></span>
-        <label class="tx-toolbar-label" for="invoice-sort">مرتب‌سازی</label>
-        <select id="invoice-sort" class="tx-toolbar-select">
-          <option value="newest" ${invSort==='newest'?'selected':''}>جدیدترین</option>
-          <option value="oldest" ${invSort==='oldest'?'selected':''}>قدیمی‌ترین</option>
-          <option value="amountDesc" ${invSort==='amountDesc'?'selected':''}>بیشترین مبلغ</option>
-          <option value="amountAsc" ${invSort==='amountAsc'?'selected':''}>کمترین مبلغ</option>
-        </select>
+      <div class="lp-summary-row">
+        <div id="invoice-summary" class="lp-summary"><span id="invoice-count" class="lp-count" aria-live="polite"></span></div>
+        <div class="lp-sort">
+          <label for="invoice-sort">مرتب‌سازی</label>
+          <select id="invoice-sort">
+            <option value="newest" ${invSort==='newest'?'selected':''}>جدیدترین</option>
+            <option value="oldest" ${invSort==='oldest'?'selected':''}>قدیمی‌ترین</option>
+            <option value="amountDesc" ${invSort==='amountDesc'?'selected':''}>بیشترین مبلغ</option>
+            <option value="amountAsc" ${invSort==='amountAsc'?'selected':''}>کمترین مبلغ</option>
+          </select>
+        </div>
       </div>
       <div id="invoice-list" class="tx-list"></div>
     `;
