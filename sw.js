@@ -27,6 +27,8 @@
    scrollY 1:1 and reverses identically. Removed the now-duplicate "داشبورد"
    <h2> inside Dashboard's own content — the header already shows it as the
    page title since the brand-name/page-title fix) */
+/* CHANGED: v132 -> v133 — merged CSS patch layers 11–14 into their canonical stylesheets, removed confirmed superseded/dead selectors, removed deleted patch files from index.html and PRECACHE_URLS. CSS appearance and JS behavior are intended to remain unchanged; no JS, data, schema, accounting, stock, or backup logic changed. */
+/* CHANGED: v131 -> v132 — filter button icon sized (was invisible); active state and badge position. */
 /* CHANGED: v130 -> v131 — shared location sheet (region → route → neighborhood, labelled 'موقعیت') used by Customers and Prospects; both use the filter button in the search row. */
 /* CHANGED: v129 -> v130 — Customers list converted to the list contract (search row with filter button, summary+sort row, badge on filter). */
 /* CHANGED: v128 -> v129 — Payments (filter sheet for secondary types, 4 segments, summary pill) and Invoices (search row, summary+sort row) converted to the list contract. */
@@ -58,7 +60,7 @@
 /* CHANGED: v111 -> v112 — UI typography, shared segmented filters, theme-aware form colors and validation states. Removed the obsolete bundled font asset from the offline precache. */
 /* Previous v110 -> v111 — 00-chrome.css and 10-disclosure.css were missing from PRECACHE_URLS (first load / offline showed unstyled header and disclosure surfaces until the network fetch finished). Both added; cache bumped so devices re-fetch the updated CSS instead of serving the stale cached copy. */
 /* CHANGED: v98 -> v99 (Soft iOS look: CSS-only visual refresh — tokens in visual-grammar.css and a new layer at the end of visual-grammar-pages.css. No asset list, route or business logic changed.) */
-const CACHE_NAME = 'baqeri-shell-v131';
+const CACHE_NAME = 'baqeri-shell-v133';
 
 /* CHANGED: v117 -> v118 — Restored unified section-heading styling from the blue patch on top of the product purchase-history baseline. No prospect-evaluation UX, segment, data, schema or business-logic changes. */
 
@@ -71,10 +73,6 @@ const PRECACHE_URLS = [
   './css/visual-grammar-pages.css',
   './css/00-chrome.css',
   './css/10-disclosure.css',
-  './css/11-v119-prospects.css',
-  './css/12-ios-segmented.css',
-  './css/13-list-contract.css',
-  './css/14-header-ios26.css',
   './js/ui-segmented.js',
   './js/ui-location-sheet.js',
   './css/shamsi-calendar.css',
