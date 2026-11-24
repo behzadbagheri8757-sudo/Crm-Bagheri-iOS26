@@ -27,6 +27,7 @@
    scrollY 1:1 and reverses identically. Removed the now-duplicate "داشبورد"
    <h2> inside Dashboard's own content — the header already shows it as the
    page title since the brand-name/page-title fix) */
+/* CHANGED: v124 -> v125 — iOS 26 header: transparent, no hairline, progressive blur under content. New css/14-header-ios26.css in PRECACHE_URLS. */
 /* CHANGED: v123 -> v124 — list summary restyled as a glass pill (was plain text on background). */
 /* CHANGED: v122 -> v123 — list-page contract pilot on Checks (search row, max-4 segments, summary+sort row, flag shortcuts). New css/13-list-contract.css in PRECACHE_URLS. */
 /* CHANGED: v121 -> v122 — segmented lens now receives ios-has-on (was missing, lens stayed invisible). */
@@ -51,7 +52,7 @@
 /* CHANGED: v111 -> v112 — UI typography, shared segmented filters, theme-aware form colors and validation states. Removed the obsolete bundled font asset from the offline precache. */
 /* Previous v110 -> v111 — 00-chrome.css and 10-disclosure.css were missing from PRECACHE_URLS (first load / offline showed unstyled header and disclosure surfaces until the network fetch finished). Both added; cache bumped so devices re-fetch the updated CSS instead of serving the stale cached copy. */
 /* CHANGED: v98 -> v99 (Soft iOS look: CSS-only visual refresh — tokens in visual-grammar.css and a new layer at the end of visual-grammar-pages.css. No asset list, route or business logic changed.) */
-const CACHE_NAME = 'baqeri-shell-v124';
+const CACHE_NAME = 'baqeri-shell-v125';
 
 /* CHANGED: v117 -> v118 — Restored unified section-heading styling from the blue patch on top of the product purchase-history baseline. No prospect-evaluation UX, segment, data, schema or business-logic changes. */
 
@@ -67,6 +68,7 @@ const PRECACHE_URLS = [
   './css/11-v119-prospects.css',
   './css/12-ios-segmented.css',
   './css/13-list-contract.css',
+  './css/14-header-ios26.css',
   './js/ui-segmented.js',
   './css/shamsi-calendar.css',
   './js/shamsi-calendar.js',
