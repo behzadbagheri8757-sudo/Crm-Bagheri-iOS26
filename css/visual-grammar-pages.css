@@ -1136,3 +1136,14 @@ html[data-theme="dark"] #main .lp-flag.warn{background:rgba(251,191,36,.16);colo
 #main .lp-filter-btn svg{width:20px;height:20px;flex:none;display:block;}
 #main .lp-filter-btn.active{border-color:var(--vg-color-primary);color:var(--vg-color-primary);}
 #main .lp-filter-btn .lp-badge{top:-4px;inset-inline-end:-4px;}
+
+/* ---- تعهدات: دو کارت روی داشبورد و صفحهٔ تعهدات با دو سگمنت ---- */
+.cm-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:8px 0 12px;}
+.cm-card{position:relative;display:flex;flex-direction:column;gap:2px;min-width:0;padding:14px 14px 12px;border-radius:12px;background:var(--surface-2);border:0.5px solid var(--border);color:var(--text-primary);text-decoration:none;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform .15s ease;}
+.cm-card:active{transform:scale(.98);}
+.cm-card-count{font-size:26px;font-weight:500;line-height:1.1;font-variant-numeric:tabular-nums;}
+.cm-card-label{font-size:13px;color:var(--text-secondary);}
+.cm-card-chev{position:absolute;top:12px;inset-inline-end:12px;font-size:18px;line-height:1;color:var(--text-muted);}
+.cm-empty{padding:28px 12px;text-align:center;font-size:14px;color:var(--text-secondary);}
+.cm-seg{margin-bottom:12px;}
+html[data-theme="dark"] .cm-card{background:var(--surface-2);}
