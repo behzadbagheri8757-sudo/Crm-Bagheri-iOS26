@@ -44,6 +44,12 @@
     else if (supSort === 'debtAsc') rows.sort((a,b) => a.t.balance - b.t.balance);
     else rows.sort((a,b) => (a.s.name || '').localeCompare(b.s.name || '', 'fa'));
 
+    const sumEl = document.getElementById('supplier-summary');
+    if (sumEl) {
+      const owed = rows.reduce((t, x) => t + Math.max(0, x.t.balance), 0);
+      sumEl.innerHTML = `<span class="lp-count">${enToFaDigits(String(rows.length))} تامین‌کننده<span class="lp-sep" aria-hidden="true">·</span>${toman(owed)} ت بدهی</span>`;
+    }
+
     if (!rows.length) {
       listEl.innerHTML = `<div class="empty">${(data.suppliers || []).length ? 'موردی پیدا نشد' : 'هنوز تامین‌کننده‌ای ثبت نشده. با + اضافه کنید.'}</div>`;
     } else {
@@ -74,20 +80,23 @@
       return `<button type="button" class="chip ${supFilter === id ? 'active' : ''}" data-sf="${id}">${label}</button>`;
     };
     root.innerHTML = `
-      <div class="field"><input id="supplier-search" placeholder="جستجوی نام یا تلفن..." value="${esc(supQuery)}" autocomplete="off"></div>
+      <div class="lp-search-row"><div class="field lp-search"><input id="supplier-search" placeholder="جستجوی نام یا تلفن..." value="${esc(supQuery)}" autocomplete="off"></div></div>
       <div class="chip-row segmented-control" id="supplier-chips">
         ${chip('all', 'همه')}
         ${chip('debt', 'بدهکار')}
         ${chip('settled', 'تسویه')}
         ${chip('credit', 'بستانکار')}
       </div>
-      <div class="tx-toolbar">
-        <label class="tx-toolbar-label" for="supplier-sort">مرتب‌سازی</label>
-        <select id="supplier-sort" class="tx-toolbar-select">
-          <option value="name" ${supSort === 'name' ? 'selected' : ''}>نام</option>
-          <option value="debtDesc" ${supSort === 'debtDesc' ? 'selected' : ''}>بیشترین بدهی</option>
-          <option value="debtAsc" ${supSort === 'debtAsc' ? 'selected' : ''}>کمترین بدهی</option>
-        </select>
+      <div class="lp-summary-row">
+        <div id="supplier-summary" class="lp-summary"></div>
+        <div class="lp-sort">
+          <label for="supplier-sort">مرتب‌سازی</label>
+          <select id="supplier-sort">
+            <option value="name" ${supSort === 'name' ? 'selected' : ''}>نام</option>
+            <option value="debtDesc" ${supSort === 'debtDesc' ? 'selected' : ''}>بیشترین بدهی</option>
+            <option value="debtAsc" ${supSort === 'debtAsc' ? 'selected' : ''}>کمترین بدهی</option>
+          </select>
+        </div>
       </div>
       <div id="supplier-list" class="tx-list"></div>
     `;

@@ -92,6 +92,18 @@
       return aOff - bOff;
     });
 
+    const sumEl = document.getElementById('product-summary');
+    if (sumEl) {
+      const allNeg = (data.products || []).filter(function (p) { return productStatus(p).key === 'neg'; }).length;
+      const flagHtml = allNeg
+        ? '<button type="button" class="lp-flag" data-pf="neg">' + enToFaDigits(String(allNeg)) + ' موجودی منفی</button>'
+        : '';
+      const totalVal = rows.reduce(function (t, x) { return t + (x.val || 0); }, 0);
+      sumEl.innerHTML =
+        '<span class="lp-count">' + enToFaDigits(String(rows.length)) + ' کالا<span class="lp-sep" aria-hidden="true">·</span>' +
+        toman(totalVal) + ' ت ارزش</span>' + flagHtml;
+    }
+
     if (!rows.length) {
       list.innerHTML =
         '<div class="empty">' +
@@ -169,19 +181,20 @@
       '<a class="btn secondary small has-chevron" href="' +
       invHref +
       '">مشاهده انبار</a></div>' +
-      '<div class="field"><input id="product-search" placeholder="جستجوی نام یا دسته‌بندی..." value="' +
+      '<div class="lp-search-row"><div class="field lp-search"><input id="product-search" placeholder="جستجوی نام یا دسته‌بندی..." value="' +
       esc(prodQuery) +
-      '" autocomplete="off"></div>' +
+      '" autocomplete="off"></div></div>' +
       '<div class="chip-row segmented-control" id="product-chips">' +
       chip('all', 'همه') +
       chip('in', 'موجود') +
       chip('low', 'کم‌موجود') +
       chip('zero', 'ناموجود') +
-      chip('neg', 'منفی') +
       '</div>' +
-      '<div class="tx-toolbar">' +
-      '<label class="tx-toolbar-label" for="product-sort">مرتب‌سازی</label>' +
-      '<select id="product-sort" class="tx-toolbar-select">' +
+      '<div class="lp-summary-row">' +
+      '<div id="product-summary" class="lp-summary"></div>' +
+      '<div class="lp-sort">' +
+      '<label for="product-sort">مرتب‌سازی</label>' +
+      '<select id="product-sort">' +
       '<option value="name"' +
       (prodSort === 'name' ? ' selected' : '') +
       '>نام</option>' +
@@ -194,7 +207,7 @@
       '<option value="valueDesc"' +
       (prodSort === 'valueDesc' ? ' selected' : '') +
       '>ارزش موجودی</option>' +
-      '</select></div>' +
+      '</select></div></div>' +
       '<div id="product-list" class="tx-list"></div>';
 
     const searchEl = document.getElementById('product-search');
@@ -205,6 +218,20 @@
     searchEl.addEventListener('input', searchHandler);
 
     chipHandlers = [];
+    // شمارندهٔ هشدار در خلاصه (جای سگمنت منفی): همان فیلتر را فعال می‌کند
+    const prodSumEl = document.getElementById('product-summary');
+    if (prodSumEl) {
+      prodSumEl.addEventListener('click', function (e) {
+        const f = e.target.closest('[data-pf]');
+        if (!f) return;
+        prodFilter = f.getAttribute('data-pf');
+        document.querySelectorAll('#product-chips [data-pf]').forEach(function (b) {
+          b.classList.toggle('active', b.getAttribute('data-pf') === prodFilter);
+        });
+        renderProductListOnly();
+      });
+    }
+
     document.querySelectorAll('#product-chips [data-pf]').forEach(function (btn) {
       const fn = function () {
         prodFilter = btn.getAttribute('data-pf');

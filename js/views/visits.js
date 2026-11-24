@@ -107,13 +107,9 @@
     }
 
     const totalAll = collectVisits().length;
-    const orderedN = rows.filter(r => r.visit.result === VISIT_RESULTS[0] || r.visit.ordered).length;
-    const hideDuplicateTotal = visitFilter === 'all' && rows.length === totalAll;
-    sumEl.innerHTML = `
-      <div class="card"><div class="label">تعداد ویزیت (فیلتر)</div><div class="value">${enToFaDigits(String(rows.length))}</div></div>
-      ${hideDuplicateTotal ? '' : `<div class="card"><div class="label">کل ویزیت‌ها</div><div class="value">${enToFaDigits(String(totalAll))}</div></div>`}
-      <div class="card wide"><div class="label">سفارش‌گرفته در فیلتر فعلی</div><div class="value accent-olive">${enToFaDigits(String(orderedN))}</div></div>
-    `;
+    const closedN = collectVisits().filter(r => r.visit.result === VISIT_RESULTS[2]).length;
+    sumEl.innerHTML = `<span class="lp-count">${enToFaDigits(String(rows.length))} ویزیت<span class="lp-sep" aria-hidden="true">·</span>${enToFaDigits(String(rows.filter(r => r.visit.result === VISIT_RESULTS[0] || r.visit.ordered).length))} سفارش</span>` +
+      (closedN ? `<button type="button" class="lp-flag warn" data-vf="closed">${enToFaDigits(String(closedN))} فروشگاه بسته بود</button>` : '');
 
     if (!rows.length) {
       listEl.innerHTML = `<div class="empty">${totalAll ? 'موردی پیدا نشد' : 'هنوز ویزیتی ثبت نشده. با + ثبت کنید.'}</div>`;
@@ -171,24 +167,38 @@
       return `<button type="button" class="chip ${visitFilter === id ? 'active' : ''}" data-vf="${id}">${label}</button>`;
     };
     root.innerHTML = `
-      <div class="field"><input id="visit-search" placeholder="جستجوی نام مشتری، منطقه، نتیجه..." value="${esc(visitQuery)}" autocomplete="off"></div>
+      <div class="lp-search-row"><div class="field lp-search"><input id="visit-search" placeholder="جستجوی نام مشتری، منطقه، نتیجه..." value="${esc(visitQuery)}" autocomplete="off"></div></div>
       <div class="chip-row segmented-control" id="visit-chips">
         ${chip('all','همه')}
         ${chip('ordered','سفارش گرفته شد')}
         ${chip('noorder','سفارش گرفته نشد')}
-        ${chip('closed','فروشگاه بسته بود')}
         ${chip('just','فقط بازدید')}
       </div>
-      <div class="tx-toolbar">
-        <label class="tx-toolbar-label" for="visit-sort">مرتب‌سازی</label>
-        <select id="visit-sort" class="tx-toolbar-select">
-          <option value="newest" ${visitSort === 'newest' ? 'selected' : ''}>جدیدترین</option>
-          <option value="oldest" ${visitSort === 'oldest' ? 'selected' : ''}>قدیمی‌ترین</option>
-        </select>
+      <div class="lp-summary-row">
+        <div id="visit-summary" class="lp-summary"></div>
+        <div class="lp-sort">
+          <label for="visit-sort">مرتب‌سازی</label>
+          <select id="visit-sort">
+            <option value="newest" ${visitSort === 'newest' ? 'selected' : ''}>جدیدترین</option>
+            <option value="oldest" ${visitSort === 'oldest' ? 'selected' : ''}>قدیمی‌ترین</option>
+          </select>
+        </div>
       </div>
-      <div id="visit-summary" class="cards" style="margin-bottom:12px;"></div>
       <div id="visit-list" class="tx-list"></div>
     `;
+
+    const visitSumEl = document.getElementById('visit-summary');
+    if (visitSumEl) {
+      visitSumEl.addEventListener('click', function (e) {
+        const f = e.target.closest('[data-vf]');
+        if (!f) return;
+        visitFilter = f.getAttribute('data-vf');
+        document.querySelectorAll('#visit-chips [data-vf]').forEach(function (b) {
+          b.classList.toggle('active', b.getAttribute('data-vf') === visitFilter);
+        });
+        renderVisitListOnly();
+      });
+    }
 
     const searchEl = document.getElementById('visit-search');
     searchHandler = function (e) {
