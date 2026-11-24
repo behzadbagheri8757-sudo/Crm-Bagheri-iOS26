@@ -666,36 +666,68 @@
   var DASH_SECTION_TITLES = {};
   function sectionTitle(section) { return DASH_SECTION_TITLES[section] || ''; }
 
-  /* Commitments (promises, deliveries, visit plans) share one grouped card on the home screen.
-     Each module keeps its own rows and bindings; this only groups them visually. */
+  /* Dashboard: two tappable cards (وعده‌های پرداخت / قول‌های تحویل) with the total open count.
+     Tapping one opens the commitments page with that tab selected. Visit plans keep their own block. */
+  function commitmentCountHtml(n) { return enToFaDigits(String(n)); }
+  function commitmentCard(tab, label, n) {
+    return '<a class="cm-card" href="#/dashboard?section=commitments&tab=' + tab + '">' +
+      '<span class="cm-card-count">' + commitmentCountHtml(n) + '</span>' +
+      '<span class="cm-card-label">' + label + '</span>' +
+      '<span class="cm-card-chev" aria-hidden="true">›</span>' +
+      '</a>';
+  }
+  function openPaymentCount() {
+    return typeof PaymentPromises !== 'undefined' ? PaymentPromises.pendingList().length : 0;
+  }
+  function openDeliveryCount() {
+    return typeof DeliveryPromises !== 'undefined' ? DeliveryPromises.pendingAll().length : 0;
+  }
   function commitmentsGroupHtml() {
-    var parts = [];
-    if (typeof PromiseUI !== 'undefined') parts.push(PromiseUI.dashboardHtml() || '');
-    if (typeof DeliveryUI !== 'undefined') parts.push(DeliveryUI.dashboardHtml() || '');
-    if (typeof VisitPlanUI !== 'undefined') parts.push(VisitPlanUI.dashboardHtml() || '');
-    var body = parts.join('');
-    if (!body.trim()) return '';
+    var visit = typeof VisitPlanUI !== 'undefined' ? (VisitPlanUI.dashboardHtml() || '') : '';
     return '<section class="dash-commitments">' +
       '<div class="dash-commitments-head">تعهدات و پیگیری‌ها</div>' +
-      body +
-      '<a class="dash-commitments-foot" href="#/dashboard?section=commitments">مشاهدهٔ همهٔ تعهدات ›</a>' +
+      '<div class="cm-cards">' +
+        commitmentCard('payment', 'وعده‌های پرداخت', openPaymentCount()) +
+        commitmentCard('delivery', 'قول‌های تحویل', openDeliveryCount()) +
+      '</div>' +
+      visit +
       '</section>';
   }
 
-  /* Push page: #/dashboard?section=commitments — the full lists of the three modules. */
-  function renderCommitmentsPage(root) {
-    var parts = [];
-    if (typeof PromiseUI !== 'undefined') parts.push(PromiseUI.dashboardHtml({ all: true }) || '');
-    if (typeof DeliveryUI !== 'undefined') parts.push(DeliveryUI.dashboardHtml({ all: true }) || '');
-    if (typeof VisitPlanUI !== 'undefined') parts.push(VisitPlanUI.dashboardHtml({ all: true }) || '');
-    var body = parts.join('');
+  /* Commitments page: #/dashboard?section=commitments[&tab=payment|delivery].
+     Two segments switch between payment promises and delivery promises in place. */
+  function renderCommitmentsPage(root, tab) {
+    var active = tab === 'delivery' ? 'delivery' : 'payment';
     root.innerHTML = '<div class="dashboard-shell dash-push">' +
-      '<div class="dash-push-context">همهٔ تعهدات باز: وعده‌های پرداخت، تحویل‌ها و ویزیت‌ها</div>' +
-      (body.trim() ? body : '<div class="empty" style="padding:12px 0;">تعهد بازی وجود ندارد.</div>') +
+      '<div class="segmented-control cm-seg" id="cm-seg">' +
+        '<button type="button" class="chip' + (active === 'payment' ? ' active' : '') + '" data-cm="payment">وعده‌های پرداخت</button>' +
+        '<button type="button" class="chip' + (active === 'delivery' ? ' active' : '') + '" data-cm="delivery">قول‌های تحویل</button>' +
+      '</div>' +
+      '<div id="cm-body"></div>' +
       '</div>';
-    if (typeof PromiseUI !== 'undefined') PromiseUI.bindDashboard(root);
-    if (typeof DeliveryUI !== 'undefined') DeliveryUI.bindDashboard(root);
-    if (typeof VisitPlanUI !== 'undefined') VisitPlanUI.bindDashboard(root);
+
+    function show(which) {
+      var body = root.querySelector('#cm-body');
+      if (!body) return;
+      var isPay = which === 'payment';
+      var html = isPay
+        ? (typeof PromiseUI !== 'undefined' ? PromiseUI.allListHtml() : '')
+        : (typeof DeliveryUI !== 'undefined' ? DeliveryUI.allListHtml() : '');
+      var n = isPay ? openPaymentCount() : openDeliveryCount();
+      body.innerHTML = n
+        ? '<div class="lp-summary-row"><div class="lp-summary"><span class="lp-count">' + commitmentCountHtml(n) + ' مورد باز</span></div></div>' + html
+        : '<div class="cm-empty">تعهدی وجود ندارد.</div>';
+      if (isPay && typeof PromiseUI !== 'undefined') PromiseUI.bindDashboard(body);
+      if (!isPay && typeof DeliveryUI !== 'undefined') DeliveryUI.bindDashboard(body);
+      root.querySelectorAll('#cm-seg [data-cm]').forEach(function (b) {
+        b.classList.toggle('active', b.getAttribute('data-cm') === which);
+      });
+    }
+
+    root.querySelectorAll('#cm-seg [data-cm]').forEach(function (b) {
+      b.addEventListener('click', function () { show(b.getAttribute('data-cm')); });
+    });
+    show(active);
   }
 
   function mount(root, params) {
@@ -705,7 +737,7 @@
     var section = params && params.section ? String(params.section) : null;
     if (section === 'commitments') {
       if (typeof setHeaderTitle === 'function') setHeaderTitle('تعهدات و پیگیری‌ها', {});
-      renderCommitmentsPage(root);
+      renderCommitmentsPage(root, params && params.tab ? String(params.tab) : 'payment');
       return function () {};
     }
     if (section && typeof setHeaderTitle === 'function' && sectionTitle(section)) setHeaderTitle(sectionTitle(section), {});

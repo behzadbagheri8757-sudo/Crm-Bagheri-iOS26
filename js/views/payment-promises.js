@@ -292,9 +292,27 @@
     });
   }
 
+  /* Full list of open payment promises, grouped by phase. Used by the commitments page. */
+  function allListHtml() {
+    var list = PP.pendingList();
+    if (!list.length) return '';
+    var groups = [
+      { title: 'سررسیدگذشته', tone: 'danger', kind: 'overdue' },
+      { title: 'امروز', tone: 'warning', kind: 'today' },
+      { title: 'فردا', tone: 'primary', kind: 'tomorrow' },
+      { title: 'بعدتر', tone: 'neutral', kind: 'upcoming' },
+    ];
+    return groups.map(function (g) {
+      var part = list.filter(function (p) { return PP.phase(p).kind === g.kind; });
+      if (!part.length) return '';
+      return '<div class="pp-dash-group pp-dash-' + g.tone + '">' + g.title + '<span>' + enToFaDigits(String(part.length)) + '</span></div>' +
+        part.map(dashRow).join('');
+    }).join('');
+  }
+
   global.PromiseUI = {
     cardHtml: cardHtml, addButtonHtml: addButtonHtml, historyHtml: historyHtml, bind: bind,
-    dashboardHtml: dashboardHtml, bindDashboard: bindDashboard,
+    dashboardHtml: dashboardHtml, allListHtml: allListHtml, bindDashboard: bindDashboard,
     openAddSheet: openAddSheet, openDetailSheet: openDetailSheet, openListSheet: openListSheet, receive: receive,
   };
 })(typeof window !== 'undefined' ? window : this);

@@ -366,9 +366,26 @@
     var load = root.querySelector('[data-dp-open-load]'); if (load) load.addEventListener('click', openLoadSheet);
   }
 
+  /* Full list of open delivery promises, grouped by phase. Used by the commitments page. */
+  function allListHtml() {
+    var list = DP.pendingAll();
+    if (!list.length) return '';
+    var groups = [
+      { title: 'عقب‌افتاده', tone: 'danger', kind: 'overdue' },
+      { title: 'امروز', tone: 'warning', kind: 'today' },
+      { title: 'فردا', tone: 'primary', kind: 'tomorrow' },
+      { title: 'بعدتر', tone: 'neutral', kind: 'upcoming' },
+    ];
+    return groups.map(function (g) {
+      var part = list.filter(function (p) { return DP.phase(p).kind === g.kind; });
+      if (!part.length) return '';
+      return '<div class="pp-dash-group pp-dash-' + g.tone + '">' + g.title + '<span>' + fa(part.length) + '</span></div>' + part.map(dashRow).join('');
+    }).join('');
+  }
+
   global.DeliveryUI = {
     slotHtml: slotHtml, historyHtml: historyHtml, bind: bind,
-    dashboardHtml: dashboardHtml, bindDashboard: bindDashboard,
+    dashboardHtml: dashboardHtml, allListHtml: allListHtml, bindDashboard: bindDashboard,
     openAddSheet: openAddSheet, openDetailSheet: openDetailSheet, openListSheet: openListSheet, openLoadSheet: openLoadSheet, deliver: deliver,
     openDateSheet: openDateSheet,
   };
