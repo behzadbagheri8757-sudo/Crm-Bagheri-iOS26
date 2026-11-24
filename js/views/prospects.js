@@ -135,7 +135,7 @@
     else if (pSort === 'newest' || pSort === 'last_evaluation') rows.sort((a,b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
     else rows.sort((a,b) => b.latestScore - a.latestScore);
 
-    sum.innerHTML = enToFaDigits(String(rows.length)) + ' از ' + enToFaDigits(String(prospectState.shops.length)) + ' مغازه';
+    sum.innerHTML = '<span class="lp-count">' + enToFaDigits(String(rows.length)) + ' از ' + enToFaDigits(String(prospectState.shops.length)) + ' مغازه</span>';
 
     if (!rows.length) {
       list.innerHTML = `<div class="empty">${prospectState.shops.length ? 'موردی پیدا نشد' : 'هنوز مغازه‌ای ثبت نشده. با + یا «ثبت مغازه» شروع کنید.'}</div>`;
@@ -165,7 +165,7 @@
     };
     root.innerHTML = `
       <h2 class="section-title">مشتریان بالقوه</h2>
-      <div class="field pl-search"><input id="prospect-search" placeholder="جستجوی نام مغازه..." value="${esc(pQuery)}" autocomplete="off"></div>
+      <div class="lp-search-row"><div class="field lp-search"><input id="prospect-search" placeholder="جستجوی نام مغازه..." value="${esc(pQuery)}" autocomplete="off"></div><button type="button" class="lp-filter-btn" id="pl-loc-btn" aria-label="فیلتر موقعیت"></button></div>
       <div id="prospect-target" class="cards" style="margin-bottom:12px;"></div>
       <div class="chip-row segmented-control" id="prospect-chips">
         ${chip('all','همه')}
@@ -175,11 +175,9 @@
         ${chip('A','رتبه A')}
         ${chip('B','رتبه B')}
       </div>
-      <div class="pl-toolbar">
-        <button type="button" class="pl-cap" id="pl-loc-cap" aria-haspopup="dialog">
-          <span class="pl-cap-title">موقعیت</span><span class="pl-cap-value" id="pl-loc-value"></span>
-        </button>
-        <div class="pl-sort">
+      <div class="lp-summary-row">
+        <div id="prospect-summary" class="lp-summary"></div>
+        <div class="lp-sort">
           <label for="prospect-sort">مرتب‌سازی</label>
           <select id="prospect-sort">
             <option value="score_desc" ${pSort === 'score_desc' ? 'selected' : ''}>بیشترین امتیاز</option>
@@ -189,7 +187,6 @@
           </select>
         </div>
       </div>
-      <div id="prospect-summary" class="pl-count"></div>
       <div id="prospect-list" class="tx-list"></div>
     `;
 
@@ -220,8 +217,8 @@
     };
     sortEl.addEventListener('change', sortHandler);
 
-    const locCap = document.getElementById('pl-loc-cap');
-    if (locCap) locCap.addEventListener('click', openProspectLocSheet);
+    const locBtn = document.getElementById('pl-loc-btn');
+    if (locBtn) locBtn.addEventListener('click', openProspectLocSheet);
 
     // Delegated list click — once per draw (same pattern as Customers/Checks)
     const listEl = document.getElementById('prospect-list');
@@ -241,21 +238,14 @@
   // ---- Location filter: ONE capsule that opens a drill-down sheet
   //      (منطقه › مسیر › محله). Replaces the three stacked selects.
 
-  let locSheetView = { level: 'root', regionId: '', routeId: '' };
-
-  function currentLocLabel() {
-    if (pLocFilter.unassigned) return 'بدون موقعیت';
-    if (pLocFilter.neighborhoodId) { const n = getNeighborhood(pLocFilter.neighborhoodId); if (n) return n.name; }
-    if (pLocFilter.routeId) { const r = getRoute(pLocFilter.routeId); if (r) return r.name; }
-    if (pLocFilter.regionId) { const g = getRegion(pLocFilter.regionId); if (g) return g.name; }
-    return 'همه';
-  }
-
+  // برگهٔ موقعیت از ماژول مشترک js/ui-location-sheet.js می‌آید (همان مشتریان).
   function updateLocCapUI() {
-    const val = document.getElementById('pl-loc-value');
-    if (val) val.textContent = currentLocLabel();
-    const cap = document.getElementById('pl-loc-cap');
-    if (cap) cap.classList.toggle('is-set', !!(pLocFilter.unassigned || pLocFilter.regionId || pLocFilter.routeId || pLocFilter.neighborhoodId));
+    const btn = document.getElementById('pl-loc-btn');
+    if (!btn) return;
+    const count = (pLocFilter.regionId ? 1 : 0) + (pLocFilter.routeId ? 1 : 0) + (pLocFilter.neighborhoodId ? 1 : 0) + (pLocFilter.unassigned ? 1 : 0);
+    btn.classList.toggle('active', count > 0);
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M7 12h10M10 18h4"/></svg>' +
+      (count ? '<span class="lp-badge">' + enToFaDigits(String(count)) + '</span>' : '');
   }
 
   function setLocFilter(next) {
@@ -264,103 +254,8 @@
     renderProspectListOnly();
   }
 
-  function locSheetRow(label, attrs, chevron) {
-    return '<button type="button" class="pl-sheet-item" ' + attrs + '><span>' + esc(label) + '</span>' +
-      '<span class="pl-sheet-check" aria-hidden="true">' + (chevron ? '›' : '') + '</span></button>';
-  }
-
-  function renderLocSheet() {
-    const v = locSheetView;
-    let title = 'موقعیت';
-    let back = '';
-    let rows = '';
-    if (v.level === 'root') {
-      rows = locSheetRow('همه مغازه‌ها', 'data-apply="all"', false) +
-        locSheetRow('بدون موقعیت', 'data-apply="unassigned"', false) +
-        listRegions().map(function (g) { return locSheetRow(g.name, 'data-drill-region="' + esc(g.id) + '"', true); }).join('');
-    } else if (v.level === 'region') {
-      const g = getRegion(v.regionId);
-      title = g ? g.name : 'منطقه';
-      back = '<button type="button" class="pl-sheet-back" data-back="1">‹ موقعیت‌ها</button>';
-      rows = locSheetRow('کل ' + title, 'data-apply-region="' + esc(v.regionId) + '"', false) +
-        listRoutes(v.regionId).map(function (r) {
-          return listNeighborhoods(r.id).length
-            ? locSheetRow(r.name, 'data-drill-route="' + esc(r.id) + '"', true)
-            : locSheetRow(r.name, 'data-apply-route="' + esc(r.id) + '"', false);
-        }).join('');
-    } else {
-      const r = getRoute(v.routeId);
-      title = r ? r.name : 'مسیر';
-      back = '<button type="button" class="pl-sheet-back" data-back="1">‹ ' + esc(r ? (getRegion(r.regionId) || {}).name || 'منطقه' : 'منطقه') + '</button>';
-      rows = locSheetRow('کل ' + title, 'data-apply-route="' + esc(v.routeId) + '"', false) +
-        listNeighborhoods(v.routeId).map(function (n) { return locSheetRow(n.name, 'data-apply-neigh="' + esc(n.id) + '"', false); }).join('');
-    }
-    openSheet(
-      back +
-      '<h3 class="pl-sheet-title">' + esc(title) + '</h3>' +
-      '<div class="pl-sheet-list">' + rows + '</div>' +
-      '<button type="button" class="pl-sheet-manage" data-manage-locations="1">مدیریت موقعیت‌ها</button>'
-    );
-    bindLocSheet();
-  }
-
-  function bindLocSheet() {
-    const on = function (sel, fn) {
-      document.querySelectorAll(sel).forEach(function (b) { b.addEventListener('click', fn); });
-    };
-    on('[data-back]', function () {
-      locSheetView = locSheetView.level === 'route' ? { level: 'region', regionId: getRoute(locSheetView.routeId) ? getRoute(locSheetView.routeId).regionId : '', routeId: '' } : { level: 'root', regionId: '', routeId: '' };
-      renderLocSheet();
-    });
-    on('[data-drill-region]', function (e) {
-      locSheetView = { level: 'region', regionId: e.currentTarget.getAttribute('data-drill-region'), routeId: '' };
-      renderLocSheet();
-    });
-    on('[data-drill-route]', function (e) {
-      locSheetView = { level: 'route', regionId: locSheetView.regionId, routeId: e.currentTarget.getAttribute('data-drill-route') };
-      renderLocSheet();
-    });
-    on('[data-apply]', function (e) {
-      const k = e.currentTarget.getAttribute('data-apply');
-      closeModal();
-      setLocFilter(k === 'unassigned' ? { unassigned: true } : {});
-    });
-    on('[data-apply-region]', function (e) {
-      const id = e.currentTarget.getAttribute('data-apply-region');
-      closeModal();
-      setLocFilter({ regionId: id });
-    });
-    on('[data-apply-route]', function (e) {
-      const id = e.currentTarget.getAttribute('data-apply-route');
-      const r = getRoute(id);
-      closeModal();
-      setLocFilter({ regionId: r ? r.regionId : '', routeId: id });
-    });
-    on('[data-apply-neigh]', function (e) {
-      const id = e.currentTarget.getAttribute('data-apply-neigh');
-      const n = getNeighborhood(id);
-      const r = n ? getRoute(n.routeId) : null;
-      closeModal();
-      setLocFilter({ regionId: r ? r.regionId : '', routeId: n ? n.routeId : '', neighborhoodId: id });
-    });
-    on('[data-manage-locations]', function () {
-      closeModal();
-      AppRouter.navigate('/locations');
-    });
-  }
-
   function openProspectLocSheet() {
-    // Start from the current selection's level so the user lands where they were.
-    if (pLocFilter.neighborhoodId || pLocFilter.routeId) {
-      const rid = pLocFilter.routeId || (getNeighborhood(pLocFilter.neighborhoodId) || {}).routeId;
-      const r = getRoute(rid);
-      locSheetView = { level: 'route', regionId: r ? r.regionId : '', routeId: rid };
-    } else if (pLocFilter.regionId) {
-      locSheetView = { level: 'region', regionId: pLocFilter.regionId, routeId: '' };
-    } else {
-      locSheetView = { level: 'root', regionId: '', routeId: '' };
-    }
-    renderLocSheet();
+    LocationSheet.open({ current: pLocFilter, onApply: setLocFilter });
   }
 
   function mount(root, params) {

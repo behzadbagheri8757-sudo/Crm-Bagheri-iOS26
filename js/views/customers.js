@@ -279,64 +279,15 @@
       .join('');
   }
 
+  // برگهٔ موقعیت مشترک (منطقه ← مسیر ← محله) — همان مغازه‌های بالقوه
   function renderLocationFilterSheet() {
-    const regions = listRegions();
-    const routes = locFilter.regionId ? listRoutes(locFilter.regionId) : (data.routes || []).slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'','fa'));
-    const neighs = locFilter.routeId ? listNeighborhoods(locFilter.routeId) : [];
-    const opt = function (list, selId, allLabel) {
-      return '<option value="">' + allLabel + '</option>' + list.map(function (x) {
-        return '<option value="' + esc(x.id) + '" ' + (x.id === selId ? 'selected' : '') + '>' + esc(x.name) + '</option>';
-      }).join('');
-    };
-    openSheet(
-      '<h3>فیلتر مشتریان</h3>' +
-      '<div class="field"><label>مسیر</label><select id="customer-filter-route">' + opt(routes, locFilter.routeId, 'همه مسیرها') + '</select></div>' +
-      '<div class="field"><label>منطقه</label><select id="customer-filter-region">' + opt(regions, locFilter.regionId, 'همه مناطق') + '</select></div>' +
-      '<div class="field"><label>محله</label><select id="customer-filter-neigh" ' + (!locFilter.routeId ? 'disabled' : '') + '>' + opt(neighs, locFilter.neighborhoodId, 'همه محله‌ها') + '</select></div>' +
-      '<div class="btn-row" style="margin-top:4px;"><button type="button" class="btn small secondary" id="customer-filter-clear">پاک کردن فیلتر</button></div>'
-    );
-
-    const routeSel = document.getElementById('customer-filter-route');
-    const regionSel = document.getElementById('customer-filter-region');
-    const neighSel = document.getElementById('customer-filter-neigh');
-    const clearBtn = document.getElementById('customer-filter-clear');
-
-    function refreshSheet(keepOpen) {
-      if (!keepOpen) return;
-      renderLocationFilterSheet();
-    }
-    if (routeSel) routeSel.addEventListener('change', function () {
-      locFilter.routeId = routeSel.value;
-      locFilter.neighborhoodId = '';
-      locFilter.unassigned = false;
-      if (locFilter.routeId) {
-        const r = getRoute(locFilter.routeId);
-        locFilter.regionId = r ? r.regionId : '';
+    LocationSheet.open({
+      current: locFilter,
+      onApply: function (f) {
+        locFilter = Object.assign({ regionId: '', routeId: '', neighborhoodId: '', unassigned: false }, f);
+        updateLocationFilterIndicator();
+        renderCustomerListOnly();
       }
-      renderCustomerListOnly();
-      refreshSheet(true);
-    });
-    if (regionSel) regionSel.addEventListener('change', function () {
-      locFilter.regionId = regionSel.value;
-      if (locFilter.routeId) {
-        const r = getRoute(locFilter.routeId);
-        if (!r || r.regionId !== locFilter.regionId) locFilter.routeId = '';
-      }
-      locFilter.neighborhoodId = '';
-      locFilter.unassigned = false;
-      renderCustomerListOnly();
-      refreshSheet(true);
-    });
-    if (neighSel) neighSel.addEventListener('change', function () {
-      locFilter.neighborhoodId = neighSel.value;
-      locFilter.unassigned = false;
-      renderCustomerListOnly();
-    });
-    if (clearBtn) clearBtn.addEventListener('click', function () {
-      locFilter = { regionId:'', routeId:'', neighborhoodId:'', unassigned:false };
-      renderCustomerListOnly();
-      closeModal();
-      updateLocationFilterIndicator();
     });
   }
 
