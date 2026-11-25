@@ -2850,7 +2850,7 @@ function openInvoiceForm(cid, editInv, opts){
         </div>
         <div class="inv-line-sub" data-row="${idx}" style="display:${prod?'flex':'none'}">
           <span class="inv-line-qtyrate">
-            <input type="text" inputmode="decimal" data-row="${idx}" class="row-qty inv-mini-input" aria-label="تعداد" value="${enToFaDigits(fmtQtyDisplay(r.qty||0))}">
+            <span class="inv-qty-stepper"><button type="button" class="inv-qty-step" data-row="${idx}" data-step="-1" aria-label="کم کردن تعداد">−</button><input type="text" inputmode="decimal" data-row="${idx}" class="row-qty inv-mini-input" aria-label="تعداد" value="${enToFaDigits(fmtQtyDisplay(r.qty||0))}"><button type="button" class="inv-qty-step" data-row="${idx}" data-step="1" aria-label="اضافه کردن تعداد">+</button></span>
             <span class="inv-line-x">×</span>
             <input type="text" inputmode="decimal" data-row="${idx}" class="row-price inv-mini-input inv-mini-input-price" aria-label="قیمت واحد" value="${esc(String(priceDisp))}">
             <span class="inv-line-unit">ت</span>
@@ -3422,6 +3422,20 @@ function openInvoiceForm(cid, editInv, opts){
       }, true);
     }
 
+    // Stepper (+ / −): same update path as typing in the quantity box.
+    document.querySelectorAll('.inv-qty-step').forEach(btn=>btn.addEventListener('click', e=>{
+      e.preventDefault();
+      const idx = btn.dataset.row;
+      if(!rows[idx]) return;
+      const step = Number(btn.dataset.step)||0;
+      const next = Math.max(0, Math.round(((rows[idx].qty||0) + step) * 1000) / 1000);
+      rows[idx].qty = next;
+      const inp = document.querySelector('.inv-line[data-row="'+idx+'"] .row-qty') || document.querySelector('.row-qty[data-row="'+idx+'"]');
+      if(inp) inp.value = enToFaDigits(fmtQtyDisplay(next));
+      invalidateInvoiceMetrics();
+      updateRowInfo(idx);
+      updateSummary();
+    }));
     document.querySelectorAll('.row-qty').forEach(el=>el.addEventListener('input', e=>{
       const idx = e.target.dataset.row;
       rows[idx].qty = parseFloat(faToEnDigits(e.target.value))||0;
