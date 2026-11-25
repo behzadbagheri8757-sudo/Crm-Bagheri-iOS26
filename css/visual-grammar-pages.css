@@ -1221,3 +1221,10 @@ html .inv-picker-list .prod-drop-name{display:block;font-size:15px;font-weight:5
 html .inv-picker-list .prod-drop-stock{font-size:12px;color:var(--vg-color-text-muted);font-variant-numeric:tabular-nums;}
 html .inv-picker-list .prod-drop-chevron{color:var(--vg-color-text-muted);font-size:16px;}
 html .inv-picker-empty{padding:28px 12px;text-align:center;font-size:14px;color:var(--vg-color-text-muted);}
+
+/* ---- فاکتور: پنل روش دریافت زیر سگمنت (نه روی آن)، تا لنز و انتخاب دیده شوند ---- */
+html .inv-sheet-v2 .inv-payment-backdrop{display:none !important;}
+html .inv-sheet-v2 .inv-payment-panel{position:static;transform:none;left:auto;bottom:auto;width:auto;max-height:none;margin:0 0 12px;padding:14px 16px;border-radius:12px;background:var(--vg-color-surface);box-shadow:none;border:0.5px solid rgba(60,60,67,0.12);}
+html .inv-sheet-v2 .inv-payment-panel[hidden]{display:none !important;}
+html .inv-sheet-v2 .inv-payment-actions .inv-payment-action{min-height:52px;gap:2px;}
+html .inv-sheet-v2 .inv-payment-actions .inv-payment-action-value{font-size:12px;font-weight:500;color:var(--vg-color-text);min-height:14px;line-height:1.2;}
