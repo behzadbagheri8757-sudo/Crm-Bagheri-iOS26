@@ -27,6 +27,20 @@
    scrollY 1:1 and reverses identically. Removed the now-duplicate "داشبورد"
    <h2> inside Dashboard's own content — the header already shows it as the
    page title since the brand-name/page-title fix) */
+/* CHANGED: v146 -> v147 — invoice: taps inside the product picker no longer close it; payment panel sits inline under the segment (lens visible), values more legible. */
+/* CHANGED: v145 -> v146 — invoice phase 5: product picker is a pushed layer inside the invoice sheet with back, search and filters (all / frequent / recent / visit suggestions); selection uses the existing selectProduct(). */
+/* CHANGED: v144 -> v145 — invoice sheet phase 4: payment method is an iOS segmented control (same buttons and panels, lens from ui-segmented.js). */
+/* CHANGED: v143 -> v144 — invoice sheet phase 3: item rows restyled, quantity stepper (+/−) uses the same update path as typing, delete button restyled. */
+/* CHANGED: v142 -> v143 — invoice sheet phase 2: sections become iOS grouped cards with section headers and hairline rows. Presentation only. */
+/* CHANGED: v141 -> v142 — invoice sheet header: cancel labelled انصراف (right), save as iOS text action (left), hairline under the bar. Presentation only. */
+/* CHANGED: v140 -> v141 — route transition snapshot now keeps #main-scoped styles (no raw copy); target capsule layout: need top-left, percent centred above, sales top-right, days below-left; card more compact. */
+/* CHANGED: v139 -> v140 — capsule liquid colour follows the target status (ahead/done green, on-track blue, behind amber). */
+/* CHANGED: v138 -> v139 — monthly target: horseshoe ring replaced by a glass capsule with animated green liquid filling right-to-left (presentation only). */
+/* CHANGED: v137 -> v138 — Game Center mode segment is full width like the rest of the app. */
+/* CHANGED: v136 -> v137 — Reports: four period segments; custom range moved to a filter button in the summary row; context shown as a pill. */
+/* CHANGED: v135 -> v136 — Watches list: search row (customer or product), 4 segments, follow-ups as summary flag. */
+/* CHANGED: v134 -> v135 — commitment cards restyled as one grouped surface with a centre divider, centred counts and labels on one baseline. */
+/* CHANGED: v133 -> v134 — dashboard commitments: two tappable count cards (payment promises, delivery promises); commitments page with two in-page segments and an empty state. */
 /* CHANGED: v132 -> v133 — merged CSS patch layers 11–14 into their canonical stylesheets, removed confirmed superseded/dead selectors, removed deleted patch files from index.html and PRECACHE_URLS. CSS appearance and JS behavior are intended to remain unchanged; no JS, data, schema, accounting, stock, or backup logic changed. */
 /* CHANGED: v131 -> v132 — filter button icon sized (was invisible); active state and badge position. */
 /* CHANGED: v130 -> v131 — shared location sheet (region → route → neighborhood, labelled 'موقعیت') used by Customers and Prospects; both use the filter button in the search row. */
@@ -60,7 +74,7 @@
 /* CHANGED: v111 -> v112 — UI typography, shared segmented filters, theme-aware form colors and validation states. Removed the obsolete bundled font asset from the offline precache. */
 /* Previous v110 -> v111 — 00-chrome.css and 10-disclosure.css were missing from PRECACHE_URLS (first load / offline showed unstyled header and disclosure surfaces until the network fetch finished). Both added; cache bumped so devices re-fetch the updated CSS instead of serving the stale cached copy. */
 /* CHANGED: v98 -> v99 (Soft iOS look: CSS-only visual refresh — tokens in visual-grammar.css and a new layer at the end of visual-grammar-pages.css. No asset list, route or business logic changed.) */
-const CACHE_NAME = 'baqeri-shell-v145';
+const CACHE_NAME = 'baqeri-shell-v147';
 
 /* CHANGED: v117 -> v118 — Restored unified section-heading styling from the blue patch on top of the product purchase-history baseline. No prospect-evaluation UX, segment, data, schema or business-logic changes. */
 
