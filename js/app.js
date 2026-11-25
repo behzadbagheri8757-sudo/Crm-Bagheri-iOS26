@@ -3465,7 +3465,7 @@ function openProductDrop(idx){
       document._invProdDropOutsideBound = true;
       document.addEventListener('pointerdown', function(e){
         document._invPickerTapPending = false;      // every new touch starts clean
-        if(e.target.closest('.prod-drop') || e.target.closest('.row-product-search')) return;
+        if(e.target.closest('.prod-drop') || e.target.closest('.row-product-search') || e.target.closest('#inv-picker-layer')) return;
         const active = document._invProdDropActive;
         if(!active || active.openRow == null) return;
         document._invPickerTapPending = true;       // this tap only closes the picker (see row click handler)
