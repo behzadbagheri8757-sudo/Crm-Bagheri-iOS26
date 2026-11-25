@@ -109,13 +109,22 @@
       ghost.style.left = rect.left + 'px';
       ghost.style.width = rect.width + 'px';
       ghost.style.height = rect.height + 'px';
-      ghost.innerHTML = main.innerHTML;
+      // The snapshot wraps the outgoing content in #main so the page's #main-scoped
+      // CSS still applies to the copy (it sits outside the live #main, so without this
+      // the copy painted unstyled, e.g. a raw black chart and bare cards).
+      // Rebuild the snapshot as a <main> with the same classes, so element/ID-scoped
+      // page CSS keeps applying to the copy.
+      const snapMain = document.createElement('main');
+      snapMain.className = String(main.className || '').replace(/route-[\w-]+/g, '').trim();
+      snapMain.innerHTML = main.innerHTML;
+      ghost.appendChild(snapMain);
       // Strip ids from the clone: it briefly coexists with the live #main,
       // and it must never be an addressable duplicate of anything real.
       try {
         var idEls = ghost.querySelectorAll('[id]');
         for (var i = 0; i < idEls.length; i++) { idEls[i].removeAttribute('id'); }
       } catch (e) {}
+      snapMain.id = 'main';
       document.body.appendChild(ghost);
       return ghost;
     } catch (e) {
