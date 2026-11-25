@@ -187,8 +187,8 @@ html[data-theme="dark"] .inv-discount-block select{background-image:url("data:im
 }
 .ios-seg.ios-seg::-webkit-scrollbar{display:none;}
 html[data-theme="dark"] .ios-seg.ios-seg{background:rgba(118,118,128,.24);}
-/* gc-seg در حالت قبلی فقط به اندازهٔ محتوا بود؛ همان را نگه می‌داریم */
-.ios-seg.ios-seg.gc-seg{display:inline-flex;width:auto;align-self:flex-start;margin:0 0 12px;}
+/* مرکز انگیزه: سگمنت تمام‌عرض، هم‌اندازه با بقیهٔ صفحات */
+.ios-seg.ios-seg.gc-seg{display:flex;width:100%;align-self:stretch;margin:0 0 12px;}
 
 /* ---- لنز (نشانگر) ---- */
 .ios-seg.ios-seg::before{

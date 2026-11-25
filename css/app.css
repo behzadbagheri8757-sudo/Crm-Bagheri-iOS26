@@ -419,7 +419,7 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{outline:0
 .gc-title-line{flex:1;height:1px;background:rgba(0,0,0,.1);}
 .gc-title-mark{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;color:#FF5C35;}
 .gc-title-mark svg{width:28px;height:28px;}
-.gc-seg{display:inline-flex;align-self:flex-start;gap:2px;padding:2px;background:rgba(0,0,0,.06);border-radius:999px;}
+.gc-seg{display:flex;width:100%;align-self:stretch;gap:2px;padding:2px;background:rgba(0,0,0,.06);border-radius:999px;}
 .gc-seg-btn{min-width:72px;min-height:44px;padding:4px 14px;border:none;border-radius:999px;color:var(--vg-color-text-muted);font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;}
 .gc-seg-btn.is-active{background:var(--vg-color-surface);color:var(--vg-color-text);box-shadow:0 1px 2px rgba(0,0,0,.08);}
 .gc-section{margin-bottom:18px;}
