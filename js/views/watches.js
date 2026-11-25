@@ -169,8 +169,7 @@
     { id: 'all',       label: 'همه' },
     { id: 'attention', label: 'نیازمند توجه' },
     { id: 'unvisited', label: 'ندیده‌شده' },
-    { id: 'check_due', label: 'چک سررسید' },
-    { id: 'followup',  label: 'پیگیری‌های باز' }
+    { id: 'check_due', label: 'چک سررسید' }
   ];
   var WATCH_FILTER_HINTS = {
     all: 'هر مورد یک نشانه است، نه لزوماً یک مشکل قطعی',
@@ -180,6 +179,7 @@
     followup: 'مواردی که قرار شد بعداً پیگیری کنی'
   };
   var watchFilter = 'all';
+  var watchQuery = '';
 
   function isActiveCustomer(cid) {
     if (typeof data === 'undefined' || !Array.isArray(data.customers)) return false;
@@ -260,6 +260,19 @@
     return { label: 'تا ' + faDigits(diff) + ' روز', cls: 'followup-status-future' };
   }
 
+  /* Search row is built once; only #watch-body re-renders, so the keyboard and focus stay put. */
+  function ensureWatchSkeleton(root) {
+    if (root.querySelector('#watch-search') && root.querySelector('#watch-body')) return;
+    root.innerHTML =
+      '<div class="lp-search-row"><div class="field lp-search">' +
+      '<input id="watch-search" placeholder="جستجوی نام مشتری یا کالا..." value="' + esc(watchQuery) + '" autocomplete="off">' +
+      '</div></div><div id="watch-body"></div>';
+    root.querySelector('#watch-search').addEventListener('input', function (e) {
+      watchQuery = e.target.value;
+      renderWatchList(root);
+    });
+  }
+
   function renderWatchList(root) {
     if (!root) return;
     var occs = [];
@@ -275,7 +288,12 @@
     }
 
     var isFollowUp = watchFilter === 'followup';
-    var shown = sets[watchFilter] || sets.all;
+    var q = String(watchQuery || '').trim().toLowerCase();
+    var shown = (sets[watchFilter] || sets.all).filter(function (o) {
+      if (!q) return true;
+      return String(customerNameById(o.customerId) || '').toLowerCase().indexOf(q) >= 0 ||
+        String(productNameForOccurrence(o) || '').toLowerCase().indexOf(q) >= 0;
+    });
 
     var groups = Object.create(null), order = [];
     shown.slice().sort(function (a, b) {
@@ -336,9 +354,15 @@
     var prevBar = root.querySelector('#watch-filters');
     var prevScroll = prevBar ? prevBar.scrollLeft : 0;
 
-    root.innerHTML =
-      '<div class="watch-page-head"><div><h2 class="section-title">هشدارهای زودهنگام</h2><div class="watch-page-hint">' + esc(WATCH_FILTER_HINTS[watchFilter] || WATCH_FILTER_HINTS.all) + '</div></div><span class="watch-total-count">' + faDigits(shown.length) + '</span></div>' +
+    ensureWatchSkeleton(root);
+    var body = root.querySelector('#watch-body');
+    var followN = sets.followup.length;
+    body.innerHTML =
+      '<div class="watch-page-head"><div><h2 class="section-title">هشدارهای زودهنگام</h2><div class="watch-page-hint">' + esc(WATCH_FILTER_HINTS[watchFilter] || WATCH_FILTER_HINTS.all) + '</div></div></div>' +
       filtersHtml(sets) +
+      '<div class="lp-summary-row"><div class="lp-summary"><span class="lp-count">' + faDigits(shown.length) + ' مورد</span>' +
+        (followN ? '<button type="button" class="lp-flag" data-watch-filter="followup">' + faDigits(followN) + ' پیگیری باز</button>' : '') +
+      '</div></div>' +
       html;
 
     var bar = root.querySelector('#watch-filters');

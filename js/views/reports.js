@@ -590,7 +590,7 @@
   function segHtml() {
     return (
       '<div class="rp-seg" role="tablist" aria-label="بازه زمانی">' +
-      PERIODS.map(function (p) {
+      PERIODS.filter(function (p) { return p.id !== 'range'; }).map(function (p) {
         const on = reportPeriod === p.id;
         return (
           '<button type="button" role="tab" class="rp-seg-btn' +
@@ -1255,7 +1255,12 @@
       '<div class="rp-page">' +
       '<div class="rp-top">' +
       segHtml() +
-      '<div class="rp-context" id="rp-context"></div>' +
+      '<div class="lp-summary-row">' +
+      '<div class="rp-context lp-summary" id="rp-context"></div>' +
+      '<button type="button" class="lp-filter-btn' + (reportPeriod === 'range' ? ' active' : '') + '" id="rp-range-btn" aria-label="بازهٔ دلخواه" aria-pressed="' + (reportPeriod === 'range' ? 'true' : 'false') + '">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>' +
+      '</button>' +
+      '</div>' +
       '</div>' +
       '<div id="reports-body" class="rp-body"></div>' +
       '</div>';
@@ -1270,6 +1275,20 @@
       const pp = e.target.closest ? e.target.closest('[data-pp]') : null;
       if (pp) {
         reportProductSort = pp.getAttribute('data-pp') === 'profit' ? 'profit' : 'sales';
+        renderBody();
+        return;
+      }
+      const rangeBtn = e.target.closest ? e.target.closest('#rp-range-btn') : null;
+      if (rangeBtn) {
+        reportPeriod = 'range';
+        const row = root.querySelector('.lp-summary-row');
+        if (!root.querySelector('#rp-range') && row) row.insertAdjacentHTML('afterend', rangeBarHtml());
+        root.querySelectorAll('.rp-seg-btn').forEach(function (b) {
+          b.classList.remove('is-active');
+          b.setAttribute('aria-selected', 'false');
+        });
+        rangeBtn.classList.add('active');
+        rangeBtn.setAttribute('aria-pressed', 'true');
         renderBody();
         return;
       }
@@ -1288,6 +1307,8 @@
         b.classList.toggle('is-active', on);
         b.setAttribute('aria-selected', on ? 'true' : 'false');
       });
+      const rb = root.querySelector('#rp-range-btn');
+      if (rb) { rb.classList.remove('active'); rb.setAttribute('aria-pressed', 'false'); }
       renderBody();
     };
     if (typeof window !== 'undefined' && window.__rpTest) {
