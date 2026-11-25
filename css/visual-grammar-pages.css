@@ -1194,3 +1194,30 @@ html .inv-sheet-v2 .inv-qty-stepper{display:inline-flex;align-items:center;gap:6
 html .inv-sheet-v2 .inv-qty-step{width:30px;height:30px;border:0;border-radius:999px;background:rgba(118,118,128,0.14);color:var(--vg-color-primary);font-size:18px;font-weight:500;line-height:1;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0;-webkit-tap-highlight-color:transparent;}
 html .inv-sheet-v2 .inv-qty-step:active{background:rgba(118,118,128,0.26);}
 html .inv-sheet-v2 .inv-line-del{width:24px;height:24px;border:0;border-radius:999px;background:var(--vg-color-danger, #FF3B30);color:#fff;font-size:15px;font-weight:600;line-height:1;display:inline-flex;align-items:center;justify-content:center;padding:0;box-shadow:none;}
+
+/* ---- فاکتور مرحلهٔ ۴: روش دریافت به‌صورت سگمنت iOS (لنز از ui-segmented.js) ---- */
+html .inv-sheet-v2 .inv-payment-actions.ios-seg.ios-seg{background:rgba(118,118,128,0.12);border:0;border-radius:999px;overflow:hidden;padding:3px;margin:0 0 12px;box-shadow:none;}
+html .inv-sheet-v2 .inv-payment-actions.ios-seg.ios-seg > .inv-payment-action{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-height:44px;padding:5px 4px;border:0;border-radius:999px;background:transparent;box-shadow:none;font-size:13px;font-weight:500;color:var(--vg-color-text-muted);}
+html .inv-sheet-v2 .inv-payment-actions.ios-seg.ios-seg > .inv-payment-action.ios-on{color:var(--vg-color-text);font-weight:600;}
+html .inv-sheet-v2 .inv-payment-actions .inv-payment-action-icon{display:none;}
+html .inv-sheet-v2 .inv-payment-actions .inv-payment-action-value{font-size:11px;font-weight:400;color:var(--vg-color-text-muted);font-variant-numeric:tabular-nums;min-height:12px;}
+html .inv-sheet-v2 .inv-payment-actions .inv-payment-action.is-active{color:var(--vg-color-text);}
+
+/* ---- فاکتور مرحلهٔ ۵: انتخاب کالا به‌صورت لایهٔ push داخل برگهٔ فاکتور ---- */
+html .inv-picker-layer{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;background:var(--vg-color-bg, #F2F2F7);padding-top:env(safe-area-inset-top,0px);}
+html .inv-picker-head{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;min-height:52px;padding:0 12px;background:var(--vg-color-surface);border-bottom:0.5px solid rgba(60,60,67,0.18);}
+html .inv-picker-back{justify-self:start;border:0;background:transparent;color:var(--vg-color-primary);font-size:17px;font-weight:400;padding:8px 2px;min-height:44px;font-family:inherit;}
+html .inv-picker-title{font-size:17px;font-weight:600;color:var(--vg-color-text);}
+html .inv-picker-spacer{display:block;}
+html .inv-picker-layer .lp-search-row{padding:10px 12px 4px;margin:0;}
+html .inv-picker-layer .chip-row{margin:6px 12px 10px;}
+html .inv-picker-list{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 12px 24px;display:flex;flex-direction:column;gap:0;}
+html .inv-picker-list .prod-drop-item{display:flex;align-items:center;gap:10px;min-height:52px;padding:10px 14px;background:var(--vg-color-surface);border-bottom:0.5px solid rgba(60,60,67,0.12);cursor:pointer;-webkit-tap-highlight-color:transparent;}
+html .inv-picker-list .prod-drop-item:first-child{border-top-left-radius:12px;border-top-right-radius:12px;}
+html .inv-picker-list .prod-drop-item:last-child{border-bottom:0;border-bottom-left-radius:12px;border-bottom-right-radius:12px;}
+html .inv-picker-list .prod-drop-item:active{background:var(--vg-color-surface-soft, #E5E5EA);}
+html .inv-picker-list .prod-drop-main{flex:1;min-width:0;}
+html .inv-picker-list .prod-drop-name{display:block;font-size:15px;font-weight:500;color:var(--vg-color-text);}
+html .inv-picker-list .prod-drop-stock{font-size:12px;color:var(--vg-color-text-muted);font-variant-numeric:tabular-nums;}
+html .inv-picker-list .prod-drop-chevron{color:var(--vg-color-text-muted);font-size:16px;}
+html .inv-picker-empty{padding:28px 12px;text-align:center;font-size:14px;color:var(--vg-color-text-muted);}
