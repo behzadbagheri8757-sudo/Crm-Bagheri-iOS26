@@ -738,28 +738,14 @@ html[data-theme="dark"] #main .dashboard-shell .bp-dashboard-snapshot-item{box-s
 #main .dashboard-shell .dash-action-queue .action-row{padding:16px 2px;gap:12px;}
 #main .dashboard-shell .dash-action-toggle{width:calc(100% + 32px);margin:4px -16px 0;padding:13px 6px;border:0;border-top:.5px solid var(--vg-color-divider);border-radius:0;color:var(--vg-color-primary);}
 #main .dashboard-shell .dash-action-toggle:active{opacity:.55;}
-#main .dashboard-shell .bp-target-strip{--ring-0:#4F8DF7;--ring-1:#34C58E;}
-#main .dashboard-shell .bp-target-strip.is-behind{--ring-0:#F7B24F;--ring-1:#EE8A2B;}
-#main .dashboard-shell .bp-target-strip.is-ahead,
-#main .dashboard-shell .bp-target-strip.is-done{--ring-0:#3CCB93;--ring-1:#16A870;}
-#main .dashboard-shell .bp-target-strip-body{display:flex;align-items:center;gap:20px;padding:4px 2px 2px;}
-#main .dashboard-shell .bp-target-ring{position:relative;flex:0 0 112px;width:112px;height:112px;}
-#main .dashboard-shell .bp-ring-svg{display:block;width:100%;height:100%;overflow:visible;}
-#main .dashboard-shell .bp-ring-track{stroke:var(--vg-color-neutral-soft);}
-#main .dashboard-shell .bp-ring-g0{stop-color:var(--ring-0);}
-#main .dashboard-shell .bp-ring-g1{stop-color:var(--ring-1);}
-#main .dashboard-shell .bp-target-ring-pct{position:absolute;inset:0;padding-bottom:5px;display:flex;align-items:center;justify-content:center;color:var(--vg-color-text);}
-#main .dashboard-shell .bp-target-ring-pct strong,
-#main .dashboard-shell .bp-target-ring-pct em{display:inline-block;font-size:22px;font-weight:600;font-variant-numeric:tabular-nums;}
-#main .dashboard-shell .bp-target-ring-pct strong{line-height:1;letter-spacing:-.02em;font-size:22px;font-weight:600;font-variant-numeric:tabular-nums;}
-#main .dashboard-shell .bp-target-ring-pct em{font-style:normal;font-size:12px;font-weight:600;color:var(--vg-color-text-muted);margin-inline-start:2px;font-variant-numeric:tabular-nums;}
+#main .dashboard-shell .bp-target-strip-body{display:flex;flex-direction:column;align-items:stretch;gap:12px;padding:4px 2px 2px;}
 #main .dashboard-shell .bp-target-strip-info{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:7px;font-size:11px;color:var(--vg-color-text-muted);}
 #main .dashboard-shell .bp-target-strip-need strong{font-weight:600;color:var(--vg-color-text);}
 #main .dashboard-shell .bp-target-strip-info .bp-target-strip-days{text-align:start;}
 #main .dashboard-shell .bp-target-strip.is-behind .bp-target-strip-status{color:var(--vg-color-warning);}
 html[data-theme="dark"] #main .dashboard-shell .bp-target-strip.is-behind .bp-target-strip-status{color:var(--vg-color-warning);}
 @media (max-width:359px){
-#main .dashboard-shell .bp-target-strip-body{flex-direction:column;align-items:center;gap:10px;}
+
 #main .dashboard-shell .bp-target-strip-info{align-items:center;}
 }
 html.vg-canvas-white{background:var(--vg-color-bg);}
@@ -1147,3 +1133,25 @@ html[data-theme="dark"] #main .lp-flag.warn{background:rgba(251,191,36,.16);colo
 .cm-card-chev{font-size:14px;line-height:1;color:var(--text-muted);}
 .cm-empty{padding:28px 12px;text-align:center;font-size:14px;color:var(--text-secondary);}
 .cm-seg{margin-bottom:12px;}
+
+/* ---- هدف فروش: کپسول شیشه‌ای با مایع سبز (فقط نمایشی) ---- */
+#main .dashboard-shell .bp-target-capsule-row{display:flex;align-items:center;gap:10px;min-width:0;}
+#main .dashboard-shell .bp-target-capsule{position:relative;flex:1 1 auto;min-width:0;height:28px;border-radius:999px;overflow:hidden;background:rgba(118,118,128,.10);border:0.5px solid rgba(255,255,255,.75);box-shadow:inset 0 0 0 .5px rgba(60,60,67,.10),0 1px 2px rgba(0,0,0,.05);}
+#main .dashboard-shell .bp-cap-liquid{position:absolute;top:0;bottom:0;inset-inline-start:0;width:var(--fill,0%);min-width:0;border-radius:999px;overflow:hidden;background:linear-gradient(180deg,#5FD9A8 0%,#22B573 55%,#14935D 100%);transition:width .8s cubic-bezier(.2,.8,.2,1);}
+#main .dashboard-shell .bp-cap-liquid::after{content:"";position:absolute;inset:3px 6px auto;height:38%;border-radius:999px;background:linear-gradient(180deg,rgba(255,255,255,.38),rgba(255,255,255,0));pointer-events:none;}
+#main .dashboard-shell .bp-cap-wave{position:absolute;top:-6px;inset-inline-start:0;width:200%;height:12px;fill:rgba(255,255,255,.32);animation:bp-cap-wave 2.8s linear infinite;}
+#main .dashboard-shell .bp-cap-bubble{position:absolute;bottom:-4px;width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,.6);opacity:0;animation:bp-cap-bubble 3.6s ease-in infinite;}
+#main .dashboard-shell .bp-cap-bubble.b1{inset-inline-start:22%;animation-delay:0s;}
+#main .dashboard-shell .bp-cap-bubble.b2{inset-inline-start:58%;width:3px;height:3px;animation-delay:1.3s;}
+#main .dashboard-shell .bp-cap-bubble.b3{inset-inline-start:82%;width:3px;height:3px;animation-delay:2.4s;}
+#main .dashboard-shell .bp-cap-pct{flex:0 0 auto;display:inline-flex;align-items:baseline;gap:2px;font-variant-numeric:tabular-nums;color:var(--vg-color-text);}
+#main .dashboard-shell .bp-cap-pct strong{font-size:17px;font-weight:600;line-height:1;}
+#main .dashboard-shell .bp-cap-pct em{font-style:normal;font-size:12px;font-weight:600;color:var(--vg-color-text-muted);}
+@keyframes bp-cap-wave{from{transform:translateX(0);}to{transform:translateX(-50%);}}
+@keyframes bp-cap-bubble{0%{transform:translateY(0);opacity:0;}15%{opacity:.8;}100%{transform:translateY(-26px);opacity:0;}}
+@media (prefers-reduced-motion: reduce){
+  #main .dashboard-shell .bp-cap-wave,
+  #main .dashboard-shell .bp-cap-bubble{animation:none;}
+  #main .dashboard-shell .bp-cap-bubble{opacity:0;}
+  #main .dashboard-shell .bp-cap-liquid{transition:none;}
+}
