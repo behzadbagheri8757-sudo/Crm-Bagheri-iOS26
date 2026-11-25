@@ -1166,3 +1166,8 @@ html[data-theme="dark"] #main .lp-flag.warn{background:rgba(251,191,36,.16);colo
 #main .dashboard-shell .bp-target-strip.is-behind .bp-cap-liquid{background:linear-gradient(180deg,#FFD27A 0%,#F59E0B 55%,#D97706 100%);}
 #main .dashboard-shell .bp-target-strip.is-ahead .bp-cap-liquid,
 #main .dashboard-shell .bp-target-strip.is-done .bp-cap-liquid{background:linear-gradient(180deg,#5FD9A8 0%,#22B573 55%,#14935D 100%);}
+
+/* ---- فاکتور: نوار بالای برگه به سبک iOS (انصراف سمت راست، ثبت سمت چپ در RTL) ---- */
+html .inv-sheet-v2 .inv-header{background:var(--vg-color-surface);border-bottom:0.5px solid rgba(60,60,67,0.18);box-shadow:none;}
+html .inv-sheet-v2 .inv-header-btn{background:transparent;border:0;box-shadow:none;min-height:44px;padding:8px 2px;color:var(--vg-color-primary);font-size:17px;font-weight:400;}
+html .inv-sheet-v2 button.inv-header-save.btn{background:transparent;border:0;box-shadow:none;min-height:44px;padding:8px 2px;color:var(--vg-color-primary);font-size:17px;font-weight:600;}
