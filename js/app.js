@@ -3026,7 +3026,7 @@ function openInvoiceForm(cid, editInv, opts){
               <span class="inv-payment-total" id="inv-payment-total">${toman(cashPaid+cardPaid+transferPaid+checkAmount)} ت</span>
             </div>
 
-            <div class="inv-payment-actions" role="group" aria-label="روش دریافت">
+            <div class="inv-payment-actions segmented-control" role="group" aria-label="روش دریافت">
               <button type="button" class="inv-payment-action" data-payment-method="cash" aria-expanded="false">
                 <span class="inv-payment-action-icon" aria-hidden="true">
                   <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 9h18M7 14h.01M11 14h3"/></svg>
@@ -3222,6 +3222,7 @@ function openInvoiceForm(cid, editInv, opts){
     }));
 
     function closeAllProductDrops(){
+      closeProductPicker();
       prodDropOpenRow = null;
       prodDropOpening = false;
       document.querySelectorAll('.prod-drop').forEach(d=>{
@@ -3288,45 +3289,95 @@ function openInvoiceForm(cid, editInv, opts){
         if(spaceAbove < maxH) dropEl.style.maxHeight = Math.max(160, spaceAbove) + 'px';
       }
     }
-    function openProductDrop(idx){
-      idx = String(idx);
-      // Same row is a true toggle: tapping the product field again closes it.
-      // Do not rebuild the panel, which previously caused the close→reopen flash.
-      if(prodDropOpenRow === idx){
-        closeAllProductDrops();
-        return;
+    // Product picker: a pushed layer INSIDE the invoice sheet (not a route, so the form
+      // state is untouched). Back returns to the same row; picking runs the existing
+      // selectProduct(). Pricing, stock and accounting rules are unchanged.
+      let pickerRow = null;
+      let pickerFilter = 'all';
+      let pickerQuery = '';
+      function customerLastProductIds(){
+        const out = []; const seen = Object.create(null);
+        (data.invoices||[]).filter(x=>x.customerId===cid).slice().reverse().forEach(inv=>(inv.items||[]).forEach(it=>{
+          if(it && it.productId && !seen[it.productId]){ seen[it.productId]=true; out.push(it.productId); }
+        }));
+        return out;
       }
-      if(prodDropOpening) return;
-      prodDropOpening = true;
-      try{
-        const dropEl = document.querySelector(`.prod-drop[data-row="${idx}"]`);
-        const anchor = document.querySelector(`.row-product-search[data-row="${idx}"]`);
-        if(!dropEl || !anchor) return;
-        // Close others first
-        document.querySelectorAll('.prod-drop').forEach(d=>{
-          if(d === dropEl) return;
-          d.hidden = true;
-          d.classList.remove('is-open');
-          d.innerHTML = '';
-        });
-        dropEl.innerHTML = productDropPanelHtml(idx);
-        dropEl.hidden = false;
-        dropEl.classList.add('is-open');
-        positionProductDrop(dropEl, anchor);
+      function customerVisitOfferIds(){
+        const vc = data.customers.find(c=>c.id===cid);
+        const visits = vc && Array.isArray(vc.visits) ? vc.visits : [];
+        const last = visits.slice().reverse().find(v=>v && Array.isArray(v.offeredProducts) && v.offeredProducts.length);
+        if(!last) return [];
+        const seen = Object.create(null); const out = [];
+        last.offeredProducts.forEach(op=>{ if(op && op.productId && !seen[op.productId]){ seen[op.productId]=true; out.push(op.productId); } });
+        return out;
+      }
+      function pickerItems(){
+        const q = String(pickerQuery||'').trim();
+        const matches = p=>!q || (p.name||'').includes(q);
+        if(pickerFilter==='frequent') return frequentProducts().filter(matches);
+        if(pickerFilter==='recent') return customerLastProductIds().map(invoiceProduct).filter(p=>p && p.active!==false && matches(p));
+        if(pickerFilter==='visit') return customerVisitOfferIds().map(invoiceProduct).filter(p=>p && p.active!==false && matches(p));
+        return data.products.filter(p=>p.active!==false && matches(p)).slice(0, 80);
+      }
+      function renderPickerList(){
+        const box = document.getElementById('inv-picker-list');
+        if(!box) return;
+        const list = pickerItems();
+        box.innerHTML = list.length
+          ? list.map(p=>productDropItemHtml(pickerRow, p)).join('')
+          : '<div class="inv-picker-empty">کالایی برای این فیلتر پیدا نشد</div>';
+      }
+      function closeProductPicker(){
+        const layer = document.getElementById('inv-picker-layer');
+        if(layer) layer.remove();
+        prodDropOpenRow = null;
+        pickerRow = null;
+      }
+      
+function openProductDrop(idx){
+        idx = String(idx);
+        if(!rows[idx]) return;
+        closeProductPicker();
+        pickerRow = idx; pickerFilter = 'all'; pickerQuery = '';
         prodDropOpenRow = idx;
-        const search = dropEl.querySelector('.prod-drop-search');
-        const list = dropEl.querySelector('.prod-drop-list');
-        if(search && list){
-          // Keyboard only when user taps search — no auto-focus
-          search.addEventListener('input', ()=>{
-            list.innerHTML = productDropListHtml(idx, search.value);
-          });
-        }
-      }finally{
-        // Release re-entry guard after gesture settles
-        setTimeout(()=>{ prodDropOpening = false; }, 120);
+        const host = document.querySelector('.inv-sheet-v2') || document.querySelector('#modalRoot');
+        if(!host) return;
+        const layer = document.createElement('div');
+        layer.id = 'inv-picker-layer';
+        layer.className = 'inv-picker-layer';
+        layer.innerHTML =
+          '<div class="inv-picker-head">' +
+            '<button type="button" class="inv-picker-back" id="inv-picker-back">‹ بازگشت</button>' +
+            '<span class="inv-picker-title">انتخاب کالا</span>' +
+            '<span class="inv-picker-spacer" aria-hidden="true"></span>' +
+          '</div>' +
+          '<div class="lp-search-row"><div class="field lp-search"><input id="inv-picker-search" type="search" placeholder="جستجوی کالا..." autocomplete="off"></div></div>' +
+          '<div class="chip-row segmented-control" id="inv-picker-filters">' +
+            '<button type="button" class="chip active" data-pick-filter="all">همه</button>' +
+            '<button type="button" class="chip" data-pick-filter="frequent">پرخرید</button>' +
+            '<button type="button" class="chip" data-pick-filter="recent">آخرین خرید</button>' +
+            '<button type="button" class="chip" data-pick-filter="visit">پیشنهاد ویزیت</button>' +
+          '</div>' +
+          '<div class="inv-picker-list" id="inv-picker-list"></div>';
+        host.appendChild(layer);
+        layer.querySelector('#inv-picker-back').addEventListener('click', closeProductPicker);
+        layer.querySelector('#inv-picker-search').addEventListener('input', e=>{ pickerQuery = e.target.value; renderPickerList(); });
+        layer.querySelectorAll('[data-pick-filter]').forEach(btn=>btn.addEventListener('click', ()=>{
+          pickerFilter = btn.getAttribute('data-pick-filter');
+          layer.querySelectorAll('[data-pick-filter]').forEach(b=>b.classList.toggle('active', b===btn));
+          renderPickerList();
+        }));
+        document.getElementById('inv-picker-list').addEventListener('click', e=>{
+          const item = e.target.closest('.prod-drop-item');
+          if(!item) return;
+          const row = pickerRow;
+          const pid = item.getAttribute('data-pid');
+          closeProductPicker();
+          selectProduct(row, pid);
+        });
+        renderPickerList();
       }
-    }
+
     function selectProduct(idx, productId){
       const prod = invoiceProduct(productId);
       if(!prod) return;
