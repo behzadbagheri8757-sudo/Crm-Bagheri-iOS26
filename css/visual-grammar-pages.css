@@ -1155,3 +1155,9 @@ html[data-theme="dark"] #main .lp-flag.warn{background:rgba(251,191,36,.16);colo
   #main .dashboard-shell .bp-cap-bubble{opacity:0;}
   #main .dashboard-shell .bp-cap-liquid{transition:none;}
 }
+
+/* ---- رنگ مایع کپسول بر اساس وضعیت هدف (فقط نمایشی) ---- */
+#main .dashboard-shell .bp-target-strip.is-ontrack .bp-cap-liquid{background:linear-gradient(180deg,#7CC4FF 0%,#3B8BF2 55%,#2563C9 100%);}
+#main .dashboard-shell .bp-target-strip.is-behind .bp-cap-liquid{background:linear-gradient(180deg,#FFD27A 0%,#F59E0B 55%,#D97706 100%);}
+#main .dashboard-shell .bp-target-strip.is-ahead .bp-cap-liquid,
+#main .dashboard-shell .bp-target-strip.is-done .bp-cap-liquid{background:linear-gradient(180deg,#5FD9A8 0%,#22B573 55%,#14935D 100%);}
