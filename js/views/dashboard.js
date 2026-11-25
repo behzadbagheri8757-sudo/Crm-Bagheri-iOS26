@@ -518,7 +518,7 @@
           '<i class="bp-cap-bubble b1"></i><i class="bp-cap-bubble b2"></i><i class="bp-cap-bubble b3"></i>' +
         '</span>' +
       '</div>' +
-      '<span class="bp-cap-pct"><strong>' + enToFaDigits(String(p)) + '</strong><em>٪</em></span>';
+      '';
     }
 
     return '<div class="bp-target-strip ' + (done ? 'is-done' : 'is-' + status.cls) + progressClass + '">' +
@@ -527,10 +527,13 @@
         '<span class="bp-target-strip-status">' + (done ? '✓ رسید' : status.icon + ' ' + status.text) + '</span>' +
       '</div>' +
       '<div class="bp-target-strip-body">' +
+        '<div class="bp-target-meta">' +
+          '<span class="bp-target-meta-sales"><strong class="bp-target-strip-current">' + compactMoney(sales) + '</strong><span class="bp-target-strip-target"> / ' + compactMoney(target) + '</span> <small>تومان</small></span>' +
+          '<span class="bp-target-meta-pct"><strong>' + enToFaDigits(String(pct)) + '</strong><em>٪</em></span>' +
+          (done ? '<span class="bp-target-strip-congrats">آفرین!</span>' : '<span class="bp-target-meta-need">نیاز روزانه <strong>' + compactMoney(requiredDaily) + '</strong> ت</span>') +
+        '</div>' +
         '<div class="bp-target-capsule-row">' + capsuleHtml(pct) + '</div>' +
-        '<div class="bp-target-strip-info">' +
-          '<span class="bp-target-strip-sales"><strong class="bp-target-strip-current">' + compactMoney(sales) + '</strong><span class="bp-target-strip-target"> / ' + compactMoney(target) + '</span> <small>تومان</small></span>' +
-          (done ? '<span class="bp-target-strip-congrats">آفرین!</span>' : '<span class="bp-target-strip-need">نیاز روزانه <strong>' + compactMoney(requiredDaily) + '</strong> ت</span>') +
+        '<div class="bp-target-foot">' +
           (!done && daysLeft > 0 ? '<span class="bp-target-strip-days">' + enToFaDigits(String(daysLeft)) + ' روز مانده</span>' : '') +
         '</div>' +
       '</div>' +
