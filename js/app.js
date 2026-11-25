@@ -2957,7 +2957,7 @@ function openInvoiceForm(cid, editInv, opts){
     openSheet(`
       <div class="inv-sheet-v2">
         <div class="inv-header">
-          <button type="button" class="inv-header-btn" id="inv-cancel">لغو</button>
+          <button type="button" class="inv-header-btn" id="inv-cancel">انصراف</button>
           <div class="inv-header-title">
             <span class="inv-header-title-main">${editInv?'ویرایش فاکتور':'فاکتور جدید'}</span>
             <span class="inv-header-title-sub">${editInv?('#'+esc(String(editInv.number||'—'))):'پیش‌نویس'}</span>
