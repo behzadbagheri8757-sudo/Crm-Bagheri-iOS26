@@ -2247,7 +2247,11 @@ function openAddVisit(cid){
         if (!op) return;
         const next = Math.max(0, Math.round(((Number(op.qty) || 0) + Number(btn.getAttribute('data-vp-qty-step'))) * 1000) / 1000);
         op.qty = next > 0 ? next : undefined;
-        renderStage();
+        // Update just this control in place: a full renderStage() replays the card's enter
+        // animation on every tap, which is the flicker.
+        const wrap = btn.closest('.vp-qty');
+        const inp = wrap ? wrap.querySelector('.vp-qty-input') : null;
+        if (inp) inp.value = op.qty != null ? enToFaDigits(String(op.qty)) : '';
       });
     });
     stage.querySelectorAll('.vp-qty-input').forEach(function (inp) {
@@ -2601,7 +2605,8 @@ function openInvoiceForm(cid, editInv, opts){
       const prod = invoiceProduct(op.productId);
       if(!prod || prod.active===false) return;
       seen[op.productId] = true;
-      out.push({productId:op.productId, qty:1, price:prod.retail||prod.sell||0, discount:0});
+      const vq = Number(op.qty);
+      out.push({productId:op.productId, qty:(vq>0 ? vq : 1), price:prod.retail||prod.sell||0, discount:0});
     });
     return out;
   }
