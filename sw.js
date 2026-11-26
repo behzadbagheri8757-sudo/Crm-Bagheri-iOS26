@@ -27,6 +27,12 @@
    scrollY 1:1 and reverses identically. Removed the now-duplicate "داشبورد"
    <h2> inside Dashboard's own content — the header already shows it as the
    page title since the brand-name/page-title fix) */
+/* CHANGED: v152 -> v153 — dead-code cleanup: 22 unused functions removed (old inline product dropdown helpers, unused nav/ui/dashboard/watch helpers) and 14 unused CSS rules/classes removed. No behaviour change. */
+/* CHANGED: v151 -> v152 — visit quantity: invoice rows seeded from an accepted product use the visit quantity; quantity stepper updates in place (no card re-render, no flicker). */
+/* CHANGED: v150 -> v151 — visit: accepted products get a quantity control (+ right, value, − left); quantity saved on the offer and shown in visit history. */
+/* CHANGED: v149 -> v150 — invoice: payment amounts stay visible after a re-render (updateInvPaymentTotal runs in renderSheet); condensed header date reads day-month-year right-to-left in Persian. */
+/* CHANGED: v148 -> v149 — visual cleanup: dashboard commitments label moved out of the card and card tightened; invoice section spacing; stepper + on the right (RTL); add-item row as an iOS row; header buttons without letter-spacing/washed colour. */
+/* CHANGED: v147 -> v148 — review fixes: removed-empty-row index shift in setActiveRow; scroll restore only into the same host kind; merged duplicate .inv-line-del and .inv-payment-action-value rules; dropped redundant !important. */
 /* CHANGED: v146 -> v147 — invoice: taps inside the product picker no longer close it; payment panel sits inline under the segment (lens visible), values more legible. */
 /* CHANGED: v145 -> v146 — invoice phase 5: product picker is a pushed layer inside the invoice sheet with back, search and filters (all / frequent / recent / visit suggestions); selection uses the existing selectProduct(). */
 /* CHANGED: v144 -> v145 — invoice sheet phase 4: payment method is an iOS segmented control (same buttons and panels, lens from ui-segmented.js). */
@@ -74,9 +80,9 @@
 /* CHANGED: v111 -> v112 — UI typography, shared segmented filters, theme-aware form colors and validation states. Removed the obsolete bundled font asset from the offline precache. */
 /* Previous v110 -> v111 — 00-chrome.css and 10-disclosure.css were missing from PRECACHE_URLS (first load / offline showed unstyled header and disclosure surfaces until the network fetch finished). Both added; cache bumped so devices re-fetch the updated CSS instead of serving the stale cached copy. */
 /* CHANGED: v98 -> v99 (Soft iOS look: CSS-only visual refresh — tokens in visual-grammar.css and a new layer at the end of visual-grammar-pages.css. No asset list, route or business logic changed.) */
-const CACHE_NAME = 'baqeri-shell-v151';
+const CACHE_NAME = 'baqeri-shell-v153';
 
-/* CHANGED: v117 -> v118— Restored unified section-heading styling from the blue patch on top of the product purchase-history baseline. No prospect-evaluation UX, segment, data, schema or business-logic changes. */
+/* CHANGED: v117 -> v118 — Restored unified section-heading styling from the blue patch on top of the product purchase-history baseline. No prospect-evaluation UX, segment, data, schema or business-logic changes. */
 
 /** App Shell — paths relative to this SW (same directory as index.html). */
 const PRECACHE_URLS = [
