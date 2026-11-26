@@ -671,8 +671,8 @@
   }
   function commitmentsGroupHtml() {
     var visit = typeof VisitPlanUI !== 'undefined' ? (VisitPlanUI.dashboardHtml() || '') : '';
-    return '<section class="dash-commitments">' +
-      '<div class="dash-commitments-head">تعهدات و پیگیری‌ها</div>' +
+    return '<div class="dashboard-block-head"><div class="dash-section-label"><span>تعهدات و پیگیری‌ها</span></div></div>' +
+      '<section class="dash-commitments">' +
       '<div class="cm-cards">' +
         commitmentCard('payment', 'وعده‌های پرداخت', openPaymentCount()) +
         commitmentCard('delivery', 'قول‌های تحویل', openDeliveryCount()) +
