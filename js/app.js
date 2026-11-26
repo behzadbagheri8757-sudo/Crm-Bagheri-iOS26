@@ -2942,6 +2942,8 @@ function openInvoiceForm(cid, editInv, opts){
     // other sheet in the app.
     const _prevScrollEl = document.querySelector('.inv-body') || document.querySelector('.sheet');
     const _prevScrollTop = _prevScrollEl ? _prevScrollEl.scrollTop : 0;
+    // Restore only into the same kind of scroll host (inv-body vs sheet).
+    const _prevScrollKind = _prevScrollEl && _prevScrollEl.classList.contains('inv-body') ? 'inv-body' : 'sheet';
     // No-Purchase Reason: expected SKUs missing from current basket (non-blocking)
     const basketPids = rows.map(function(r){ return r.productId; }).filter(Boolean);
     const nprCandidatesInv = (typeof getNoPurchaseCandidates === 'function')
@@ -3136,7 +3138,8 @@ function openInvoiceForm(cid, editInv, opts){
     })();
     if(_prevScrollTop){
       const _newScrollEl = document.querySelector('.inv-body') || document.querySelector('.sheet');
-      if(_newScrollEl) _newScrollEl.scrollTop = _prevScrollTop;
+      const _newKind = _newScrollEl && _newScrollEl.classList.contains('inv-body') ? 'inv-body' : 'sheet';
+      if(_newScrollEl && _newKind === _prevScrollKind) _newScrollEl.scrollTop = _prevScrollTop;
     }
     updateSummary();
     // No-Purchase Reason chips (re-bound after every renderSheet rebuild)
@@ -3251,7 +3254,8 @@ function openInvoiceForm(cid, editInv, opts){
         rows.splice(removedIdx, 1);
         invalidateInvoiceMetrics();
         if(emptyEl) emptyEl.remove();
-        // Add Item appends the transient row, so populated row indexes remain stable.
+        // Rows after the removed one shift down by one: keep the target on the same row.
+        if(removedIdx < idx) idx -= 1;
       }
 
       activeRowIndex = idx;
