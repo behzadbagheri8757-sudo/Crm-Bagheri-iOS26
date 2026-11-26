@@ -1132,6 +1132,7 @@
                 var name = prod ? prod.name : (op.productId || '—');
                 var s = name + ' (' + (rxMap[op.reaction] || op.reaction || '—') + ')';
                 if (op.reaction === 'rejected' && op.rejectionReason) s += ' — ' + (rrMap[op.rejectionReason] || op.rejectionReason);
+                if (op.reaction === 'accepted' && op.qty) s += ' — تعداد ' + enToFaDigits(String(op.qty));
                 return s;
               });
               extraBits.push('پیشنهاد: ' + bits.join('؛ '));

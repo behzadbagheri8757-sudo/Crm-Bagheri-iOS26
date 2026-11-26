@@ -46,7 +46,7 @@
           const prod = (data.products || []).find(p => p.id === op.productId) || {};
           return '<div class="row-details-item">' +
             '<span class="row-details-name">' + esc(prod.name || 'کالا') + '</span>' +
-            '<span class="row-details-meta">' + esc(offerMeta(op)) + '</span>' +
+            '<span class="row-details-meta">' + esc(offerMeta(op)) + (op.reaction === 'accepted' && op.qty ? ' · تعداد ' + enToFaDigits(String(op.qty)) : '') + '</span>' +
           '</div>';
         }).join('') +
       '</div></details>';
