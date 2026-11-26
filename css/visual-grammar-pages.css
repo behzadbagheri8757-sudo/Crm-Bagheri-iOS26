@@ -1235,3 +1235,10 @@ html .inv-sheet-v2 .inv-header-btn,
 html .inv-sheet-v2 button.inv-header-save.btn{letter-spacing:0;opacity:1;text-transform:none;font-family:inherit;-webkit-font-smoothing:antialiased;}
 html .inv-sheet-v2 .inv-header-btn{color:#0A84FF;}
 html .inv-sheet-v2 button.inv-header-save.btn{color:#0A84FF;}
+
+/* ---- ویزیت: تعداد محصول قبول‌شده (− مقدار +) ---- */
+html .vp-qty{display:inline-flex;align-items:center;gap:6px;flex:none;}
+html .vp-qty-step{width:28px;height:28px;border:0;border-radius:999px;background:rgba(118,118,128,0.14);color:var(--vg-color-primary);font-size:17px;font-weight:500;line-height:1;display:inline-flex;align-items:center;justify-content:center;padding:0;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+html .vp-qty-step:active{background:rgba(118,118,128,0.26);}
+html .vp-qty-input{width:56px;height:30px;border:0;border-radius:8px;background:var(--vg-color-surface-soft, #F2F2F7);color:var(--vg-color-text);font-size:14px;font-weight:600;text-align:center;font-variant-numeric:tabular-nums;font-family:inherit;padding:0 4px;}
+html .vp-qty-input:focus{outline:2px solid var(--vg-color-primary);outline-offset:0;}
