@@ -198,7 +198,7 @@ html[data-theme="dark"] #main.customer-detail-view .watch-level-high{color:#F3A5
 .prod-drop-hint{display:flex;flex-direction:column;}
 .prod-drop-hint .bp-hint-line{font-size:11px;line-height:1.6;}
 .prod-drop-item:has(.prod-drop-hint){padding-top:9px;padding-bottom:9px;}
-.prod-drop-section-title{padding:8px 12px 4px;font-size:11px;font-weight:var(--vg-weight-title);line-height:1.5;color:var(--vg-color-text-muted);background:var(--vg-color-surface-soft);}
+
 .inv-line-intel{margin:4px 14px 0;font-size:12px;line-height:1.6;color:var(--vg-color-warning);overflow-wrap:anywhere;}
 .inv-line-intel[hidden]{display:none;}
 .watch-customer-items .watch-list-row{align-items:flex-start;padding:11px 2px;}
@@ -262,7 +262,7 @@ html[data-theme="dark"] .watch-detail-reason .watch-detail-value{color:var(--vg-
 .bp-target-strip.is-done .bp-target-strip-status{color:var(--vg-color-success);}
 .bp-target-strip-settings{appearance:none;-webkit-appearance:none;margin:0;padding:8px 4px;border:0;background:transparent;font-family:inherit;font-size:11px;font-weight:600;color:var(--vg-color-primary);white-space:nowrap;cursor:pointer;-webkit-tap-highlight-color:transparent;}
 .bp-target-strip-empty-text{font-size:12px;color:var(--vg-color-text-muted);padding-right:27px;}
-.bp-target-strip-sales{display:flex;align-items:baseline;min-width:0;}
+
 .bp-target-strip-current{font-size:17px;line-height:1.05;font-weight:600;color:var(--vg-color-text);letter-spacing:-.015em;}
 .bp-target-strip-target{font-size:12px;font-weight:600;color:var(--vg-color-text-muted);}
 .bp-target-strip-congrats{font-weight:600;color:var(--vg-color-success) !important;}
@@ -739,14 +739,11 @@ html[data-theme="dark"] #main .dashboard-shell .bp-dashboard-snapshot-item{box-s
 #main .dashboard-shell .dash-action-toggle{width:calc(100% + 32px);margin:4px -16px 0;padding:13px 6px;border:0;border-top:.5px solid var(--vg-color-divider);border-radius:0;color:var(--vg-color-primary);}
 #main .dashboard-shell .dash-action-toggle:active{opacity:.55;}
 #main .dashboard-shell .bp-target-strip-body{display:flex;flex-direction:column;align-items:stretch;gap:8px;padding:2px 2px 0;}
-#main .dashboard-shell .bp-target-strip-info{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:7px;font-size:11px;color:var(--vg-color-text-muted);}
-#main .dashboard-shell .bp-target-strip-need strong{font-weight:600;color:var(--vg-color-text);}
-#main .dashboard-shell .bp-target-strip-info .bp-target-strip-days{text-align:start;}
+
 #main .dashboard-shell .bp-target-strip.is-behind .bp-target-strip-status{color:var(--vg-color-warning);}
 html[data-theme="dark"] #main .dashboard-shell .bp-target-strip.is-behind .bp-target-strip-status{color:var(--vg-color-warning);}
 @media (max-width:359px){
 
-#main .dashboard-shell .bp-target-strip-info{align-items:center;}
 }
 html.vg-canvas-white{background:var(--vg-color-bg);}
 #main .tx-list,
@@ -1047,22 +1044,6 @@ input[placeholder*="جستجو"]::placeholder{font-weight:300;}
 #prospect-target .prospect-daily-target .pdt-caption{font-size:12px;}
 
 /* 3) ردیف ابزار: کپسول موقعیت (راست) + مرتب‌سازی کوچک (چپ) */
-#main .pl-toolbar{display:flex;align-items:center;gap:8px;margin:0 0 8px;}
-#main .pl-toolbar .pl-sort{display:flex;align-items:center;gap:6px;margin-inline-start:auto;}
-#main .pl-sort label{font-size:12px;color:var(--vg-color-text-muted);white-space:nowrap;}
-#main .pl-sort select{width:auto;min-width:0;height:32px;min-height:32px;margin:0;padding:4px 26px 4px 10px;font-size:12px;border-radius:999px;background-position:left 9px center;}
-
-#main .pl-cap{display:inline-flex;align-items:center;gap:6px;min-height:32px;max-width:100%;padding:4px 12px;border:1px solid var(--vg-glass-border);border-radius:999px;background:var(--vg-glass-sheen),var(--vg-glass-tint);-webkit-backdrop-filter:var(--vg-glass-blur);backdrop-filter:var(--vg-glass-blur);box-shadow:var(--vg-glass-rim),0 1px 3px rgba(26,38,52,.06);color:var(--vg-color-text);font-family:inherit;font-size:12px;line-height:1.2;cursor:pointer;}
-#main .pl-cap:active{transform:scale(.97);}
-#main .pl-cap-title{color:var(--vg-color-text-muted);font-weight:400;white-space:nowrap;}
-#main .pl-cap-value{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;max-width:140px;}
-#main .pl-cap::after{content:"";flex:none;width:5px;height:5px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:translateY(-2px) rotate(45deg);opacity:.5;}
-#main .pl-cap.is-set{border-color:var(--vg-color-primary);}
-#main .pl-cap.is-set .pl-cap-title,
-#main .pl-cap.is-set .pl-cap-value{color:var(--vg-color-primary);}
-
-#main #prospect-summary.pl-count{display:block;background:transparent;border:0;box-shadow:none;overflow:visible;padding:0 4px;margin:0 0 8px;font-size:12px;color:var(--vg-color-text-muted);font-variant-numeric:tabular-nums;}
-html[data-theme="dark"] #main #prospect-summary.pl-count{border:0;}
 
 /* برگهٔ موقعیت (drill-down) */
 .pl-sheet-title{margin:0 0 12px;text-align:center;font-size:17px;font-weight:600;color:var(--vg-color-text);}

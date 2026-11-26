@@ -465,7 +465,7 @@ html .inv-sheet-v2 .inv-row-date input.shamsi-date-field:focus-visible{outline:0
 .gc-kpi-num{font-size:17px;font-weight:600;color:var(--vg-color-text);font-variant-numeric:tabular-nums;}
 .watch-page-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;}
 .watch-page-hint{font-size:12px;color:var(--vg-color-text-muted);}
-.watch-total-count{min-width:32px;height:32px;padding:0 8px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;background:rgba(31,41,55,.05);border:1px solid rgba(31,41,55,.08);font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;}
+
 .watch-customer-group{margin:0 0 10px;border:1px solid rgba(31,41,55,.08);border-radius:14px;background:var(--vg-color-surface);overflow:hidden;}
 .watch-customer-head{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:rgba(31,41,55,.03);border-bottom:.5px solid var(--vg-color-divider);}
 .watch-customer-name{font-size:13px;font-weight:600;color:var(--vg-color-text);}
