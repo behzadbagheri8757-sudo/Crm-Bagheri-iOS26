@@ -1989,6 +1989,10 @@ function openAddVisit(cid){
           rejectionReason: op.rejectionReason,
         };
       }
+      if (op.reaction === 'accepted') {
+        const q = Number(op.qty);
+        return (q > 0) ? { productId: op.productId, reaction: 'accepted', qty: q } : { productId: op.productId, reaction: 'accepted' };
+      }
       return { productId: op.productId, reaction: op.reaction };
     });
   }
@@ -2084,8 +2088,18 @@ function openAddVisit(cid){
           ? '<span class="vp-status is-' + sum.tone + '">' + esc(sum.text) + '</span>'
           : cycleBadge + (meta ? '<span class="vp-row-meta">' + esc(meta) + '</span>' : '')) +
       '</button>' +
+      (op && op.reaction === 'accepted' ? qtyControlHtml(pid, op) : '') +
       (op ? '<button type="button" class="vp-row-del" data-vp-del="' + esc(pid) + '" aria-label="حذف ' + esc(productLabel(pid)) + '">حذف</button>' : '') +
     '</div>';
+  }
+  function qtyControlHtml(pid, op){
+    const val = (op.qty != null && op.qty !== '') ? enToFaDigits(String(op.qty)) : '';
+    const id = esc(pid);
+    return '<span class="vp-qty" role="group" aria-label="تعداد قبول‌شده">' +
+      '<button type="button" class="vp-qty-step" data-vp-qty-pid="' + id + '" data-vp-qty-step="1" aria-label="افزایش تعداد">+</button>' +
+      '<input type="text" inputmode="decimal" class="vp-qty-input" data-vp-qty-pid="' + id + '" value="' + esc(val) + '" placeholder="تعداد" aria-label="تعداد">' +
+      '<button type="button" class="vp-qty-step" data-vp-qty-pid="' + id + '" data-vp-qty-step="-1" aria-label="کاهش تعداد">−</button>' +
+    '</span>';
   }
   function footerBack(target){
     return '<div class="vp-footer"><button type="button" class="vp-back visit-stage-back" data-back-step="' + esc(target) + '">بازگشت</button></div>';
@@ -2224,6 +2238,26 @@ function openAddVisit(cid){
         state.pendingFrom = 'add';
         state.step = 'reaction';
         renderStage();
+      });
+    });
+    stage.querySelectorAll('[data-vp-qty-step]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        markDirty(btn);
+        const op = currentOffer(btn.getAttribute('data-vp-qty-pid'));
+        if (!op) return;
+        const next = Math.max(0, Math.round(((Number(op.qty) || 0) + Number(btn.getAttribute('data-vp-qty-step'))) * 1000) / 1000);
+        op.qty = next > 0 ? next : undefined;
+        renderStage();
+      });
+    });
+    stage.querySelectorAll('.vp-qty-input').forEach(function (inp) {
+      inp.addEventListener('change', function () {
+        markDirty(inp);
+        const op = currentOffer(inp.getAttribute('data-vp-qty-pid'));
+        if (!op) return;
+        const v = parseFloat(faToEnDigits(inp.value));
+        op.qty = v > 0 ? v : undefined;
+        inp.value = op.qty != null ? enToFaDigits(String(op.qty)) : '';
       });
     });
     stage.querySelectorAll('[data-vp-del]').forEach(function (btn) {
