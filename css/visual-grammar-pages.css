@@ -1124,8 +1124,8 @@ html[data-theme="dark"] #main .lp-flag.warn{background:rgba(251,191,36,.16);colo
 #main .lp-filter-btn .lp-badge{top:-4px;inset-inline-end:-4px;}
 
 /* ---- تعهدات روی داشبورد: یک سطح گروهی با جداکنندهٔ وسط ---- */
-.cm-cards{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);margin:8px 0 12px;border-radius:12px;background:var(--surface-2);border:0.5px solid var(--border);overflow:hidden;}
-.cm-card{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-width:0;padding:16px 8px 14px;color:var(--text-primary);text-decoration:none;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background-color .15s ease;}
+.cm-cards{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);margin:0 0 12px;border-radius:12px;background:var(--surface-2);border:0.5px solid var(--border);overflow:hidden;}
+.cm-card{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-width:0;padding:10px 8px 10px;color:var(--text-primary);text-decoration:none;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background-color .15s ease;}
 .cm-card:first-child{border-inline-end:0.5px solid var(--border);}
 .cm-card:active{background:var(--fill-ghost-hover);}
 .cm-card-count{font-size:22px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums;}
@@ -1173,10 +1173,10 @@ html .inv-sheet-v2 .inv-header-btn{background:transparent;border:0;box-shadow:no
 html .inv-sheet-v2 button.inv-header-save.btn{background:transparent;border:0;box-shadow:none;min-height:44px;padding:8px 2px;color:var(--vg-color-primary);font-size:17px;font-weight:600;}
 
 /* ---- فاکتور مرحلهٔ ۲: بخش‌ها به گروه‌های iOS (عنوان بالا، کارت گروهی، جداکنندهٔ نازک) ---- */
-html .inv-sheet-v2 .inv-section{margin:0 0 22px;}
+html .inv-sheet-v2 .inv-section{margin:0 0 16px;}
 html .inv-sheet-v2 .inv-section-title,
 html .inv-sheet-v2 .inv-items-card-head,
-html .inv-sheet-v2 .inv-payment-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 16px 6px;font-size:13px;font-weight:400;color:var(--vg-color-text-muted);}
+html .inv-sheet-v2 .inv-payment-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0;padding:0 16px 4px;font-size:13px;font-weight:400;color:var(--vg-color-text-muted);}
 html .inv-sheet-v2 .inv-customer-context,
 html .inv-sheet-v2 .inv-items-card,
 html .inv-sheet-v2 .inv-rows,
@@ -1225,3 +1225,13 @@ html .inv-picker-empty{padding:28px 12px;text-align:center;font-size:14px;color:
 html .inv-sheet-v2 .inv-payment-backdrop{display:none;}
 html .inv-sheet-v2 .inv-payment-panel{position:static;transform:none;left:auto;bottom:auto;width:auto;max-height:none;margin:0 0 12px;padding:14px 16px;border-radius:12px;background:var(--vg-color-surface);box-shadow:none;border:0.5px solid rgba(60,60,67,0.12);}
 html .inv-sheet-v2 .inv-payment-actions .inv-payment-action{min-height:52px;gap:2px;}
+
+/* ---- فاکتور: ردیف «افزودن قلم جدید» به‌صورت ردیف iOS (هم‌راستا با ردیف‌های گروه) ---- */
+html .inv-sheet-v2 .inv-items-card > .inv-add-line{display:flex;align-items:center;gap:10px;width:100%;min-height:46px;margin:0;padding:10px 16px;border:0;border-top:0.5px solid rgba(60,60,67,0.12);border-radius:0;background:transparent;box-shadow:none;color:var(--vg-color-primary);font-family:inherit;font-size:15px;font-weight:500;text-align:start;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+html .inv-sheet-v2 .inv-items-card > .inv-add-line:active{background:rgba(118,118,128,0.10);}
+html .inv-sheet-v2 .inv-add-line-icon{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:999px;background:var(--vg-color-primary);color:#fff;font-size:17px;font-weight:500;line-height:1;flex:none;}
+/* ---- فاکتور: دکمه‌های انصراف و ثبت، بدون فاصلهٔ حروف و بدون کم‌رنگی ---- */
+html .inv-sheet-v2 .inv-header-btn,
+html .inv-sheet-v2 button.inv-header-save.btn{letter-spacing:0;opacity:1;text-transform:none;font-family:inherit;-webkit-font-smoothing:antialiased;}
+html .inv-sheet-v2 .inv-header-btn{color:#0A84FF;}
+html .inv-sheet-v2 button.inv-header-save.btn{color:#0A84FF;}
