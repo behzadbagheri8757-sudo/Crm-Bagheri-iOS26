@@ -23,9 +23,6 @@
     return '#/watches';
   }
 
-  function watchDetailHref(occId) {
-    return '#/watch?id=' + encodeURIComponent(occId || '');
-  }
 
   function navigateToWatch(occId) {
     AppRouter.navigate('/watch', { id: occId });
@@ -89,9 +86,6 @@
   /* Existing stored severity only — never recalculated. */
   function levelLabel(level) {
     return level === 'high' ? 'زیاد' : level === 'medium' ? 'متوسط' : level === 'low' ? 'کم' : (level || '—');
-  }
-  function levelColor(level) {
-    return level === 'high' ? '#B3261E' : level === 'medium' ? '#C77700' : '#6B7280';
   }
 
   /* Human label for the watch type (presentation text only; falls back to a neutral phrase). */

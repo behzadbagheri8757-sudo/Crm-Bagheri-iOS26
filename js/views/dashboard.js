@@ -19,17 +19,7 @@
 
   function money(v) { return toman(Math.round(Number(v) || 0)) + ' ت'; }
 
-  function deltaHtml(pct) {
-    if (pct === null || pct === undefined || !isFinite(pct)) return '<span class="kpi-delta flat">بدون مقایسه</span>';
-    const n = Math.round(pct * 10) / 10;
-    if (n > 0) return '<span class="kpi-delta up">↑ ' + esc(String(n).replace('-', '')) + '٪</span> <span>نسبت به بازه مشابه</span>';
-    if (n < 0) return '<span class="kpi-delta down">↓ ' + esc(String(Math.abs(n))) + '٪</span> <span>نسبت به بازه مشابه</span>';
-    return '<span class="kpi-delta flat">۰٪</span> <span>بدون تغییر</span>';
-  }
 
-  function dashTile(href, ico, title, sub) {
-    return '<a class="dash-tile" href="' + href + '"><span class="dash-ico">' + ico + '</span><span class="dash-title">' + title + '</span>' + (sub ? '<span class="dash-sub">' + sub + '</span>' : '') + '</a>';
-  }
 
   /* Quick Actions: opens a tiny customer picker, then delegates to the existing
      global add-* functions (openAddInvoice/openAddTransaction/openAddVisit).

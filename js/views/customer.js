@@ -181,10 +181,6 @@
     other: 'سایر'
   };
 
-  function rejectionReasonLabel(code) {
-    if (!code) return '—';
-    return REJECTION_REASON_LABELS[code] || String(code);
-  }
 
   /**
    * Build rejection insights for ONE customer from offeredProductStats.
@@ -733,74 +729,6 @@
     return (sentence ? '<div class="bp-row-text bp-sheet-text">' + esc(sentence) + '</div>' : '') + P.detailsHtml(P.watchDetailLines(o));
   }
 
-  function openWatchReasonSheet(occurrenceId, onDone) {
-    if (!occurrenceId || typeof recordWatchReason !== 'function') return;
-    var options = (typeof getWatchResponseOptions === 'function')
-      ? getWatchResponseOptions(occurrenceId)
-      : (typeof WATCH_REASON_OPTIONS !== 'undefined' && Array.isArray(WATCH_REASON_OPTIONS))
-      ? WATCH_REASON_OPTIONS
-      : [
-          { code: 'still_stock', label: 'هنوز موجودی دارد' },
-          { code: 'price', label: 'قیمت' },
-          { code: 'competitor', label: 'خرید از رقیب' },
-          { code: 'no_need', label: 'فعلاً نیاز ندارد' },
-          { code: 'quality', label: 'مشکل کیفیت' },
-          { code: 'other', label: 'سایر' }
-        ];
-    var optsHtml = options.map(function (o) {
-      return '<button type="button" class="btn secondary small" data-watch-reason="' + esc(o.code) + '" style="width:100%;margin-bottom:6px;text-align:right;">' +
-        esc(o.label) + '</button>';
-    }).join('');
-    if (typeof openSheet !== 'function') return;
-    openSheet(
-      '<div class="sheet-title">ثبت علت هشدار</div>' +
-      '<div class="report-note" style="margin-bottom:10px;">پاسخ‌های «هنوز موجودی دارد»، «این محصول را نمی‌خواهد»، «بعداً پیگیری می‌کنم» و «فعلاً نیاز ندارد» هشدار را می‌بندند و همان مورد را فوراً برنمی‌گردانند؛ سایر علت‌ها فقط ثبت می‌شوند.</div>' +
-      '<div id="watch-reason-list">' + optsHtml + '</div>' +
-      '<div class="field" style="margin-top:10px;"><label>یادداشت (اختیاری)</label>' +
-      '<input type="text" id="watch-reason-note" autocomplete="off" placeholder="توضیح کوتاه..."></div>' +
-      '<div class="btn-row" style="margin-top:12px;justify-content:space-between;">' +
-      '<button type="button" class="btn secondary" id="watch-dismiss-btn">بستن هشدار</button>' +
-      '<button type="button" class="btn secondary" id="watch-reason-cancel">انصراف</button></div>'
-    );
-    var cancel = document.getElementById('watch-reason-cancel');
-    if (cancel) cancel.onclick = function () { if (typeof closeModal === 'function') closeModal(); };
-    var dismissBtn = document.getElementById('watch-dismiss-btn');
-    if (dismissBtn) {
-      dismissBtn.onclick = function () {
-        if (typeof dismissWatchOccurrence !== 'function') return;
-        var noteEl = document.getElementById('watch-reason-note');
-        var note = noteEl ? noteEl.value : '';
-        try {
-          dismissWatchOccurrence(occurrenceId, note);
-          if (typeof showToast === 'function') showToast('هشدار بسته شد');
-        } catch (err) {
-          console.error(err);
-          if (typeof showToast === 'function') showToast('بستن هشدار ممکن نشد');
-        }
-        if (typeof closeModal === 'function') closeModal();
-        if (typeof onDone === 'function') onDone();
-      };
-    }
-    var list = document.getElementById('watch-reason-list');
-    if (list) {
-      list.addEventListener('click', function (e) {
-        var btn = e.target.closest('[data-watch-reason]');
-        if (!btn) return;
-        var code = btn.getAttribute('data-watch-reason');
-        var noteEl = document.getElementById('watch-reason-note');
-        var note = noteEl ? noteEl.value : '';
-        try {
-          recordWatchReason(occurrenceId, code, note);
-          if (typeof showToast === 'function') showToast('علت ثبت شد');
-        } catch (err) {
-          console.error(err);
-          if (typeof showToast === 'function') showToast('ثبت علت ممکن نشد');
-        }
-        if (typeof closeModal === 'function') closeModal();
-        if (typeof onDone === 'function') onDone();
-      });
-    }
-  }
 
   function openWatchFollowUpSheet(occurrenceId, cid, onDone) {
     if (!occurrenceId || typeof getPendingWatchFollowUps !== 'function' || typeof openSheet !== 'function') return;
