@@ -124,21 +124,6 @@ function invoiceDocHtml(inv, cust, forPrint){
 }
 
 /** Directory URL of the current HTML page (handles GitHub Pages project paths) */
-function getPageDirUrl(){
-  try{
-    const u = new URL(window.location.href);
-    let path = u.pathname || '/';
-    const last = path.split('/').pop() || '';
-    if(/\.[a-zA-Z0-9]+$/.test(last)){
-      path = path.substring(0, path.lastIndexOf('/') + 1);
-    }else if(!path.endsWith('/')){
-      path = path + '/';
-    }
-    return u.origin + path;
-  }catch(e){
-    return (document.baseURI || window.location.href || '').replace(/[^/]+$/, '') || './';
-  }
-}
 
 /** Absolute URL for a project-relative asset.
  * Uses document.baseURI (browser-native base-URL resolution) instead of manually
@@ -2837,38 +2822,6 @@ function openInvoiceForm(cid, editInv, opts){
       </div>
     `;
   }
-  function productDropListHtml(idx, query){
-    const q = (query||'').trim();
-    const matches = p=>!q || (p.name||'').includes(q);
-    // Inactive products (active===false) excluded from NEW invoice product selector only.
-    const activeOnly = data.products.filter(p=>p.active!==false);
-    // Section 1 — this customer's most-purchased products; section 2 — everything else (max 40).
-    const frequent = frequentProducts().filter(matches);
-    const inFrequent = Object.create(null);
-    frequent.forEach(p=>{ inFrequent[p.id] = true; });
-    const others = activeOnly.filter(p=>matches(p) && !inFrequent[p.id]).slice(0, 40);
-    if(!frequent.length && !others.length) return `<div class="prod-drop-empty">کالایی پیدا نشد</div>`;
-    // Headings only when both sections exist; otherwise the list looks exactly as before.
-    if(frequent.length && others.length){
-      return `<div class="prod-drop-section-title">پرخرید این مشتری</div>` +
-        frequent.map(p=>productDropItemHtml(idx, p)).join('') +
-        `<div class="prod-drop-section-title">همه محصولات</div>` +
-        others.map(p=>productDropItemHtml(idx, p)).join('');
-    }
-    return (frequent.length ? frequent : others).map(p=>productDropItemHtml(idx, p)).join('');
-  }
-  function productDropPanelHtml(idx){
-    return `
-      <div class="prod-drop-panel">
-        <div class="prod-drop-search-wrap">
-          <input type="search" class="prod-drop-search" data-row="${idx}" placeholder="جستجوی کالا..." value="" autocomplete="off" enterkeyhint="search">
-        </div>
-        <div class="prod-drop-list">${productDropListHtml(idx, '')}</div>
-      </div>`;
-  }
-  function productDropItemsHtml(idx, query){
-    return productDropListHtml(idx, query);
-  }
 
   function itemsHtml(){
     return rows.map((r,idx)=>{
@@ -3311,31 +3264,6 @@ function openInvoiceForm(cid, editInv, opts){
       if(newActiveEl) newActiveEl.classList.add('is-active');
     }
 
-    function positionProductDrop(dropEl, anchorEl){
-      if(!dropEl || !anchorEl) return;
-      const margin = 10;
-      const rect = anchorEl.getBoundingClientRect();
-      const vv = window.visualViewport;
-      const vh = vv ? vv.height : window.innerHeight;
-      const vTop = vv ? vv.offsetTop : 0;
-      // Height cap: ~38% viewport, max 300px, min 180px
-      const maxH = Math.min(300, Math.max(180, Math.round(vh * 0.38)));
-      dropEl.style.left = margin + 'px';
-      dropEl.style.right = margin + 'px';
-      dropEl.style.width = 'auto';
-      dropEl.style.maxHeight = maxH + 'px';
-      const spaceBelow = (vTop + vh) - rect.bottom - 8;
-      const spaceAbove = rect.top - vTop - 8;
-      if(spaceBelow >= Math.min(maxH, 200) || spaceBelow >= spaceAbove){
-        dropEl.style.top = (rect.bottom + 4) + 'px';
-        dropEl.style.bottom = 'auto';
-        if(spaceBelow < maxH) dropEl.style.maxHeight = Math.max(160, spaceBelow) + 'px';
-      }else{
-        dropEl.style.bottom = (window.innerHeight - rect.top + 4) + 'px';
-        dropEl.style.top = 'auto';
-        if(spaceAbove < maxH) dropEl.style.maxHeight = Math.max(160, spaceAbove) + 'px';
-      }
-    }
     // Product picker: a pushed layer INSIDE the invoice sheet (not a route, so the form
       // state is untouched). Back returns to the same row; picking runs the existing
       // selectProduct(). Pricing, stock and accounting rules are unchanged.
@@ -3569,9 +3497,6 @@ function openProductDrop(idx){
         btn.classList.remove('is-active');
         btn.setAttribute('aria-expanded','false');
       });
-    }
-    function paymentAmountFor(method){
-      return method==='cash' ? cashPaid : method==='card' ? cardPaid : method==='transfer' ? transferPaid : checkAmount;
     }
     function setPaymentAmount(method, amount){
       const value = Math.max(0, Number(amount)||0);

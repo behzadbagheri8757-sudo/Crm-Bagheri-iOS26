@@ -99,9 +99,6 @@ function prospectComputeScore(answers){
   });
   return total;
 }
-function prospectAnsweredCount(answers){
-  return PROSPECT_QUESTIONS.filter(q=>answers[q.id]).length;
-}
 function prospectNowISO(){ return new Date().toISOString(); }
 function prospectTodayStr(){
   const d = new Date();

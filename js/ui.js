@@ -368,9 +368,6 @@ function balanceStatusWord(balance){
   if(balance<0) return 'بستانکار';
   return 'تسویه شده';
 }
-function balanceStatusText(balance, amountText){
-  return balance===0 ? balanceStatusWord(balance) : (balanceStatusWord(balance)+': '+amountText);
-}
 /**
  * Single source of the customer risk wording (Customer Detail, Quick View, Customers list).
  * Pure: no data access. Unknown / missing level => empty label (caller supplies its own fallback).

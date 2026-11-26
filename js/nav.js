@@ -12,7 +12,6 @@ function isSpaShell() {
 }
 
 /** Dashboard href: hash on SPA shell, classic page elsewhere. */
-function spaDashboardHref() { return '#/dashboard'; }
 
 const NAV_ITEMS = [
   { id: 'dashboard', href: '#/dashboard',     label: 'داشبورد', spaPath: '/dashboard' },
@@ -362,28 +361,10 @@ function _bnReduceMotion(){
 }
 
 /* Fast spring used for the press-lift and the final settle. */
-function _bnPressSpring(t){
-  t = Math.max(0, Math.min(1, t));
-  var c = 1.70158;
-  var x = t - 1;
-  return 1 + (c + 1) * x * x * x + c * x * x;
-}
 
 /* Damped spring used for the actual travel. The position is sampled into
    WAAPI frames so the animation stays on the compositor and can be
    interrupted without losing the exact current geometry. */
-function _bnSpring(t, zeta, delay){
-  var tt = delay > 0 ? (t - delay) / (1 - delay) : t;
-  if(tt <= 0) return 0;
-  if(tt >= 1) tt = 1;
-  var tau = tt * 6.5;
-  if(zeta >= 1){
-    var a = Math.sqrt(zeta*zeta - 1);
-    return 1 - Math.exp(-zeta*tau) * (Math.cosh(a*tau) + (zeta/Math.max(a,1e-6))*Math.sinh(a*tau));
-  }
-  var wd = Math.sqrt(1 - zeta*zeta);
-  return 1 - Math.exp(-zeta*tau) * (Math.cos(wd*tau) + (zeta/wd)*Math.sin(wd*tau));
-}
 
 function _bnSmoothStep(t){
   t = Math.max(0, Math.min(1, t));
@@ -507,10 +488,6 @@ function _bnEaseOutCubic(t){
   return 1 - u*u*u;
 }
 
-function _bnEaseOutQuad(t){
-  var u = 1 - (t < 0 ? 0 : (t > 1 ? 1 : t));
-  return 1 - u * u;
-}
 
 /* Reads the indicator's actual rendered transform (translate + scale)
    straight off its computed matrix. Used only when a travel animation is
@@ -984,42 +961,6 @@ function fillMoreSheetList(activeId){
 
 let _moreSheetHideTimer = null;
 
-function openMoreSheet(activeId){
-  ensureBottomNavDOM();
-  const overlay = document.getElementById('more-overlay');
-  const sheet = document.getElementById('more-sheet');
-  if(!overlay || !sheet) return;
-  if(!sheet.classList.contains('show')) sheet.__returnFocus = document.activeElement;
-  if(sheet.__keyHandler) document.removeEventListener('keydown', sheet.__keyHandler);
-  sheet.__keyHandler = function(e){
-    if(sheet.hidden || !sheet.classList.contains('show')) return;
-    if(e.key === 'Escape'){ e.preventDefault(); closeMoreSheet(); return; }
-    if(e.key !== 'Tab') return;
-    const items = Array.from(sheet.querySelectorAll('a[href],button:not([disabled])')).filter(function(el){ return el.getClientRects().length; });
-    if(!items.length){ e.preventDefault(); sheet.focus(); return; }
-    const first = items[0], last = items[items.length-1];
-    if(e.shiftKey && (document.activeElement === first || !sheet.contains(document.activeElement))){ e.preventDefault(); last.focus(); }
-    else if(!e.shiftKey && (document.activeElement === last || !sheet.contains(document.activeElement))){ e.preventDefault(); first.focus(); }
-  };
-  document.addEventListener('keydown', sheet.__keyHandler);
-  overlay.__closeFn = closeMoreSheet;
-  // Cancel any pending hide-after-transition timer from a just-closed sheet —
-  // otherwise a rapid close→reopen (tap close, immediately tap "بیشتر" again)
-  // leaves that timer alive, and it later fires `hidden = true` on the sheet
-  // we just reopened, making it silently disappear a moment after opening.
-  if(_moreSheetHideTimer){ clearTimeout(_moreSheetHideTimer); _moreSheetHideTimer = null; }
-  fillMoreSheetList(activeId);
-  overlay.hidden = false;
-  sheet.hidden = false;
-  requestAnimationFrame(() => {
-    overlay.classList.add('show');
-    sheet.classList.add('show');
-    const first = sheet.querySelector('.more-sheet-item, .more-sheet-close');
-    if(first) first.focus();
-  });
-  document.body.classList.add('more-open');
-  try{ window.__scrollLock && window.__scrollLock.lock(); }catch(_e){}
-}
 
 function closeMoreSheet(){
   const overlay = document.getElementById('more-overlay');
@@ -1404,23 +1345,8 @@ function bindPullToRefresh(){
   }
 }
 
-function getQueryParam(name){
-  try{
-    return new URLSearchParams(window.location.search).get(name);
-  }catch(e){
-    return null;
-  }
-}
 
 
-function pageShellNote(title, detail){
-  return `
-    <h2 class="section-title">${title}</h2>
-    <div class="page-skeleton-note">
-      ${detail || 'این صفحه در مرحله ۱ فقط اسکلت معماری است. امکانات کامل در مراحل بعد منتقل می‌شوند.'}
-    </div>
-  `;
-}
 
 function waitForCrmDataLoad() {
   return new Promise(function (resolve) {
@@ -1525,24 +1451,6 @@ async function bootSpaShell() {
       return;
     }
 
-    function spaActiveIdFromPath(path) {
-      if (path === '/' || path === '/dashboard') return 'dashboard';
-      if (path === '/products') return 'products';
-      if (path === '/inventory') return 'inventory';
-      if (path === '/reports') return 'reports';
-      if (path === '/customers' || path === '/customer') return 'customers';
-      if (path === '/payments') return 'payments';
-      if (path === '/invoices' || path === '/invoice') return 'invoices';
-      if (path === '/suppliers' || path === '/supplier') return 'suppliers';
-      if (path === '/visits') return 'visits';
-      if (path === '/prospects' || path === '/prospect' || path === '/prospect-routes' || path === '/evaluation') return 'prospects';
-      if (path === '/watches' || path === '/watch') return 'watches';
-      if (path === '/checks') return 'checks';
-      if (path === '/game') return 'game';
-      if (path === '/settings') return 'settings';
-      if (path === '/more') return 'more';
-      return 'dashboard';
-    }
 
     /* Per-route nav titles — iOS large-title convention: the tab bar labels
        already used for BOTTOM_NAV_ITEMS/MORE_NAV_ITEMS are reused for list
