@@ -588,7 +588,7 @@ html .inv-sheet-v2 input.inv-mini-input.has-input-clear{padding-inline-end:26px 
 html .inv-sheet-v2 .inv-line-view-active{background:var(--vg-color-surface-soft);}
 .inv-sheet-v2 .inv-line.is-active:not(.inv-line-empty) .inv-line-sub::after{content:'';flex:none;width:16px;height:16px;margin-inline-start:auto;opacity:.38;background-color:var(--vg-color-text-muted);pointer-events:none;-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 15 6-6 6 6'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 15 6-6 6 6'/%3E%3C/svg%3E") center/contain no-repeat;}
 .inv-sheet-v2 .inv-line-view-active .row-product-search.inv-line-name{padding-left:50px !important;}
-html .inv-sheet-v2 .inv-line-del{left:2px;width:44px;height:44px;min-width:44px;padding:12px;box-sizing:border-box;border-radius:50%;background-color:var(--vg-color-neutral-soft);background-clip:content-box;color:var(--vg-color-text-muted);font-size:13px;line-height:20px;text-align:center;opacity:1;}
+html .inv-sheet-v2 .inv-line-del{width:24px;height:24px;border:0;border-radius:999px;background:var(--vg-color-danger, #FF3B30);color:#fff;font-size:15px;font-weight:600;line-height:1;display:inline-flex;align-items:center;justify-content:center;padding:0;box-shadow:none;}
 html .inv-sheet-v2 .inv-line-del:active{background-color:var(--vg-color-danger-soft);color:var(--vg-color-danger);}
 .prod-drop-panel{border:1px solid var(--vg-color-border);border-radius:20px;box-shadow:var(--vg-shadow-overlay), 0 0 0 1px var(--vg-color-border);}
 html[data-theme="dark"] .prod-drop-panel{background:var(--vg-glass-tint);border-color:var(--vg-color-border);box-shadow:var(--vg-shadow-overlay), 0 0 0 1px var(--vg-color-border);}
@@ -680,7 +680,7 @@ html .inv-sheet-v2 .inv-row-label{font-size:15px;font-weight:400;}
 html .inv-sheet-v2 .inv-row-value{font-size:13px;font-variant-numeric:tabular-nums;}
 html .inv-sheet-v2 .inv-payment-total{font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;}
 html .inv-sheet-v2 .inv-payment-action{font-size:12px;font-weight:500;}
-html .inv-sheet-v2 .inv-payment-action-value{font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;}
+html .inv-sheet-v2 .inv-payment-action-value{font-size:12px;font-weight:500;color:var(--vg-color-text);min-height:14px;line-height:1.2;font-variant-numeric:tabular-nums;}
 html .inv-sheet-v2 .inv-payment-panel-head{font-size:15px;font-weight:600;}
 html .inv-sheet-v2 .inv-payment-panel-head small{font-size:11px;font-weight:400;}
 html .inv-sheet-v2 .inv-payment-confirm{font-size:15px;font-weight:600;}
@@ -1193,14 +1193,13 @@ html .inv-sheet-v2 .inv-items .inv-line:last-child{border-bottom:0;}
 html .inv-sheet-v2 .inv-qty-stepper{display:inline-flex;align-items:center;gap:6px;}
 html .inv-sheet-v2 .inv-qty-step{width:30px;height:30px;border:0;border-radius:999px;background:rgba(118,118,128,0.14);color:var(--vg-color-primary);font-size:18px;font-weight:500;line-height:1;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0;-webkit-tap-highlight-color:transparent;}
 html .inv-sheet-v2 .inv-qty-step:active{background:rgba(118,118,128,0.26);}
-html .inv-sheet-v2 .inv-line-del{width:24px;height:24px;border:0;border-radius:999px;background:var(--vg-color-danger, #FF3B30);color:#fff;font-size:15px;font-weight:600;line-height:1;display:inline-flex;align-items:center;justify-content:center;padding:0;box-shadow:none;}
 
 /* ---- فاکتور مرحلهٔ ۴: روش دریافت به‌صورت سگمنت iOS (لنز از ui-segmented.js) ---- */
+/* ios-seg is doubled on purpose: it must outrank the dark-mode .ios-seg.ios-seg rule. */
 html .inv-sheet-v2 .inv-payment-actions.ios-seg.ios-seg{background:rgba(118,118,128,0.12);border:0;border-radius:999px;overflow:hidden;padding:3px;margin:0 0 12px;box-shadow:none;}
 html .inv-sheet-v2 .inv-payment-actions.ios-seg.ios-seg > .inv-payment-action{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-height:44px;padding:5px 4px;border:0;border-radius:999px;background:transparent;box-shadow:none;font-size:13px;font-weight:500;color:var(--vg-color-text-muted);}
 html .inv-sheet-v2 .inv-payment-actions.ios-seg.ios-seg > .inv-payment-action.ios-on{color:var(--vg-color-text);font-weight:600;}
 html .inv-sheet-v2 .inv-payment-actions .inv-payment-action-icon{display:none;}
-html .inv-sheet-v2 .inv-payment-actions .inv-payment-action-value{font-size:11px;font-weight:400;color:var(--vg-color-text-muted);font-variant-numeric:tabular-nums;min-height:12px;}
 html .inv-sheet-v2 .inv-payment-actions .inv-payment-action.is-active{color:var(--vg-color-text);}
 
 /* ---- فاکتور مرحلهٔ ۵: انتخاب کالا به‌صورت لایهٔ push داخل برگهٔ فاکتور ---- */
@@ -1223,8 +1222,6 @@ html .inv-picker-list .prod-drop-chevron{color:var(--vg-color-text-muted);font-s
 html .inv-picker-empty{padding:28px 12px;text-align:center;font-size:14px;color:var(--vg-color-text-muted);}
 
 /* ---- فاکتور: پنل روش دریافت زیر سگمنت (نه روی آن)، تا لنز و انتخاب دیده شوند ---- */
-html .inv-sheet-v2 .inv-payment-backdrop{display:none !important;}
+html .inv-sheet-v2 .inv-payment-backdrop{display:none;}
 html .inv-sheet-v2 .inv-payment-panel{position:static;transform:none;left:auto;bottom:auto;width:auto;max-height:none;margin:0 0 12px;padding:14px 16px;border-radius:12px;background:var(--vg-color-surface);box-shadow:none;border:0.5px solid rgba(60,60,67,0.12);}
-html .inv-sheet-v2 .inv-payment-panel[hidden]{display:none !important;}
 html .inv-sheet-v2 .inv-payment-actions .inv-payment-action{min-height:52px;gap:2px;}
-html .inv-sheet-v2 .inv-payment-actions .inv-payment-action-value{font-size:12px;font-weight:500;color:var(--vg-color-text);min-height:14px;line-height:1.2;}
