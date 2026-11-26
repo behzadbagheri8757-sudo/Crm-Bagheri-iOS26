@@ -2850,7 +2850,7 @@ function openInvoiceForm(cid, editInv, opts){
         </div>
         <div class="inv-line-sub" data-row="${idx}" style="display:${prod?'flex':'none'}">
           <span class="inv-line-qtyrate">
-            <span class="inv-qty-stepper"><button type="button" class="inv-qty-step" data-row="${idx}" data-step="-1" aria-label="کم کردن تعداد">−</button><input type="text" inputmode="decimal" data-row="${idx}" class="row-qty inv-mini-input" aria-label="تعداد" value="${enToFaDigits(fmtQtyDisplay(r.qty||0))}"><button type="button" class="inv-qty-step" data-row="${idx}" data-step="1" aria-label="اضافه کردن تعداد">+</button></span>
+            <span class="inv-qty-stepper"><button type="button" class="inv-qty-step" data-row="${idx}" data-step="1" aria-label="اضافه کردن تعداد">+</button><input type="text" inputmode="decimal" data-row="${idx}" class="row-qty inv-mini-input" aria-label="تعداد" value="${enToFaDigits(fmtQtyDisplay(r.qty||0))}"><button type="button" class="inv-qty-step" data-row="${idx}" data-step="-1" aria-label="کم کردن تعداد">−</button></span>
             <span class="inv-line-x">×</span>
             <input type="text" inputmode="decimal" data-row="${idx}" class="row-price inv-mini-input inv-mini-input-price" aria-label="قیمت واحد" value="${esc(String(priceDisp))}">
             <span class="inv-line-unit">ت</span>
@@ -3141,6 +3141,10 @@ function openInvoiceForm(cid, editInv, opts){
       const _newKind = _newScrollEl && _newScrollEl.classList.contains('inv-body') ? 'inv-body' : 'sheet';
       if(_newScrollEl && _newKind === _prevScrollKind) _newScrollEl.scrollTop = _prevScrollTop;
     }
+    // The rebuilt markup carries the payment amounts as text, but the .is-filled class
+    // (which un-hides them, app.css) is only set by updateInvPaymentTotal(). Run it here so
+    // amounts stay visible after every re-render (e.g. switching the discount type).
+    updateInvPaymentTotal();
     updateSummary();
     // No-Purchase Reason chips (re-bound after every renderSheet rebuild)
     if(typeof bindNoPurchasePrompt === 'function') bindNoPurchasePrompt(cid);

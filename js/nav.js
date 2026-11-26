@@ -1211,7 +1211,9 @@ function ensureHeaderDate(){
       ? (weekday + '، ' + dayStr + ' ' + monthName + ' ' + yearStr)
       : (dayStr + ' ' + monthName + ' ' + yearStr);
     el.dataset.fullText = fullText;
-    el.dataset.shortText = dayStr + '/' + monthStr + '/' + yearStr;
+    // Condensed header: same Persian order as the full date (day, month name, year),
+    // written right-to-left, instead of a slash-separated numeric string.
+    el.dataset.shortText = dayStr + ' ' + monthName + ' ' + yearStr;
     const header = el.closest('header');
     el.textContent = header && header.classList.contains('header-condensed')
       ? el.dataset.shortText
