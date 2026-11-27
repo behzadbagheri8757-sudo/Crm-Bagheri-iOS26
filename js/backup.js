@@ -1022,18 +1022,21 @@ async function _recoverPendingRestoreJournal(){
     await dbDelete(RESTORE_JOURNAL_KEY);
     return {ok:true,recovered:true};
   }catch(e){
-    console.warn('Pending restore recovery failed; preserving journal under restoreJournal_failed and allowing boot',e);
+    // FAIL CLOSED (audit P1): a failed recovery leaves the stores in a mixed state, so the
+    // CRM must not start on it. The active journal is KEPT so the next boot / Retry
+    // (loadData() calls this again first) re-attempts recovery. A diagnostic copy is
+    // archived under restoreJournal_failed, but that copy never clears the block.
+    console.error('Pending restore recovery failed; blocking CRM start until recovery succeeds',e);
     try{
       await dbPut(RESTORE_JOURNAL_FAILED_KEY, JSON.stringify({
         failedAt:new Date().toISOString(),
         error:String(e && e.message || e),
         journal:journal
       }));
-      await dbDelete(RESTORE_JOURNAL_KEY);
     }catch(moveErr){
-      console.error('Failed to archive restore journal failure; allowing boot anyway',moveErr);
+      console.error('Failed to archive restore journal diagnostics',moveErr);
     }
-    return {ok:true, recovered:false, failed:true};
+    throw new Error('Restore recovery did not complete; startup blocked. Retry to recover. ('+String(e && e.message || e)+')');
   }
 }
 

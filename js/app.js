@@ -3675,17 +3675,23 @@ function openProductDrop(idx){
 
       // Business validation: discount invariants must hold before any stock/payment
       // mutation or persistence. UI clamping is not sufficient protection.
-      const invalidRow = rows.find(r=> {
-        const gross = (Number(r.qty)||0) * (Number(r.price)||0);
-        const rowDiscount = Number(r.discount)||0;
-        return !(r.qty>0) || r.price<0 || rowDiscount<0 || rowDiscount>gross;
+      // Validate only the rows that will be persisted (validRows). Empty draft rows must not
+      // block the save, and must not contribute to the subtotal either.
+      const invalidRow = validRows.find(r=> {
+        const q = Number(r.qty);
+        const p = Number(r.price);
+        const d = (r.discount==null || r.discount==='') ? 0 : Number(r.discount);
+        if(!Number.isFinite(q) || q<=0) return true;      // qty must be a positive finite number
+        if(!Number.isFinite(p) || p<0) return true;       // price: finite and not negative
+        if(!Number.isFinite(d) || d<0) return true;       // discount: finite and not negative
+        return d > q*p;                                   // discount may not exceed the row's gross
       });
       if(invalidRow){
         showToast('مقادیر فاکتور نامعتبر است.\n\nتعداد باید بزرگ‌تر از صفر، قیمت و تخفیف نباید منفی باشند و تخفیف هر ردیف نباید از مبلغ همان ردیف بیشتر باشد.');
         btn.disabled = false;
         return;
       }
-      const invoiceSubtotal = rows.reduce((s,r)=>s + (Number(r.qty)||0)*(Number(r.price)||0) - (Number(r.discount)||0), 0);
+      const invoiceSubtotal = validRows.reduce((s,r)=>s + (Number(r.qty)||0)*(Number(r.price)||0) - (Number(r.discount)||0), 0);
       const normalizedDiscount = Number(discount);
       if(!Number.isFinite(normalizedDiscount) || normalizedDiscount<0){
         showToast('تخفیف کلی فاکتور نمی‌تواند منفی یا نامعتبر باشد.');
