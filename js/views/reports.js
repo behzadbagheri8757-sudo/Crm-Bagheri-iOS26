@@ -30,6 +30,7 @@
   let reportPeriod = 'month';
   let openState = { receipts: false, financial: false };
   let rootClickHandler = null;
+  let rootChangeHandler = null;
   let rootToggleHandler = null;
   let chartPointerHandler = null;
   let chartState = null;
@@ -1315,7 +1316,7 @@
       window.__rpDebug = { productProfitRows: productProfitRows, periodInvoiceGrossProfit: periodInvoiceGrossProfit, topProductsForPeriod: topProductsForPeriod, periodReturns: periodReturns, invoiceDiscountAmount: invoiceDiscountAmount };
     }
     root.addEventListener('click', rootClickHandler);
-    root.addEventListener('change', function (e) {
+    rootChangeHandler = function (e) {
       const t = e.target;
       if (!t || (t.id !== 'rp-range-from' && t.id !== 'rp-range-to')) return;
       if (!reportRange) reportRange = rangeDefault();
@@ -1329,7 +1330,8 @@
       }
       reportRange = next;
       renderBody();
-    });
+    };
+    root.addEventListener('change', rootChangeHandler);
 
     // <details> 'toggle' does not bubble → capture, so open/closed state survives re-renders
     rootToggleHandler = function (e) {
@@ -1376,6 +1378,7 @@
       refreshToken = null;
       try {
         if (rootClickHandler) root.removeEventListener('click', rootClickHandler);
+        if (rootChangeHandler) root.removeEventListener('change', rootChangeHandler);
         if (rootToggleHandler) root.removeEventListener('toggle', rootToggleHandler, true);
         if (chartPointerHandler) {
           root.removeEventListener('pointerdown', chartPointerHandler);
@@ -1383,7 +1386,7 @@
         }
         root.removeEventListener('keydown', onChartKeydown);
       } catch (e) {}
-      rootClickHandler = rootToggleHandler = chartPointerHandler = null;
+      rootClickHandler = rootChangeHandler = rootToggleHandler = chartPointerHandler = null;
       chartState = null;
       root.innerHTML = '';
     };

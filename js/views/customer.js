@@ -2273,7 +2273,12 @@
     currentCustomerId = params && params.id ? params.id : null;
     currentSection = params && params.section ? String(params.section) : null;
     ensureHistorySearchButton(currentCustomerId);
+    let mounted = true;
+    // Each refresh gets a sequence number. Only the newest refresh may paint, so a slow
+    // reconcile from an earlier refresh can never overwrite a newer render.
+    let refreshSequence = 0;
     function refreshCustomer() {
+      const seq = ++refreshSequence;
       // Per-cycle, RAM-only Context: shared only so that reconcileWatchLifecycle's
       // Watch-observation pass and the subsequent Priority/Signals pass (both of
       // which independently derive the same per-customer SKU aggregation) don't
@@ -2282,17 +2287,25 @@
       var ctx = typeof createComputationContext === 'function'
         ? createComputationContext({ data: data })
         : { aggregatePairMapCache: Object.create(null) };
-      function paint() { drawCustomerPage(rootEl || root, ctx); applyPushSection(rootEl || root); }
+      const cid = currentCustomerId;
+      // AUDIT P2: the async reconcile may finish after the user has left this page or moved
+      // to another customer. Paint only if this mount is still alive AND still showing the
+      // same customer; always use the captured root, never the shared #main fallback.
+      function paint() {
+        if (!mounted || rootEl !== root || seq !== refreshSequence || currentCustomerId !== cid) return;
+        drawCustomerPage(root, ctx); applyPushSection(root);
+      }
       // Paint immediately so the page is never blank if lifecycle reconcile hangs.
       paint();
-      if (typeof reconcileWatchLifecycle === 'function' && currentCustomerId) {
-        reconcileWatchLifecycle(currentCustomerId, ctx).then(paint).catch(function () { paint(); });
+      if (typeof reconcileWatchLifecycle === 'function' && cid) {
+        reconcileWatchLifecycle(cid, ctx).then(paint).catch(function () { paint(); });
       }
     }
     refreshCustomer();
     refreshToken = ViewHost.setRefresh(refreshCustomer);
 
     return function unmount() {
+      mounted = false;
       ViewHost.clearRefresh(refreshToken);
       refreshToken = null;
       currentCustomerId = null;
