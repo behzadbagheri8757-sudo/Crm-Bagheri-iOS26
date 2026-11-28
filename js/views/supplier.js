@@ -217,7 +217,7 @@
                 return (async function () {
                   const previousData = JSON.parse(JSON.stringify(data));
                   const retResult = applyPurchaseReturnStockEffects(purchase, retLines, s.name, date);
-                  if (!retResult.ok) { showToast(retResult.error || 'برگشت خرید ممکن نشد'); throw new Error('validation'); }
+                  if (!retResult.ok) { appAlert(retResult.error || 'برگشت خرید ممکن نشد'); throw new Error('validation'); }
                   purchase.returns = purchase.returns || [];
                   const rec = {
                     id: uid(),
@@ -301,7 +301,7 @@
                 const previousData = JSON.parse(JSON.stringify(data));
                 if (purchase.productId && qty > 0) {
                   const retResult = applyPurchaseReturnStockEffects(purchase, [{ productId: purchase.productId, qty: qty }], s.name, date);
-                  if (!retResult.ok) { showToast(retResult.error || 'برگشت خرید ممکن نشد'); throw new Error('validation'); }
+                  if (!retResult.ok) { appAlert(retResult.error || 'برگشت خرید ممکن نشد'); throw new Error('validation'); }
                 }
                 purchase.returns = purchase.returns || [];
                 const rec = { id: uid(), date: date, qty: qty, amount: amount };
@@ -406,7 +406,7 @@
     await withSubmitGuard(btn, async () => {
       await commitWithRollback(() => {
         const r = hardDeletePurchaseLayers(p.id);
-        if (!r || !r.ok) { showToast((r && r.error) || 'حذف خرید ممکن نشد'); throw new Error('validation'); }
+        if (!r || !r.ok) { appAlert((r && r.error) || 'حذف خرید ممکن نشد'); throw new Error('validation'); }
         const idx = (s.purchases || []).findIndex(x => x.id === p.id);
         if (idx >= 0) s.purchases.splice(idx, 1);
       });
@@ -428,7 +428,7 @@
     const p = (s.purchases || []).find(x => x.id === purchaseId);
     if (!p) return;
     const blocked = purchaseCanBeEditedOrDeleted(p);
-    if (blocked) { showToast(blocked); return; }
+    if (blocked) { appAlert(blocked); return; }
 
     const stocked = purchaseStocked(p);
     const lines = purchaseLinesView(p);
@@ -528,7 +528,7 @@
             lines.forEach((l, i) => {
               if (qtys[i] === l.qty) return;
               const r = adjustPurchaseLayerQty(p.id, l.productId, qtys[i], l.id);
-              if (!r || !r.ok) { showToast((r && r.error) || 'ویرایش تعداد ممکن نشد'); throw new Error('validation'); }
+              if (!r || !r.ok) { appAlert((r && r.error) || 'ویرایش تعداد ممکن نشد'); throw new Error('validation'); }
             });
             p.amount = isItems
               ? p.items.reduce((a, it) => a + (Number(it.lineAmount) || (Number(it.qty) || 0) * (Number(it.unitCost) || 0)), 0)
@@ -584,7 +584,7 @@
         if (amount <= 0) { showToast('مبلغ را وارد کن'); throw new Error('validation'); }
         await commitWithRollback(() => {
           const again = findPayment(s, key);
-          if (!again) { showToast('پرداخت پیدا نشد'); throw new Error('validation'); }
+          if (!again) { appAlert('پرداخت پیدا نشد'); throw new Error('validation'); }
           again.p.amount = amount;
           again.p.date = document.getElementById('sep-date').value || todayISO();
           again.p.note = (document.getElementById('sep-note').value || '').trim();
@@ -610,7 +610,7 @@
     await withSubmitGuard(btn, async () => {
       await commitWithRollback(() => {
         const again = findPayment(s, key);
-        if (!again) { showToast('پرداخت پیدا نشد'); throw new Error('validation'); }
+        if (!again) { appAlert('پرداخت پیدا نشد'); throw new Error('validation'); }
         s.payments.splice(again.index, 1);
       });
       closeModal();
@@ -682,7 +682,7 @@
       });
       closeModal();
       drawSupplierPage(rootEl);
-      showToast(to === 'cleared' ? 'چک پرداخت‌شده شد' : (to === 'bounced' ? 'چک برگشتی شد — به بدهی اضافه شد' : 'چک در جریان شد'));
+      if (to === 'bounced') appAlert('چک برگشتی شد و مبلغ آن به بدهی تأمین‌کننده اضافه شد.'); else showToast(to === 'cleared' ? 'چک پرداخت‌شده شد' : 'چک در جریان شد');
     });
   }
 
@@ -710,7 +710,7 @@
         if (_due < _iss) { showToast('تاریخ سررسید نمی‌تواند قبل از تاریخ صدور باشد'); throw new Error('validation'); }
         await commitWithRollback(() => {
           const again = findPayment(s, key);
-          if (!again) { showToast('چک پیدا نشد'); throw new Error('validation'); }
+          if (!again) { appAlert('چک پیدا نشد'); throw new Error('validation'); }
           const q = again.p;
           q.faceAmount = amount;
           q.amount = (checkStatus(q) === 'bounced') ? 0 : amount;   // status itself is NOT editable here

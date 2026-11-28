@@ -155,7 +155,7 @@
         var res = await PP.commit(function (d) {
           return PP.add(d, cid, { amount: amountVal(), promiseDate: dateEl.value, note: document.getElementById('pp-note').value, replaces: from ? from.id : null });
         });
-        if (!res || !res.ok) { showToast((res && res.error) || 'ثبت نشد', { type: 'error' }); throw new Error('validation'); }
+        if (!res || !res.ok) { appAlert((res && res.error) || 'ثبت نشد'); throw new Error('validation'); }
         closeModal();
         afterChange();
         showToast('وعده ثبت شد');
@@ -205,7 +205,7 @@
     on('pp-d-dismiss', async function () {
       if (!(await appConfirm('این وعده بسته شود؟ (پرداخت جداگانه ثبت شده است)', 'بستن'))) return;
       var res = await PP.commit(function (d) { return PP.dismiss(d, p.id); });
-      if (!res || !res.ok) { showToast((res && res.error) || 'انجام نشد', { type: 'error' }); return; }
+      if (!res || !res.ok) { appAlert((res && res.error) || 'انجام نشد'); return; }
       closeModal(); afterChange(); showToast('وعده بسته شد');
     });
     on('pp-d-reschedule', function () { openAddSheet(p.customerId, { from: p }); });
@@ -213,7 +213,7 @@
     on('pp-d-broken', async function () {
       if (!(await appConfirm('این وعده «انجام نشد» ثبت شود؟', 'ثبت'))) return;
       var res = await PP.commit(function (d) { return PP.markBroken(d, p.id); });
-      if (!res || !res.ok) { showToast((res && res.error) || 'انجام نشد', { type: 'error' }); return; }
+      if (!res || !res.ok) { appAlert((res && res.error) || 'انجام نشد'); return; }
       closeModal(); afterChange();
     });
     on('pp-d-delete', async function () {

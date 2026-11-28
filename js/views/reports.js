@@ -1323,7 +1323,7 @@
       const next = { from: t.id === 'rp-range-from' ? t.value : reportRange.from,
                      to: t.id === 'rp-range-to' ? t.value : reportRange.to };
       if (!next.from || !next.to || next.from > next.to) {
-        showToast('تاریخ پایان نمی‌تواند قبل از تاریخ شروع باشد', { type: 'error' });
+        appAlert('تاریخ پایان نمی‌تواند قبل از تاریخ شروع باشد');
         const bar = document.getElementById('rp-range');
         if (bar) bar.outerHTML = rangeBarHtml();  /* redraw the pickers with the saved dates */
         return;

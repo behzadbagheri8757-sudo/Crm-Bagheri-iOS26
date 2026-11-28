@@ -78,11 +78,12 @@
       const neighBtn = e.target.closest('[data-add-neigh]');
       if (neighBtn) {
         const routeId = neighBtn.getAttribute('data-add-neigh');
-        const name = prompt('نام محله / خیابان:');
-        if (!name || !name.trim()) return;
-        addProspectNeighborhood(routeId, name.trim()).then(() => {
-          showToast('محله اضافه شد');
-          drawRoutes(root);
+        askText('نام محله / خیابان', { placeholder: 'مثلاً: خیابان امام' }).then(name => {
+          if (!name) return;
+          return addProspectNeighborhood(routeId, name).then(() => {
+            showToast('محله اضافه شد');
+            drawRoutes(root);
+          });
         });
       }
     });

@@ -762,7 +762,7 @@
       } else if (typeof completeWatchFollowUp === 'function') {
         result = completeWatchFollowUp(occurrenceId, code, note ? note.value : '');
       }
-      if (typeof showToast === 'function') showToast(result ? 'نتیجه پیگیری ثبت شد' : 'ثبت نتیجه ممکن نشد');
+      if (result) { if (typeof showToast === 'function') showToast('نتیجه پیگیری ثبت شد'); } else if (typeof appAlert === 'function') appAlert('ثبت نتیجه ممکن نشد');
       if (typeof closeModal === 'function') closeModal();
       if (typeof onDone === 'function') onDone();
     });
@@ -781,7 +781,7 @@
         var id = el.getAttribute('data-followup-cancel');
         var ok = false;
         try { ok = !!reverseWatchDecision(id); } catch (e) { ok = false; }
-        if (typeof showToast === 'function') showToast(ok ? 'پیگیری لغو شد' : 'لغو پیگیری ممکن نشد');
+        if (ok) { if (typeof showToast === 'function') showToast('پیگیری لغو شد'); } else if (typeof appAlert === 'function') appAlert('لغو پیگیری ممکن نشد');
         drawCustomerPage(rootEl || root);
       });
     });

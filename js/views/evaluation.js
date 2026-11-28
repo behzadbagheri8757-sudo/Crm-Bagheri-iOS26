@@ -432,7 +432,7 @@
               navigateToProspect(shop.id, { justCreated: true });
             } catch (e) {
               console.error(e);
-              showToast('خطا در ذخیره');
+              appAlert('خطا در ذخیره');
               saveBtn.disabled = false;
             } finally {
               window.__sheetSaveInFlight = Math.max(0, (window.__sheetSaveInFlight || 1) - 1);

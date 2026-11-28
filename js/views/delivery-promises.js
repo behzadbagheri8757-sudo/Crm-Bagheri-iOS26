@@ -184,7 +184,7 @@
       await withSubmitGuard(e.currentTarget, async function () {
         var items = rows.filter(function (r) { return r.productId; }).map(function (r) { return { productId: r.productId, qty: qtyOf(r) }; });
         var res = await DP.commit(function (d) { return DP.add(d, cid, { deliveryDate: date.value(), items: items, note: noteEl.value }); });
-        if (!res || !res.ok) { showToast((res && res.error) || 'ثبت نشد', { type: 'error' }); throw new Error('validation'); }
+        if (!res || !res.ok) { appAlert((res && res.error) || 'ثبت نشد'); throw new Error('validation'); }
         closeModal(); afterChange(); showToast('قول تحویل ثبت شد');
       });
     });
@@ -204,7 +204,7 @@
     saveBtn.addEventListener('click', async function (e) {
       await withSubmitGuard(e.currentTarget, async function () {
         var res = await onSave(date.value());
-        if (!res || !res.ok) { showToast((res && res.error) || 'ثبت نشد', { type: 'error' }); throw new Error('validation'); }
+        if (!res || !res.ok) { appAlert((res && res.error) || 'ثبت نشد'); throw new Error('validation'); }
         closeModal(); afterChange(); showToast('تاریخ تغییر کرد');
       });
     });
@@ -263,13 +263,13 @@
     on('dp-d-manual', async function () {
       if (!(await appConfirm('این قول بدون فاکتور بسته شود؟ (کالا جداگانه تحویل داده شده)', 'بستن'))) return;
       var res = await DP.commit(function (d) { return DP.closeManually(d, p.id); });
-      if (!res || !res.ok) { showToast((res && res.error) || 'انجام نشد', { type: 'error' }); return; }
+      if (!res || !res.ok) { appAlert((res && res.error) || 'انجام نشد'); return; }
       closeModal(); afterChange(); showToast('قول بسته شد');
     });
     on('dp-d-cancel', async function () {
       if (!(await appConfirm('این قول تحویل لغو شود؟', 'لغو قول'))) return;
       var res = await DP.commit(function (d) { return DP.cancel(d, p.id); });
-      if (!res || !res.ok) { showToast((res && res.error) || 'انجام نشد', { type: 'error' }); return; }
+      if (!res || !res.ok) { appAlert((res && res.error) || 'انجام نشد'); return; }
       closeModal(); afterChange();
     });
     on('dp-d-delete', async function () {

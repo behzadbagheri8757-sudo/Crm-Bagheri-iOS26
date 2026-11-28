@@ -120,7 +120,7 @@
         if (typeof showToast === 'function') showToast('هشدار بسته شد');
       } catch (e) {
         console.error(e);
-        if (typeof showToast === 'function') showToast('بستن هشدار ممکن نشد');
+        if (typeof showToast === 'function') appAlert('بستن هشدار ممکن نشد');
       }
       if (typeof closeModal === 'function') closeModal();
       if (typeof onDone === 'function') onDone();
@@ -135,7 +135,7 @@
         if (typeof showToast === 'function') showToast('علت ثبت شد');
       } catch (err) {
         console.error(err);
-        if (typeof showToast === 'function') showToast('ثبت علت ممکن نشد');
+        if (typeof showToast === 'function') appAlert('ثبت علت ممکن نشد');
       }
       if (typeof closeModal === 'function') closeModal();
       if (typeof onDone === 'function') onDone();
@@ -548,7 +548,7 @@
         e.preventDefault();
         if (typeof dismissWatchOccurrence !== 'function') return;
         try { dismissWatchOccurrence(dismissBtn.getAttribute('data-watch-dismiss'), ''); if (typeof showToast === 'function') showToast('هشدار بسته شد'); }
-        catch (err) { console.error(err); if (typeof showToast === 'function') showToast('بستن هشدار ممکن نشد'); }
+        catch (err) { console.error(err); if (typeof showToast === 'function') appAlert('بستن هشدار ممکن نشد'); }
         navigateToWatches();
         return;
       }

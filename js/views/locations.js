@@ -84,7 +84,7 @@
       const name = (input.value || '').trim();
       if (!name) { showToast('نام منطقه را وارد کن'); return; }
       const res = await putRegion({ name });
-      if (!res.ok) { showToast(res.reason || 'ذخیره نشد'); return; }
+      if (!res.ok) { appAlert(res.reason || 'ذخیره نشد'); return; }
       showToast('منطقه اضافه شد');
       draw(root);
     };
@@ -114,7 +114,7 @@
         const name = (input && input.value || '').trim();
         if (!name) { showToast('نام مسیر را وارد کن'); return; }
         const res = await putRoute({ regionId, name });
-        if (!res.ok) { showToast(res.reason || 'ذخیره نشد'); return; }
+        if (!res.ok) { appAlert(res.reason || 'ذخیره نشد'); return; }
         showToast('مسیر اضافه شد');
         draw(root);
         return;
@@ -126,7 +126,7 @@
         const name = (input && input.value || '').trim();
         if (!name) { showToast('نام محله را وارد کن'); return; }
         const res = await putNeighborhood({ routeId, name });
-        if (!res.ok) { showToast(res.reason || 'ذخیره نشد'); return; }
+        if (!res.ok) { appAlert(res.reason || 'ذخیره نشد'); return; }
         showToast('محله اضافه شد');
         draw(root);
         return;
@@ -136,7 +136,7 @@
         const id = delRegion.getAttribute('data-del-region');
         if (!(await appConfirm('این منطقه حذف شود؟'))) return;
         const res = await deleteRegion(id);
-        if (!res.ok) { showToast(res.reason || 'حذف نشد'); return; }
+        if (!res.ok) { appAlert(res.reason || 'حذف نشد'); return; }
         showToast('حذف شد');
         draw(root);
         return;
@@ -146,7 +146,7 @@
         const id = delRoute.getAttribute('data-del-route');
         if (!(await appConfirm('این مسیر حذف شود؟'))) return;
         const res = await deleteRoute(id);
-        if (!res.ok) { showToast(res.reason || 'حذف نشد'); return; }
+        if (!res.ok) { appAlert(res.reason || 'حذف نشد'); return; }
         showToast('حذف شد');
         draw(root);
         return;
@@ -156,7 +156,7 @@
         const id = delNeigh.getAttribute('data-del-neigh');
         if (!(await appConfirm('این محله حذف شود؟'))) return;
         const res = await deleteNeighborhood(id);
-        if (!res.ok) { showToast(res.reason || 'حذف نشد'); return; }
+        if (!res.ok) { appAlert(res.reason || 'حذف نشد'); return; }
         showToast('حذف شد');
         draw(root);
         return;

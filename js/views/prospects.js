@@ -97,7 +97,7 @@
           }).catch(function(err){
             console.error(err);
             save.disabled = false;
-            showToast('ذخیره تارگت ناموفق بود');
+            appAlert('ذخیره تارگت ناموفق بود');
           });
         };
       };

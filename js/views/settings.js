@@ -195,7 +195,7 @@
     const exportJsonBtn = document.getElementById('export-json');
     exportJsonHandler = function () {
       if (typeof exportBackupJSON === 'function') exportBackupJSON();
-      else showToast('تابع پشتیبان‌گیری در دسترس نیست');
+      else appAlert('تابع پشتیبان‌گیری در دسترس نیست');
     };
     exportJsonBtn.onclick = exportJsonHandler;
 
@@ -203,7 +203,7 @@
     const exportExcelBtn = document.getElementById('export-excel');
     exportExcelHandler = function () {
       if (typeof exportExcel === 'function') exportExcel();
-      else showToast('تابع اکسل در دسترس نیست');
+      else appAlert('تابع اکسل در دسترس نیست');
     };
     exportExcelBtn.onclick = exportExcelHandler;
 
@@ -226,10 +226,11 @@
       );
       if (!ok) return;
       if (typeof importBackupJSON === 'function') {
-        await importBackupJSON(f);
-        location.reload();
+        const res = await importBackupJSON(f);
+        // Reload only after the user has read the outcome; on failure the data is unchanged.
+        if (await reportRestoreOutcome(res)) location.reload();
       } else {
-        showToast('تابع بازیابی در دسترس نیست');
+        appAlert('تابع بازیابی در دسترس نیست');
       }
     };
     importBtn.onclick = importBtnHandler;
@@ -243,10 +244,10 @@
       }
       if (!(await appConfirm('به حالت قبل از آخرین بازیابی برگردیم؟'))) return;
       if (typeof undoLastRestore === 'function') {
-        await undoLastRestore();
-        location.reload();
+        const res = await undoLastRestore();
+        if (await reportRestoreOutcome(res)) location.reload();
       } else {
-        showToast('تابع برگشت در دسترس نیست');
+        appAlert('تابع برگشت در دسترس نیست');
       }
     };
     undoBtn.onclick = undoBtnHandler;
@@ -256,10 +257,10 @@
     root.querySelectorAll('[data-auto-key]').forEach(function (btn) {
       const handler = async function () {
         if (typeof restoreFromAutoBackup === 'function') {
-          await restoreFromAutoBackup(btn.getAttribute('data-auto-key'));
-          location.reload();
+          const res = await restoreFromAutoBackup(btn.getAttribute('data-auto-key'));
+          if (await reportRestoreOutcome(res)) location.reload();
         } else {
-          showToast('تابع بازیابی خودکار در دسترس نیست');
+          appAlert('تابع بازیابی خودکار در دسترس نیست');
         }
       };
       btn.addEventListener('click', handler);
@@ -336,7 +337,7 @@
       const lockBtn = document.getElementById('pin-lock-now-btn');
 
       function openPinSheet(mode) {
-        if (!window.pinLock) { showToast('ماژول PIN در دسترس نیست'); return; }
+        if (!window.pinLock) { appAlert('ماژول PIN در دسترس نیست'); return; }
         if (mode === 'set' && window.pinLock.isPinSet()) { showToast('PIN از قبل فعال است؛ از «تغییر» استفاده کنید'); return; }
         if ((mode === 'change' || mode === 'clear') && !window.pinLock.isPinSet()) { showToast('PIN فعال نیست'); return; }
         const title = mode === 'set' ? 'تنظیم PIN' : (mode === 'change' ? 'تغییر PIN' : 'حذف PIN');
@@ -368,7 +369,7 @@
             showToast(mode === 'clear' ? 'PIN حذف شد' : (mode === 'change' ? 'PIN تغییر کرد' : 'PIN ذخیره شد'));
           }catch(e){
             save.disabled = false;
-            showToast(e && e.message ? e.message : 'خطا در عملیات PIN');
+            appAlert(e && e.message ? e.message : 'خطا در عملیات PIN');
           }
         };
       }
@@ -381,7 +382,7 @@
       clearBtn.onclick = pinClearHandler;
 
       pinLockNowHandler = function () {
-        if (!window.pinLock) { showToast('ماژول PIN در دسترس نیست'); return; }
+        if (!window.pinLock) { appAlert('ماژول PIN در دسترس نیست'); return; }
         if (!window.pinLock.isPinSet()) { showToast('ابتدا PIN را تنظیم کنید'); return; }
         window.pinLock.lock();
         window.pinLock.ensureUnlocked();

@@ -242,7 +242,7 @@
         if (typeof onSaved === 'function') onSaved();
       } catch (e) {
         console.error(e);
-        showToast('خطا در ویرایش پاسخ');
+        appAlert('خطا در ویرایش پاسخ');
       }
     });
   }
@@ -364,7 +364,7 @@
           if (typeof onSaved === 'function') onSaved();
         } catch (e) {
           console.error(e);
-          showToast('خطا در ثبت ویزیت');
+          appAlert('خطا در ثبت ویزیت');
         }
       })();
     });
@@ -430,7 +430,7 @@
         if (typeof onSaved === 'function') onSaved();
       } catch (e) {
         console.error(e);
-        showToast(e.message || 'خطا در ویرایش ویزیت');
+        appAlert(e.message || 'خطا در ویرایش ویزیت');
       }
     });
   }
@@ -525,7 +525,7 @@
           drawProspectDetail(root);
         } catch (e) {
           console.error(e);
-          showToast(e.message || 'خطا در تبدیل');
+          appAlert(e.message || 'خطا در تبدیل');
         }
       };
     }

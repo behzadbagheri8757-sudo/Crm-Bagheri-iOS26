@@ -537,35 +537,35 @@
         const invId = currentInvoiceId;
         const inv = (data.invoices || []).find(x => x.id === invId);
         if (!inv) {
-          showToast('فاکتور پیدا نشد');
+          appAlert('فاکتور پیدا نشد');
           return;
         }
 
         try {
           if (action === 'print') {
             if (typeof printInvoice !== 'function') {
-              showToast('تابع چاپ در دسترس نیست');
+              appAlert('تابع چاپ در دسترس نیست');
               return;
             }
             printInvoice(inv.id);
           } else if (action === 'image') {
             if (typeof exportInvoiceImage !== 'function') {
-              showToast('تابع خروجی تصویر در دسترس نیست');
+              appAlert('تابع خروجی تصویر در دسترس نیست');
               return;
             }
             Promise.resolve(exportInvoiceImage(inv.id)).catch(function (err) {
               console.error(err);
-              showToast('خطا در خروجی تصویر');
+              appAlert('خطا در خروجی تصویر');
             });
           } else if (action === 'edit') {
             if (typeof openEditInvoice !== 'function') {
-              showToast('تابع ویرایش در دسترس نیست');
+              appAlert('تابع ویرایش در دسترس نیست');
               return;
             }
             openEditInvoice(inv.id, inv.customerId);
           } else if (action === 'open-alloc') {
             const sec = (rootEl || root).querySelector('#inv-alloc-section');
-            if (!sec) { showToast('ریز تسویه در دسترس نیست'); return; }
+            if (!sec) { appAlert('ریز تسویه در دسترس نیست'); return; }
             const more = sec.closest('details');
             if (more) more.open = true;
             sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -582,7 +582,7 @@
               } catch (err) {
                 console.error(err);
                 drawInvoicePage(rootEl || root);
-                showToast('ذخیره نشد');
+                appAlert('ذخیره نشد');
               }
             })();
           } else if (action === 'unlink-visit') {
@@ -595,7 +595,7 @@
                 drawInvoicePage(rootEl || root);
               } catch (err) {
                 console.error(err);
-                showToast('ذخیره نشد');
+                appAlert('ذخیره نشد');
               }
             })();
           } else if (action === 'del') {
@@ -630,12 +630,12 @@
               navigateToInvoices();
             })().catch(function (err) {
               console.error(err);
-              showToast('خطا در حذف فاکتور');
+              appAlert('خطا در حذف فاکتور');
             });
           }
         } catch (err) {
           console.error('invoice action failed', action, err);
-          showToast('خطا: ' + (err && err.message ? err.message : String(err)));
+          appAlert('خطا: ' + (err && err.message ? err.message : String(err)));
         }
       });
     }
