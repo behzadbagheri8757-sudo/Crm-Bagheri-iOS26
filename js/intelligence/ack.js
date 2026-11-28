@@ -848,7 +848,7 @@
         if (btn.disabled) return;
         btn.disabled = true;
         var ok = reverseAck(btn.getAttribute('data-ack-reverse'), 'seller_reversal');
-        if (typeof showToast === 'function') showToast(ok ? 'تصمیم لغو شد' : 'لغو انجام نشد');
+        if (ok) { if (typeof showToast === 'function') showToast('تصمیم لغو شد'); } else if (typeof appAlert === 'function') appAlert('لغو انجام نشد');
         if (typeof onDone === 'function') onDone(ok);
       });
     });
