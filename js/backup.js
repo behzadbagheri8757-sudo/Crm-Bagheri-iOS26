@@ -1117,24 +1117,34 @@ async function _restoreParsedBackup(parsed){
   }
 }
 
+// Returns {ok, message}. Callers show the outcome in a dialog that stays on screen until
+// the user dismisses it (a toast disappears too quickly and the page reloads right after).
 async function importBackupJSON(file){
   try{
     const parsed=JSON.parse(await file.text());
     _normalizeBackupEnvelope(parsed);
-    if(!validateBackupShape(parsed)){ showToast(validateBackupShape.lastError || 'این فایل، فایل بکاپ معتبر یا کامل نیست'); return; }
+    if(!validateBackupShape(parsed)) return {ok:false, message: validateBackupShape.lastError || 'این فایل، فایل بکاپ معتبر یا کامل نیست.'};
     const ok=await _restoreParsedBackup(parsed);
-    if(ok){ render(); showToast('اطلاعات با موفقیت بازیابی شد'); }
-    else { render(); showToast('بازیابی انجام نشد؛ اطلاعات قبلی حفظ شد'); }
+    render();
+    if(ok) return {ok:true, message:'اطلاعات با موفقیت بازیابی شد. برنامه دوباره بارگذاری می‌شود.'};
+    return {ok:false, message:'بازیابی انجام نشد؛ اطلاعات قبلی حفظ شد.'};
   }catch(e){
     console.error('importBackupJSON failed',e);
-    showToast(e && e.message ? e.message : 'بازیابی انجام نشد');
+    return {ok:false, message: (e && e.message) ? 'بازیابی انجام نشد: '+e.message : 'بازیابی انجام نشد.'};
   }
+}
+
+// Shows a restore outcome that stays until dismissed. Resolves true only on success.
+async function reportRestoreOutcome(res){
+  const msg=(res && res.message) || 'نتیجه‌ی بازیابی نامشخص است. وضعیت را بررسی کنید.';
+  await appConfirm(msg,'باشه','بستن',{danger:false});
+  return !!(res && res.ok);
 }
 
 async function undoLastRestore(){
   try{
     const snap=await dbGet(PRERESTORE_KEY), pSnap=await dbGet(PRERESTORE_PROSPECT_KEY), iSnap=await dbGet(PRERESTORE_INTELLIGENCE_KEY), tSnap=await dbGet(PRERESTORE_TARGET_KEY), gSnap=await dbGet(PRERESTORE_GAME_KEY);
-    if(!snap || !snap.value || !pSnap || !pSnap.value || !iSnap || !iSnap.value || !tSnap || !tSnap.value || !gSnap || !gSnap.value){ showToast('نسخه‌ی کامل قبل از بازیابی موجود نیست'); return; }
+    if(!snap || !snap.value || !pSnap || !pSnap.value || !iSnap || !iSnap.value || !tSnap || !tSnap.value || !gSnap || !gSnap.value){ return {ok:false, message:'نسخه‌ی کامل قبل از بازیابی موجود نیست.'}; }
     const storedTarget=JSON.parse(tSnap.value);
     const storedGame=JSON.parse(gSnap.value);
     if(!_validateGameState(storedGame && storedGame.gameMeta, storedGame && storedGame.gameLedger)) throw new Error('Game Center pre-restore snapshot invalid');
@@ -1150,12 +1160,12 @@ async function undoLastRestore(){
       if(!_semanticStateEqual(actual,previous)) throw new Error('undo verification failed');
       await dbDelete(RESTORE_JOURNAL_KEY); await dbDelete(PRERESTORE_KEY); await dbDelete(PRERESTORE_PROSPECT_KEY); await dbDelete(PRERESTORE_INTELLIGENCE_KEY); await dbDelete(PRERESTORE_TARGET_KEY); await dbDelete(PRERESTORE_GAME_KEY);
       try{ await dbDelete(PRERESTORE_WATCH_KEY); }catch(_wd){}
-      render(); showToast('به حالت قبل از بازیابی برگشت');
+      render(); return {ok:true, message:'به حالت قبل از بازیابی برگشت. برنامه دوباره بارگذاری می‌شود.'};
     }catch(e){
       try{ await _restoreSnapshot(current); const actual=await _readCurrentSemanticState(); if(!_semanticStateEqual(actual,current)) throw new Error('undo rollback verification failed'); await dbDelete(RESTORE_JOURNAL_KEY); }catch(re){ console.error('CRITICAL undo rollback incomplete',re); throw new Error('بازگردانی Undo کامل نشد؛ برنامه را دوباره باز کنید.'); }
       throw e;
     }
-  }catch(e){ console.error('undoLastRestore failed',e); showToast(e.message || 'بازگرداندن انجام نشد'); }
+  }catch(e){ console.error('undoLastRestore failed',e); return {ok:false, message:'بازگرداندن انجام نشد: '+(e.message||'خطای نامشخص')}; }
 }
 
 function backupPayloadFromAutoOrFile(parsed){
@@ -1218,16 +1228,16 @@ async function _autoBackupTickImpl(){
 }
 
 async function restoreFromAutoBackup(key){
-  if(!(await appConfirm('مطمئنی؟ اطلاعات فعلی با این نسخه‌ی بکاپ خودکار جایگزین می‌شه.'))) return;
+  if(!(await appConfirm('مطمئنی؟ اطلاعات فعلی با این نسخه‌ی بکاپ خودکار جایگزین می‌شه.'))) return {ok:false, message:'بازیابی لغو شد.'};
   try{
     const snap = await dbGet(key);
-    if(!snap || !snap.value){ showToast('این نسخه‌ی بکاپ پیدا نشد'); return; }
+    if(!snap || !snap.value) return {ok:false, message:'این نسخه‌ی بکاپ پیدا نشد.'};
     const parsed = JSON.parse(snap.value);
     const blob = new Blob([JSON.stringify(parsed)], {type:'application/json'});
-    await importBackupJSON({ text: async()=>await blob.text() });
+    return await importBackupJSON({ text: async()=>await blob.text() });
   }catch(e){
     console.error(e);
-    showToast('بازیابی از بکاپ خودکار ممکن نشد');
+    return {ok:false, message:'بازیابی از بکاپ خودکار ممکن نشد.'};
   }
 }
 
@@ -1244,7 +1254,7 @@ async function exportExcel(){
       });
     }
     if(!await window.__baqeriXlsxPromise){
-      showToast('کتابخانه اکسل لود نشد؛ برای این خروجی به اینترنت نیاز است');
+      appAlert('کتابخانه اکسل لود نشد؛ برای این خروجی به اینترنت نیاز است');
       return;
     }
   }

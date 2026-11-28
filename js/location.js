@@ -295,7 +295,7 @@ function openLocationAssignSheet(opts){
       closeModal();
     }catch(e){
       console.error('openLocationAssignSheet save failed', e);
-      showToast('ذخیره نشد، دوباره تلاش کن');
+      appAlert('ذخیره نشد، دوباره تلاش کن');
     }
   };
   if(saveBtn) saveBtn.addEventListener('click', function(){ run(picker.getValue()); });

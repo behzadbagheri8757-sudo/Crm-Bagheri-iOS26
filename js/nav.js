@@ -1336,7 +1336,7 @@ function bindPullToRefresh(){
       if(!refreshed && typeof AppRouter !== 'undefined' && AppRouter.resolve) AppRouter.resolve();
     }catch(err){
       console.error('[pull-to-refresh] reload failed', err);
-      if(typeof showToast === 'function') showToast('بروزرسانی ناموفق بود');
+      if(typeof showToast === 'function') appAlert('بروزرسانی ناموفق بود');
     }
     await minVisible;
     el.classList.remove('show', 'ptr-spinning');
@@ -1533,7 +1533,7 @@ async function bootSpaShell() {
     bindPullToRefresh();
   } catch (e) {
     console.error('bootSpaShell failed', e);
-    if (typeof showToast === 'function') showToast('خطا در بارگذاری اطلاعات');
+    if (typeof showToast === 'function') appAlert('خطا در بارگذاری اطلاعات');
     const main = document.getElementById('main');
     if (main) {
       main.innerHTML = '<div class="empty" role="alert">خطا در بارگذاری اطلاعات. صفحه را دوباره باز کنید.</div>';

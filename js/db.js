@@ -705,7 +705,7 @@ async function saveData(){
     // Global last-known-good rollback closes the remaining integrity gap for
     // mutation paths that do not maintain their own previousData snapshot.
     try{ restoreDataInPlace(JSON.parse(_lastPersistedData)); }catch(rollbackErr){ console.error('global save rollback failed', rollbackErr); }
-    showToast('⚠️ ذخیره نشد؛ تغییر انجام‌شده برگردانده شد');
+    appAlert('⚠️ ذخیره نشد؛ تغییر انجام‌شده برگردانده شد');
     throw e;
   }
   // fire-and-forget: بکاپ خودکار کاملاً جدا از ذخیره‌ی اصلی اجرا می‌شود؛

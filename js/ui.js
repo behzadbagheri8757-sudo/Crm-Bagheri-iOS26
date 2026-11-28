@@ -851,14 +851,215 @@ function daysAgo(iso){
   if(isNaN(d)) return Infinity;
   return Math.floor((Date.now()-d.getTime())/86400000);
 }
+/* ---------- dialogs for errors that block an action ----------
+   appAlert: one-button dialog that stays until dismissed (for errors the user must read and
+   act on; toasts are for success / passive status). Non-blocking: callers do not await it.
+   - Only ONE alert dialog exists at a time. A new message while one is open is appended to
+     the open dialog instead of creating a second overlay.
+   - Focus returns to the element that was focused before the dialog opened.
+   askText: one-field dialog that replaces window.prompt(); resolves the trimmed text or null. */
+let _appAlertLayer = null;
+let _appAlertDone = [];
+
+function _focusBeforeDialog(){
+  const el = document.activeElement;
+  return (el && el !== document.body && typeof el.focus === 'function') ? el : null;
+}
+function _restoreFocus(el){
+  if (el && el.isConnected && typeof el.focus === 'function') {
+    try { el.focus({ preventScroll: true }); } catch (e) { el.focus(); }
+  }
+}
+
+function appAlert(message){
+  return new Promise(function(resolve){
+    const text = String(message || 'عملیات انجام نشد.');
+    if (_appAlertLayer && _appAlertLayer.isConnected) {
+      const box = _appAlertLayer.querySelector('.confirm-message');
+      // Same message already on screen (e.g. the same save failed twice): do not repeat it.
+      const already = box && Array.prototype.some.call(box.querySelectorAll('.app-alert-extra'), function(x){ return x.textContent === text; });
+      if (box && !already) {
+        const p = document.createElement('p');
+        p.className = 'app-alert-extra';
+        p.textContent = text;
+        box.appendChild(p);
+      }
+      _appAlertDone.push(resolve);
+      return;
+    }
+    const root = document.getElementById('modalRoot');
+    if (!root) { showToast(text, { type: 'error' }); resolve(); return; } // never lose the message
+    const restoreTo = _focusBeforeDialog();
+    const msgId = 'app-alert-msg-' + uid();
+    const layer = document.createElement('div');
+    layer.className = 'confirm-overlay';
+    layer.setAttribute('role', 'alertdialog');
+    layer.setAttribute('aria-modal', 'true');
+    layer.setAttribute('aria-labelledby', msgId);
+    layer.innerHTML = '<div class="confirm-card"><div class="confirm-message" id="' + msgId + '"></div><div class="btn-row"><button type="button" class="btn" data-alert-ok>متوجه شدم</button></div></div>';
+    const first = document.createElement('p');
+    first.className = 'app-alert-extra';
+    first.textContent = text;
+    layer.querySelector('.confirm-message').appendChild(first);
+    root.appendChild(layer);
+    _appAlertLayer = layer;
+    _appAlertDone = [resolve];
+
+    function done(){
+      document.removeEventListener('keydown', onKey, true);
+      layer.remove();
+      _appAlertLayer = null;
+      const waiters = _appAlertDone;
+      _appAlertDone = [];
+      _restoreFocus(restoreTo);
+      waiters.forEach(function(r){ r(); });
+    }
+    function onKey(e){ if (e.key === 'Escape' || e.key === 'Enter') { e.preventDefault(); done(); } }
+    layer.querySelector('[data-alert-ok]').addEventListener('click', done);
+    layer.addEventListener('click', function(e){ if (e.target === layer) done(); });
+    document.addEventListener('keydown', onKey, true);
+    layer.querySelector('[data-alert-ok]').focus();
+  });
+}
+
+function askText(title, opts){
+  opts = opts || {};
+  return new Promise(function(resolve){
+    const root = document.getElementById('modalRoot');
+    if (!root) { resolve(null); return; }
+    const restoreTo = _focusBeforeDialog();
+    const msgId = 'ask-text-msg-' + uid();
+    const layer = document.createElement('div');
+    layer.className = 'confirm-overlay';
+    layer.setAttribute('role', 'dialog');
+    layer.setAttribute('aria-modal', 'true');
+    layer.setAttribute('aria-labelledby', msgId);
+    layer.innerHTML = '<div class="confirm-card"><div class="confirm-message" id="' + msgId + '"></div><input type="text" class="ask-text-input" autocomplete="off" enterkeyhint="done"><div class="btn-row"><button type="button" class="btn secondary" data-ask-cancel>انصراف</button><button type="button" class="btn" data-ask-ok>ثبت</button></div></div>';
+    layer.querySelector('.confirm-message').textContent = String(title || '');
+    const input = layer.querySelector('.ask-text-input');
+    input.placeholder = String(opts.placeholder || '');
+    root.appendChild(layer);
+    function finish(value){
+      document.removeEventListener('keydown', onKey, true);
+      layer.remove();
+      _restoreFocus(restoreTo);
+      resolve(value);
+    }
+    function submit(){
+      const v = String(input.value || '').trim();
+      if (!v) { input.focus(); return; }
+      finish(v);
+    }
+    function onKey(e){ if (e.key === 'Escape') { e.preventDefault(); finish(null); } }
+    layer.querySelector('[data-ask-ok]').addEventListener('click', submit);
+    layer.querySelector('[data-ask-cancel]').addEventListener('click', function(){ finish(null); });
+    layer.addEventListener('click', function(e){ if (e.target === layer) finish(null); });
+    input.addEventListener('keydown', function(e){ if (e.key === 'Enter') { e.preventDefault(); submit(); } });
+    document.addEventListener('keydown', onKey, true);
+    setTimeout(function(){ input.focus(); }, 0);
+  });
+}
+
+/* ---------- inline field errors ----------
+   setFieldError(input, text): shows text under the field, marks it red, and wires
+   aria-invalid / aria-describedby so screen readers announce it with the field.
+   clearFieldError(input): removes all of that again. focusFirstInvalid(root): focuses the
+   first invalid field inside root. */
+let _fieldErrSeq = 0;
+function clearFieldError(input){
+  if (!input) return;
+  if (input._fieldErr) { input._fieldErr.remove(); input._fieldErr = null; }
+  input.removeAttribute('aria-invalid');
+  input.removeAttribute('aria-describedby');
+  input.classList.remove('is-invalid');
+}
+function setFieldError(input, message){
+  if (!input) return;
+  clearFieldError(input);
+  const id = (input.id || 'field') + '-err-' + (++_fieldErrSeq);
+  const err = document.createElement('div');
+  err.className = 'field-error';
+  err.id = id;
+  err.setAttribute('aria-live', 'polite');
+  err.textContent = String(message || '');
+  input.setAttribute('aria-invalid', 'true');
+  input.setAttribute('aria-describedby', id);
+  input.classList.add('is-invalid');
+  input.insertAdjacentElement('afterend', err);
+  input._fieldErr = err;
+}
+function focusFirstInvalid(root){
+  const el = (root || document).querySelector('.is-invalid');
+  if (el && typeof el.focus === 'function') { el.focus(); return el; }
+  return null;
+}
+
+/* ---------- toasts (queued, prioritised, dismissible) ----------
+   - At most TOAST_MAX_VISIBLE toasts on screen; extra messages wait in a queue.
+   - A new message never removes an earlier one.
+   - Errors are shown before queued success messages, and an error may replace the
+     oldest visible success toast so it is never hidden behind it.
+   - Each toast closes on tap. Errors stay longer (6 s) than success messages (2.4 s).
+   - Errors use role="alert"; everything else role="status" (inside an aria-live container).
+   Signature unchanged: showToast(msg, {type:'error'}). */
+const TOAST_MAX_VISIBLE = 3;
+const TOAST_MS = { info: 2400, error: 6000 };
+const TOAST_FADE_MS = 220;
+const toastState = { visible: [], queue: [], seq: 0 };
+
+function _toastStack(){ return document.getElementById('toast-stack'); }
+
 function showToast(msg, opts){
   opts = opts || {};
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.toggle('error', opts.type === 'error');
-  t.classList.add('show');
-  clearTimeout(showToast._h);
-  showToast._h = setTimeout(()=>t.classList.remove('show'), opts.type === 'error' ? 4500 : 2000);
+  const type = opts.type === 'error' ? 'error' : 'info';
+  const item = { id: ++toastState.seq, type: type, msg: String(msg == null ? '' : msg) };
+  if (type === 'error') {
+    // Errors jump ahead of queued success messages.
+    const firstInfo = toastState.queue.findIndex(q => q.type !== 'error');
+    if (firstInfo === -1) toastState.queue.push(item); else toastState.queue.splice(firstInfo, 0, item);
+    // If the screen is full of success toasts, free a slot now by closing the oldest one.
+    if (toastState.visible.length >= TOAST_MAX_VISIBLE) {
+      const oldestInfo = toastState.visible.find(v => v.type !== 'error' && !v.gone);
+      if (oldestInfo) _toastDismiss(oldestInfo);
+    }
+  } else {
+    toastState.queue.push(item);
+  }
+  _toastPump();
+}
+
+function _toastPump(){
+  const stack = _toastStack();
+  if (!stack) return;
+  while (toastState.visible.length < TOAST_MAX_VISIBLE && toastState.queue.length) {
+    _toastRender(stack, toastState.queue.shift());
+  }
+}
+
+function _toastRender(stack, item){
+  const el = document.createElement('div');
+  el.className = 'toast ' + (item.type === 'error' ? 'toast-error' : 'toast-info');
+  if (item.type === 'error') el.setAttribute('role', 'alert');
+  else el.removeAttribute('role'); // inherits aria-live="polite" from #toast-stack: announced once
+  el.textContent = item.msg;
+  const entry = { el: el, type: item.type, timer: null, gone: false };
+  el.addEventListener('click', function(){ _toastDismiss(entry); });
+  stack.appendChild(el);
+  toastState.visible.push(entry);
+  requestAnimationFrame(function(){ el.classList.add('show'); });
+  entry.timer = setTimeout(function(){ _toastDismiss(entry); }, TOAST_MS[item.type]);
+}
+
+function _toastDismiss(entry){
+  if (!entry || entry.gone) return;
+  entry.gone = true;
+  clearTimeout(entry.timer);
+  entry.el.classList.remove('show');
+  setTimeout(function(){
+    entry.el.remove();
+    toastState.visible = toastState.visible.filter(function(v){ return v !== entry; });
+    _toastPump();
+  }, TOAST_FADE_MS);
 }
 
 

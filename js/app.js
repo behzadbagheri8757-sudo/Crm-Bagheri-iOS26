@@ -241,7 +241,7 @@ async function prepareInvoiceImgs(root, kind, timeoutMs){
 
 async function printInvoice(invId){
   const inv = data.invoices.find(x=>x.id===invId);
-  if(!inv){ if(typeof showToast==='function') showToast('فاکتور برای چاپ پیدا نشد'); return; }
+  if(!inv){ if(typeof showToast==='function') appAlert('فاکتور برای چاپ پیدا نشد'); return; }
   const cust = data.customers.find(x=>x.id===inv.customerId);
   const area = document.getElementById('printArea');
   if(!area){ if(typeof showToast==='function') showToast('ناحیه چاپ در صفحه موجود نیست'); return; }
@@ -250,12 +250,12 @@ async function printInvoice(invId){
   const failed = results.filter(r=>!r.ok);
   if(failed.length){
     console.warn('print logo load failed', failed);
-    if(typeof showToast==='function') showToast('لوگو بارگذاری نشد — مسیر logo-export.png را بررسی کنید');
+    if(typeof showToast==='function') appAlert('لوگو بارگذاری نشد — مسیر logo-export.png را بررسی کنید');
   }
   // one extra frame after decode so layout/print engine sees the bitmap
   await new Promise(r=> requestAnimationFrame(()=> requestAnimationFrame(r)));
   try{ window.print(); }
-  catch(e){ console.error(e); if(typeof showToast==='function') showToast('چاپ در این مرورگر پشتیبانی نشد'); }
+  catch(e){ console.error(e); if(typeof showToast==='function') appAlert('چاپ در این مرورگر پشتیبانی نشد'); }
 }
 
 function statementDocHtml(c, forPrint){
@@ -342,7 +342,7 @@ async function exportInvoiceImage(invId){
   if(!inv) return;
   const h2cOk = await ensureHtml2CanvasLoaded();
   if(!h2cOk){
-    showToast('کتابخانه ساخت تصویر در دسترس نیست');
+    appAlert('کتابخانه ساخت تصویر در دسترس نیست');
     return;
   }
   const cust = data.customers.find(x=>x.id===inv.customerId);
@@ -373,7 +373,7 @@ async function exportInvoiceImage(invId){
     }, 'image/png');
   }catch(e){
     console.error(e);
-    showToast('ساخت تصویر ممکن نشد');
+    appAlert('ساخت تصویر ممکن نشد');
   }finally{
     holder.remove();
   }
@@ -533,7 +533,7 @@ function openAddProduct(editId){
       if(stockQty !== p.stockQty){
         const adj = manualStockAdjustAbsolute(p.id, stockQty, 'ویرایش دستی موجودی');
         if(!adj || !adj.ok){
-          showToast((adj && adj.error) ? adj.error : 'امکان تغییر موجودی نیست');
+          appAlert((adj && adj.error) ? adj.error : 'امکان تغییر موجودی نیست');
           return null;
         }
       }
@@ -586,7 +586,7 @@ function openAddProduct(editId){
         await saveData();
       }catch(err){
         data.analysisGroups = data.analysisGroups.filter(g=>g.id!==newGroup.id);
-        showToast('گروه ذخیره نشد');
+        appAlert('گروه ذخیره نشد');
         analysisGroupSelect.value = lastAnalysisGroupValue;
         return;
       }
@@ -623,7 +623,7 @@ function openAddProduct(editId){
         if(q<=0){ showToast('مقدار رو وارد کن'); throw new Error('validation'); }
         const r = manualStockOut(p.id, q, 'خروج/اصلاح دستی');
         if(!r || !r.ok){
-          showToast((r && r.error) ? r.error : 'امکان کاهش موجودی نیست');
+          appAlert((r && r.error) ? r.error : 'امکان کاهش موجودی نیست');
           throw new Error('validation');
         }
         await saveData(); openAddProduct(p.id); showToast('موجودی کم شد');
@@ -2373,7 +2373,7 @@ function openAddVisit(cid){
     }
     const c = data.customers.find(function (x) { return x.id === cid; });
     if (!c) {
-      showToast('مشتری پیدا نشد');
+      appAlert('مشتری پیدا نشد');
       return false;
     }
     if (!state.kind) { showToast('نوع ویزیت را انتخاب کنید'); return false; }
@@ -2411,7 +2411,7 @@ function openAddVisit(cid){
       await saveData();
     } catch (e) {
       console.error(e);
-      showToast('ذخیره نشد');
+      appAlert('ذخیره نشد');
       return false;
     }
     // ACK: every rejected offer becomes a product SellerAck, and every visit leaves one account-level
@@ -3586,11 +3586,19 @@ function openProductDrop(idx){
         }
       });
     });
+    document.querySelectorAll('.inv-payment-panel input[type="text"]').forEach(inp=>inp.addEventListener('input', ()=>clearFieldError(inp)));
     document.querySelectorAll('.inv-payment-confirm').forEach(btn=>{
       btn.addEventListener('click', ()=>{
         const method = btn.getAttribute('data-payment-confirm');
         const input = document.querySelector(`.inv-payment-panel[data-payment-panel="${method}"] input[type="text"]`);
-        const value = input ? parseFloat(faToEnDigits(input.value))||0 : 0;
+        // Validate here so a bad amount is never silently turned into 0.
+        // Empty = no amount for this method (allowed, clears it).
+        const raw = input ? String(faToEnDigits(input.value)).trim() : '';
+        const n = raw === '' ? 0 : Number(raw);
+        if (raw !== '' && !Number.isFinite(n)) { setFieldError(input, 'مبلغ را فقط با عدد وارد کنید.'); focusFirstInvalid(input.closest('.inv-payment-panel')); return; }
+        if (n < 0) { setFieldError(input, 'مبلغ دریافتی نمی‌تواند منفی باشد.'); focusFirstInvalid(input.closest('.inv-payment-panel')); return; }
+        clearFieldError(input);
+        const value = n;
         pendingPayment[method] = value;
         setPaymentAmount(method, value);
         if(method==='check'){
@@ -3739,7 +3747,7 @@ function openProductDrop(idx){
       }
       const stockCheck = validateSaleAvailability(items, creditStock, creditFifo);
       if(!stockCheck.ok){
-        showToast(stockCheck.error || 'موجودی کافی نیست یا موجودی FIFO با موجودی کالا ناسازگار است.', {type:'error'});
+        appAlert(stockCheck.error || 'موجودی کافی نیست یا موجودی FIFO با موجودی کالا ناسازگار است.');
         btn.disabled = false;
         return;
       }
@@ -3797,7 +3805,7 @@ function openProductDrop(idx){
           editInv.newBalance = before.newBalance;
           applyInvoiceStockEffects(oldItemsSnap, oldDateSnap, editInv, false);
           pushInvoicePayments(cid, editInv, before.cashPaid, before.cardPaid, before.transferPaid, before.checkPaid, checkDue, checkMeta);
-          showToast((e && e.message) || 'موجودی کافی نیست یا موجودی FIFO با موجودی کالا ناسازگار است.', {type:'error'});
+          appAlert((e && e.message) || 'موجودی کافی نیست یا موجودی FIFO با موجودی کالا ناسازگار است.');
           btn.disabled = false;
           return;
         }
@@ -3840,7 +3848,7 @@ function openProductDrop(idx){
         applyInvoiceStockEffects(items, date, newInv, true);
       }catch(e){
         restoreDataInPlace(previousData);
-        showToast((e && e.message) || 'موجودی کافی نیست یا موجودی FIFO با موجودی کالا ناسازگار است.', {type:'error'});
+        appAlert((e && e.message) || 'موجودی کافی نیست یا موجودی FIFO با موجودی کالا ناسازگار است.');
         btn.disabled = false;
         return;
       }
