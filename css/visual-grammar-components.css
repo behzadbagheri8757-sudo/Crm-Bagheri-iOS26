@@ -140,9 +140,13 @@ a.ledger-row:active{background:var(--vg-color-surface-soft);}
 .accent-red{color:var(--vg-color-danger) !important;}
 .accent-amber{color:var(--vg-color-warning) !important;}
 .btn-row{display:flex;flex-wrap:wrap;gap:var(--vg-space-related);margin-top:var(--vg-space-group);}
-.toast{position:fixed;bottom:calc(84px + env(safe-area-inset-bottom,0px) + var(--keyboard-height,0px));left:50%;transform:translateX(-50%) translateY(10px);background:var(--vg-color-primary);color:#fff;padding:11px 18px;white-space:pre-wrap;max-width:calc(100vw - 32px);box-sizing:border-box;border-radius:var(--vg-radius-control);font-size:13px;font-weight:var(--vg-weight-title);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:90;}
-.toast.error{background:var(--vg-color-danger);}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+/* Toast stack (see js/ui.js). Frosted HUD pill for info, red pill for errors. */
+.toast-stack{position:fixed;left:0;right:0;bottom:calc(84px + env(safe-area-inset-bottom,0px) + var(--keyboard-height,0px));display:flex;flex-direction:column;align-items:center;gap:8px;padding:0 16px;pointer-events:none;z-index:70;}
+.toast{pointer-events:auto;cursor:pointer;max-width:100%;box-sizing:border-box;padding:11px 18px;border-radius:999px;font-size:15px;font-weight:500;line-height:1.4;text-align:center;white-space:pre-wrap;color:#fff;background:rgba(28,28,30,0.86);-webkit-backdrop-filter:saturate(160%) blur(18px);backdrop-filter:saturate(160%) blur(18px);box-shadow:0 6px 20px rgba(0,0,0,0.16);opacity:0;transform:translateY(10px) scale(.98);transition:opacity .22s ease,transform .26s cubic-bezier(.2,.8,.2,1);-webkit-tap-highlight-color:transparent;}
+.toast.show{opacity:1;transform:translateY(0) scale(1);}
+.toast.toast-error{background:rgba(255,59,48,0.94);}
+html[data-theme="dark"] .toast.toast-info{background:rgba(242,242,247,0.9);color:#000;}
+@media (prefers-reduced-transparency: reduce){.toast{-webkit-backdrop-filter:none;backdrop-filter:none;background:#1C1C1E;}.toast.toast-error{background:#FF3B30;}}
 .overlay{position:fixed;inset:0;background:rgba(11,31,58,.5);display:flex;align-items:flex-end;justify-content:center;z-index:60;}
 .chip-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;}
 .segmented-control#check-sides>.chip{flex:1 1 0;white-space:normal;}
@@ -236,3 +240,16 @@ html[data-theme="dark"] .ios-seg.ios-seg>.ios-seg-item.ios-on{background:transpa
 
 /* کپسول‌های وضعیت بدون شمارنده شبیه گذشته، ولی یکدست */
 .ios-seg.ios-seg.bp-watch-filters>.ios-seg-item{gap:6px;}
+
+/* ---- stage 2: text prompt dialog (replaces window.prompt) ---- */
+.ask-text-input{width:100%;box-sizing:border-box;margin:12px 0 4px;padding:11px 12px;border:0;border-radius:12px;background:var(--vg-color-surface-soft, #F2F2F7);color:var(--vg-color-text);font-size:17px;font-family:inherit;}
+.ask-text-input:focus{outline:2px solid var(--vg-color-primary);outline-offset:0;}
+
+/* ---- confirm / alert dialogs: long text scrolls inside the card; extra messages are spaced ---- */
+.confirm-message{max-height:min(50vh,360px);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;}
+.app-alert-extra{margin:0 0 8px;}
+.app-alert-extra:last-child{margin-bottom:0;}
+
+/* ---- inline field errors (see setFieldError in js/ui.js) ---- */
+.field-error{color:var(--vg-color-danger, #FF3B30);font-size:13px;line-height:1.35;margin:6px 4px 0;}
+.is-invalid{box-shadow:inset 0 0 0 1.5px var(--vg-color-danger, #FF3B30) !important;}
