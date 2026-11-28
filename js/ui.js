@@ -1038,7 +1038,7 @@ function _toastPump(){
 
 function _toastRender(stack, item){
   const el = document.createElement('div');
-  el.className = 'toast ' + (item.type === 'error' ? 'toast-error' : 'toast-info');
+  el.className = 'toast ' + (item.type === 'error' ? 'toast-error' : 'toast-info') + (/[\\r\\n]/.test(item.msg) ? ' toast-multiline' : '');
   if (item.type === 'error') el.setAttribute('role', 'alert');
   else el.removeAttribute('role'); // inherits aria-live="polite" from #toast-stack: announced once
   el.textContent = item.msg;
